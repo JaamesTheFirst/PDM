@@ -16,7 +16,7 @@ Inspired by apps like **Moovit**, but focused on **green energy and sustainabili
 - ⚡ Charging stations locator
 - ♻️ CO₂ savings estimation per trip
 - 🧭 Navigation & ETA
-- 🗺️ Multi-city support
+- 🗺️ Multi-city support (maybe)
 
 ---
 
