@@ -1,0 +1,164 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  routes    Route[]
+  preferences UserPreferences?
+
+  @@map("users")
+}
+
+model UserPreferences {
+  id       String @id @default(cuid())
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Transport preferences
+  preferredTransportTypes String[] // ["electric_bus", "bike", "walking"]
+  maxWalkingDistance      Int      @default(500) // meters
+  avoidHighways          Boolean  @default(false)
+  ecoFriendlyOnly        Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+model Station {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  
+  // Location data
+  latitude    Float
+  longitude   Float
+  address     String?
+  
+  // Station type and capabilities
+  stationType String  // "bus_stop", "bike_station", "charging_station", "metro"
+  isActive    Boolean @default(true)
+  
+  // Energy/sustainability info
+  energySource String? // "solar", "wind", "grid", "battery"
+  carbonFootprint Float? // kg CO2 per kWh
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  routes RouteStation[]
+  startRoutes Route[] @relation("RouteStartStation")
+  endRoutes   Route[] @relation("RouteEndStation")
+
+  @@map("stations")
+}
+
+model Vehicle {
+  id          String  @id @default(cuid())
+  name        String
+  vehicleType String  // "electric_bus", "bike", "scooter", "metro"
+  
+  // Vehicle specs
+  capacity    Int?    // passenger capacity
+  energyType  String  // "electric", "hybrid", "human_powered"
+  batteryLevel Float? // percentage (0-100)
+  
+  // Location
+  currentLatitude  Float?
+  currentLongitude Float?
+  isInService      Boolean @default(true)
+  
+  // Sustainability metrics
+  co2PerKm         Float? // kg CO2 per kilometer
+  energyEfficiency Float? // kWh per km
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  routes RouteVehicle[]
+
+  @@map("vehicles")
+}
+
+model Route {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  
+  // Route details
+  startStationId String
+  endStationId   String
+  startStation   Station @relation("RouteStartStation", fields: [startStationId], references: [id])
+  endStation     Station @relation("RouteEndStation", fields: [endStationId], references: [id])
+  
+  // Route metrics
+  distance      Float   // kilometers
+  estimatedTime Int     // minutes
+  difficulty    String? // "easy", "medium", "hard"
+  
+  // Sustainability metrics
+  carbonFootprint Float? // kg CO2 for entire route
+  energyConsumption Float? // kWh for entire route
+  ecoScore         Float? // 0-100 sustainability score
+  
+  // Route status
+  isActive     Boolean @default(true)
+  isVerified   Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId      String?
+  user        User?   @relation(fields: [userId], references: [id])
+  stations    RouteStation[]
+  vehicles    RouteVehicle[]
+
+  @@map("routes")
+}
+
+model RouteStation {
+  id       String @id @default(cuid())
+  routeId  String
+  stationId String
+  order    Int    // order of stations in the route
+  
+  route   Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  station Station @relation(fields: [stationId], references: [id])
+
+  @@unique([routeId, stationId])
+  @@map("route_stations")
+}
+
+model RouteVehicle {
+  id        String @id @default(cuid())
+  routeId   String
+  vehicleId String
+  
+  route   Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@unique([routeId, vehicleId])
+  @@map("route_vehicles")
+}
