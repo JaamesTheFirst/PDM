@@ -1,0 +1,8 @@
+
+Camadas todas gays (passos fullstack):
+
+auth -Francisco, Sofia, Daniel
+integração com mapa
+api/algoritmo calcular rotas
+integração com BD
+
