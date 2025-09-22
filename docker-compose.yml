@@ -54,7 +54,7 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-    command: npm run start:dev
+    command: sh -lc "npm ci && npx prisma generate && npm run start:dev"
 
 volumes:
   postgres_data:

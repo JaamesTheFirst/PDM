@@ -1,29 +1,26 @@
-# 🚀 Sustainable Transport App - Windows PowerShell Setup Script
+# Sustainable Transport App - Windows PowerShell Setup Script
 # Run this script in PowerShell as Administrator
-# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# Example: powershell.exe -ExecutionPolicy Bypass -File .\install_win.ps1
 
-Write-Host "🚀 Setting up Sustainable Transport App development environment for Windows..." -ForegroundColor Green
+Write-Host "Setting up Sustainable Transport App development environment for Windows..." -ForegroundColor Green
 
-# Function to print colored output
+# Functions for colored output
 function Write-Success($message) {
-    Write-Host "✅ $message" -ForegroundColor Green
+    Write-Host "SUCCESS: $message" -ForegroundColor Green
 }
-
-function Write-Warning($message) {
-    Write-Host "⚠️  $message" -ForegroundColor Yellow
+function Write-WarningMsg($message) {
+    Write-Host "WARNING: $message" -ForegroundColor Yellow
 }
-
 function Write-Info($message) {
-    Write-Host "ℹ️  $message" -ForegroundColor Blue
+    Write-Host "INFO: $message" -ForegroundColor Blue
 }
-
-function Write-Error($message) {
-    Write-Host "❌ $message" -ForegroundColor Red
+function Write-ErrMsg($message) {
+    Write-Host "ERROR: $message" -ForegroundColor Red
 }
 
 # Check if running as Administrator
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Error "This script requires Administrator privileges. Please run PowerShell as Administrator."
+    Write-ErrMsg "This script requires Administrator privileges. Please run PowerShell as Administrator."
     exit 1
 }
 
@@ -40,7 +37,8 @@ if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
     Write-Success "Chocolatey already installed"
 }
 
-# Refresh environment
+# Refresh environment PATH
+Write-Info "Refreshing PATH from Machine and User scopes..."
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
 # Install development tools
@@ -60,14 +58,14 @@ $packages = @(
 foreach ($package in $packages) {
     Write-Info "Installing $package..."
     try {
-        choco install $package -y
+        choco install $package -y --no-progress
         Write-Success "$package installed successfully"
     } catch {
-        Write-Warning "Failed to install $package. You may need to install it manually."
+        Write-WarningMsg "Failed to install $package. You may need to install it manually."
     }
 }
 
-# Refresh environment variables
+# Refresh environment variables again (after installs)
 Write-Info "Refreshing environment variables..."
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
@@ -77,15 +75,17 @@ try {
     npm install -g @nestjs/cli prisma yarn
     Write-Success "Global npm packages installed"
 } catch {
-    Write-Warning "Failed to install npm packages. Please run 'npm install -g @nestjs/cli prisma yarn' manually after Node.js is fully installed."
+    Write-WarningMsg "Failed to install npm packages. Please run 'npm install -g @nestjs/cli prisma yarn' manually after Node.js is fully installed."
 }
 
 # Create development directories
 Write-Info "Creating development directories..."
 $devPath = "$env:USERPROFILE\development"
 if (!(Test-Path $devPath)) {
-    New-Item -ItemType Directory -Path $devPath
+    New-Item -ItemType Directory -Path $devPath | Out-Null
     Write-Success "Development directory created at $devPath"
+} else {
+    Write-Info "Development directory already exists at $devPath"
 }
 
 # Flutter doctor check
@@ -93,12 +93,12 @@ Write-Info "Running Flutter doctor..."
 try {
     flutter doctor
 } catch {
-    Write-Warning "Flutter not yet available in PATH. Please restart your terminal and run 'flutter doctor'"
+    Write-WarningMsg "Flutter not yet available in PATH. Please restart your terminal and run 'flutter doctor'."
 }
 
-Write-Success "Windows development environment setup completed!"
+Write-Success 'Setup script completed!'
 
-Write-Warning "IMPORTANT NEXT STEPS:"
+Write-WarningMsg "IMPORTANT NEXT STEPS:"
 Write-Host ""
 Write-Host "1. RESTART YOUR COMPUTER to ensure all environment variables are loaded" -ForegroundColor Yellow
 Write-Host ""
@@ -134,5 +134,4 @@ Write-Host "   cd app && flutter pub get"
 Write-Host "   flutter run -d chrome"
 Write-Host ""
 
-Write-Success "Setup script completed! 🚀"
-Write-Info "For FlutterFlow integration, visit: https://flutterflow.io"
+Write-Info 'For FlutterFlow integration, visit: https://flutterflow.io'
