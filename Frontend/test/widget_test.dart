@@ -5,7 +5,11 @@ import 'package:sustainable_transport_app/main.dart';
 
 void main() {
   testWidgets('App arranca e mostra a LoginScreen', (WidgetTester tester) async {
-    await tester.pumpWidget(const App());
+    // Se no teu main o widget raiz se chamar EcoApp, troca App -> EcoApp.
+    await tester.pumpWidget(const EcoApp());
+
+    // Deixa concluir animações/navegação inicial (AuthGate -> Login)
+    await tester.pumpAndSettle();
 
     // Deve existir o botão "Entrar" e o campo "Email" do nosso login.
     expect(find.byType(ElevatedButton), findsWidgets);
