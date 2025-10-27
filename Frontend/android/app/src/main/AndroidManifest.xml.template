@@ -1,10 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-<!-- Mapbox Access Token -->
-
-<!--
+<!-- Mapbox Access Token - Replace YOUR_MAPBOX_ACCESS_TOKEN with your actual token -->
 <meta-data android:name="com.mapbox.token"
-           android:value="aqui tem de meter a api key que vos vou dar no whatsapp"/>
--->
+           android:value="YOUR_MAPBOX_ACCESS_TOKEN"/>
 
 <!-- Location permissions -->
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

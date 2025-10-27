@@ -4,6 +4,7 @@ import '../state/auth_controller.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/signup_screen.dart';
+import '../screens/map_screen.dart';
 
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -16,6 +17,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const SignUpScreen());
       case '/home':
         return MaterialPageRoute(builder: (_) => const HomeScreen());
+      case '/map':
+        return MaterialPageRoute(builder: (_) => const MapScreen());
       default:
         return MaterialPageRoute(builder: (_) => const AuthGate());
     }

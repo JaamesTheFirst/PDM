@@ -286,6 +286,10 @@ pnpm-lock.yaml
 config/secrets.json
 config/production.json
 
+# Mapbox API Keys
+Frontend/android/app/src/main/AndroidManifest.xml
+Frontend/ios/Runner/Info.plist
+
 # Generated files
 *.generated.*
 

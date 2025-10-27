@@ -5,9 +5,9 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Enable CORS for Flutter app
+  // Enable CORS for Flutter app (allow all origins for development)
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:8080'],
+    origin: true, // Allow all origins
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
@@ -20,7 +20,7 @@ async function bootstrap() {
   }));
   
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Sustainable Transport API running on port ${port}`);
 }
 bootstrap();
