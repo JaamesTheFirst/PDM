@@ -11,13 +11,18 @@ const String _envBase = String.fromEnvironment('BASE_URL', defaultValue: '');
 
 String _computeDefaultBase() {
   // Web/desktop/iOS simulador => localhost
-  if (kIsWeb) return 'http://localhost:3000';
+  if (kIsWeb) return 'http://localhost:3001';
   try {
-    if (Platform.isAndroid) return 'http://10.0.2.2:3000'; // emulador Android
+    if (Platform.isAndroid) return 'http://10.143.79.174:3001'; // Android device (Mac IP on hotspot)
+    //aqui vs vao ter de definir o ip do servidor de backend da vossa maquina, 
+    //este e o que funciona para o meu mac a correr no hotspot do tele, 
+    //mas pra vcs vai ser diferente
+  
+  
   } catch (_) {
     // Platform não existe no web; ignorar
   }
-  return 'http://localhost:3000';
+  return 'http://localhost:3001';
 }
 
 final String kBaseUrl = _envBase.isNotEmpty ? _envBase : _computeDefaultBase();

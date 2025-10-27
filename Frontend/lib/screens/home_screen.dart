@@ -178,6 +178,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // Map button
+                ElevatedButton.icon(
+                  style: EcoTheme.primaryButtonStyle,
+                  onPressed: () => Navigator.of(context).pushNamed('/map'),
+                  icon: const Icon(Icons.map),
+                  label: const Text('Ver mapa'),
+                ), 
+                
                 // Pills informativas
                 Row(
                   children: const [
