@@ -13,12 +13,18 @@ String _computeDefaultBase() {
   // Web/desktop/iOS simulador => localhost
   if (kIsWeb) return 'http://localhost:3001';
   try {
-    if (Platform.isAndroid) return 'http://10.143.79.174:3001'; // Android device (Mac IP on hotspot)
-    //aqui vs vao ter de definir o ip do servidor de backend da vossa maquina, 
-    //este e o que funciona para o meu mac a correr no hotspot do tele, 
-    //mas pra vcs vai ser diferente
-  
-  
+    if (Platform.isAndroid) {
+      // For Android emulator, use 10.0.2.2 which maps to localhost on your machine
+      // For physical Android device, use your machine's IP address
+      // You can override by setting BASE_URL environment variable:
+      // flutter run --dart-define=BASE_URL=http://YOUR_IP:3001
+      const String customUrl = String.fromEnvironment('BASE_URL');
+      if (customUrl.isNotEmpty) return customUrl;
+      
+      // Default: use 10.0.2.2 for emulator
+      // For physical device, each dev should set their IP via --dart-define or update this line
+      return 'http://10.0.2.2:3001';
+    }
   } catch (_) {
     // Platform não existe no web; ignorar
   }
