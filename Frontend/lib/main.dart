@@ -1,21 +1,25 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'state/auth_controller.dart';
-import 'routes/app_router.dart';
+
+import 'features/auth/state/auth_controller.dart';
+import 'app/state/theme_controller.dart';
+import 'app/app_shell.dart';
+import 'mapbox_config.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Mapbox with your token (only for mobile platforms)
-  if (kIsWeb == false) {
-    MapboxOptions.setAccessToken("aqui tem de meter a api key que vos vou dar no whatsapp");
+  if (!kIsWeb) {
+    MapboxOptions.setAccessToken(kMapboxAccessToken); // MapBox token
   }
-  
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthController(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthController()),
+        ChangeNotifierProvider(create: (_) => ThemeController()),
+      ],
       child: const EcoApp(),
     ),
   );
@@ -25,11 +29,14 @@ class EcoApp extends StatelessWidget {
   const EcoApp({super.key});
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeController>();
     return MaterialApp(
       title: 'EcoMove',
-      onGenerateRoute: AppRouter.onGenerateRoute,
-      initialRoute: '/', // AuthGate
+      theme: theme.lightTheme,
+      darkTheme: theme.darkTheme,
+      themeMode: theme.themeMode, // DARK por defeito
       debugShowCheckedModeBanner: false,
+      home: const AppShell(),
     );
   }
 }
