@@ -24,7 +24,7 @@ services:
     image: redis:7-alpine
     container_name: sustainable_transport_redis
     ports:
-      - "6380:6379"
+      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
