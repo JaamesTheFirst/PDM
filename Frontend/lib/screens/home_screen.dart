@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_client.dart';
-import '../state/auth_controller.dart';
-import 'login_screen.dart';
+import '../features/auth/state/auth_controller.dart';
+import '../features/auth/pages/login_screen.dart';
 
 /// === ECO THEME (inline para este ficheiro) ===
 class EcoTheme {
