@@ -1,3 +1,4 @@
+// lib/app/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,7 +7,7 @@ import '../features/auth/pages/login_screen.dart';
 import '../features/auth/pages/signup_screen.dart';
 import '../features/impact/pages/impact_page.dart';
 import '../features/map/pages/map_page.dart';
-import '../features/map/pages/route_search_page.dart';
+import '../features/settings/pages/settings_page.dart';
 import 'app_shell.dart';
 
 class AppRouter {
@@ -14,47 +15,18 @@ class AppRouter {
     switch (settings.name) {
       case '/':
         return MaterialPageRoute(builder: (_) => const AuthGate());
-
       case '/login':
         return MaterialPageRoute(builder: (_) => const LoginScreen());
-
       case '/signup':
         return MaterialPageRoute(builder: (_) => const SignUpScreen());
-
       case '/home':
         return MaterialPageRoute(builder: (_) => const AppShell());
-
       case '/map':
         return MaterialPageRoute(builder: (_) => const MapPage());
-
       case '/impact':
         return MaterialPageRoute(builder: (_) => const ImpactPage());
-
-      case '/route-search':
-        return PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const RouteSearchPage(),
-          transitionDuration: const Duration(milliseconds: 260),
-          reverseTransitionDuration: const Duration(milliseconds: 220),
-          transitionsBuilder: (_, animation, secondaryAnimation, child) {
-            final curved = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-              reverseCurve: Curves.easeInCubic,
-            );
-
-            return FadeTransition(
-              opacity: curved,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.06),
-                  end: Offset.zero,
-                ).animate(curved),
-                child: child,
-              ),
-            );
-          },
-        );
-
+      case '/settings':
+        return MaterialPageRoute(builder: (_) => const SettingsPage());
       default:
         return MaterialPageRoute(builder: (_) => const AuthGate());
     }
