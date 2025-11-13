@@ -63,17 +63,19 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   /// 0 = expandido ao máximo; valor maior = painel mais baixo (mais mapa visível em cima).
   double _collapse = 0.0;
 
+  /// Percentagem do colapso a partir da qual fazemos snap para o modo compacto
+  static const double _snapThresholdRatio = 0.55;
+
   @override
   void initState() {
     super.initState();
     _ensureDots();
-    // já não chamamos _fitFromTo aqui; vamos adaptar câmara com a geometria da rota
     _selectMode('walking', draw: true);
   }
 
   @override
   void dispose() {
-    // mantemos anotações no mapa ao fechar (não limpamos managers aqui)
+    // mantemos anotações no mapa ao fechar
     super.dispose();
   }
 
@@ -110,7 +112,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   Future<void> _fitRouteGeometry(List<List<num>> geometry) async {
     if (geometry.isEmpty) return;
 
-    // converte lista [lon, lat] -> List<Point>
     final points = geometry
         .map(
           (c) => mbx.Point(
@@ -122,7 +123,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         )
         .toList();
 
-    // padding para não ficar mesmo colado às bordas
     final padding = mbx.MbxEdgeInsets(
       top: 40,
       left: 40,
@@ -134,16 +134,14 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       final cam = await widget.mapboxMap.cameraForCoordinates(
         points,
         padding,
-        0, // bearing
-        0, // pitch
+        0,
+        0,
       );
       await widget.mapboxMap.flyTo(
         cam,
         mbx.MapAnimationOptions(duration: 900),
       );
-    } catch (_) {
-      // se por algum motivo falhar, não queremos crashar
-    }
+    } catch (_) {}
   }
 
   Future<void> _selectMode(String mode, {bool draw = false}) async {
@@ -181,7 +179,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
     if (draw) {
       await _drawRoute(data);
-      await _fitRouteGeometry(data.geometry); // ⬅️ aqui é que ajusta a câmara
+      await _fitRouteGeometry(data.geometry);
     }
 
     if (!mounted) return;
@@ -220,8 +218,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       builder: (context, constraints) {
         final maxH = constraints.maxHeight;
 
-        // altura mínima do painel (botões + header + 1 tile mais ou menos)
-        const double minPanelHeight = 260.0;
+        // altura mínima do painel (header + 1 modo + botões)
+        const double minPanelHeight = 230.0;
 
         // altura máxima (painel quase cheio)
         final double maxPanelHeight = maxH;
@@ -233,6 +231,9 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         final double effectiveCollapse = _collapse.clamp(0.0, maxCollapse);
 
         final double panelHeight = maxPanelHeight - effectiveCollapse;
+
+        // limiar real em px para snap + "modo compacto"
+        final double snapThreshold = maxCollapse * _snapThresholdRatio;
 
         // modos disponíveis
         final modes = <_ModeCard>[
@@ -289,13 +290,11 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         ];
 
         // estamos em modo "compacto"? (quase colapsado)
-        final bool isCompact = effectiveCollapse > maxCollapse * 0.65;
+        final bool isCompact = effectiveCollapse >= snapThreshold && maxCollapse > 0;
 
-        // encontra o card do modo selecionado
         _ModeCard selectedCard =
             modes.firstWhere((m) => _effectiveKeyFor(m) == _selected, orElse: () => modes.first);
 
-        // helper para criar o subtitle do modo (distância / duração)
         String _subtitleFor(_ModeCard m) {
           final effectiveKey = _effectiveKeyFor(m);
           final isDisabled = m.disabled;
@@ -311,7 +310,9 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
           color: Colors.transparent,
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
               height: panelHeight,
               width: double.infinity,
               decoration: BoxDecoration(
@@ -329,7 +330,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                 padding: EdgeInsets.only(bottom: bottomInset + 12),
                 child: Column(
                   children: [
-                    // handle + drag: mexe só a altura do painel (topo desce/sobe)
+                    // handle + drag
                     GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onVerticalDragUpdate: (d) {
@@ -340,11 +341,15 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                         });
                       },
                       onVerticalDragEnd: (_) {
-                        // Se quiseres snap:
-                        // setState(() {
-                        //   if (_collapse < maxCollapse / 2) _collapse = 0;
-                        //   else _collapse = maxCollapse;
-                        // });
+                        // SNAP: decide se fica expandido ou compacto
+                        if (maxCollapse <= 0) return;
+                        setState(() {
+                          if (_collapse < snapThreshold) {
+                            _collapse = 0; // expandido, mostra lista inteira
+                          } else {
+                            _collapse = maxCollapse; // compacto, só 1 item
+                          }
+                        });
                       },
                       child: SizedBox(
                         height: 40,
@@ -390,7 +395,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                       ),
                     ),
 
-                    // lista de modos (scroll normal ou compact com 1 item)
+                    // lista de modos
                     Expanded(
                       child: isCompact
                           ? Padding(
@@ -403,7 +408,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                                   subtitle: _subtitleFor(selectedCard),
                                   badge: selectedCard.badge,
                                   disabled: selectedCard.disabled,
-                                  selected: true, // sempre highlight no compacto
+                                  selected: true,
                                   onTap: selectedCard.disabled
                                       ? null
                                       : () => _selectMode(
@@ -434,13 +439,12 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                                           _selectMode(effectiveKey, draw: true),
                                 );
                               },
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 8),
+                              separatorBuilder: (_, __) => const SizedBox(height: 8),
                               itemCount: modes.length,
                             ),
                     ),
 
-                    // ações – FIXAS no fundo do painel
+                    // ações no fundo
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
@@ -490,7 +494,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     );
   }
 
-  // devolve a key "efetiva" (sem o _disabled)
   String _effectiveKeyFor(_ModeCard m) {
     return m.keyId.endsWith('_disabled')
         ? m.keyId.replaceAll('_disabled', '')
