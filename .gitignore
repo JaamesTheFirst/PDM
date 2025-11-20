@@ -119,7 +119,6 @@ app.*.map.json
 *.sqlite3
 
 # Prisma
-backend/prisma/migrations/
 backend/prisma/dev.db*
 backend/prisma/*.db
 backend/prisma/*.db-journal
