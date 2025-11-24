@@ -2,34 +2,12 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
-
-type Vehicle = {
-  trainNumber: number;
-  runDate: string;
-  delay: number | null;
-  lastStation: string | null;
-  latitude: string | null;
-  longitude: string | null;
-  status: string;
-  hasDisruptions: boolean;
-  service: {
-    code: string;
-    designation: string;
-  };
-  origin: {
-    code: string;
-    designation: string;
-  };
-  destination: {
-    code: string;
-    designation: string;
-  };
-};
+import { CpVehicleDto, CpVehiclesApiResponse } from './dto';
 
 @Injectable()
 export class CpService {
   private readonly logger = new Logger(CpService.name);
-  private vehiclesCache: Vehicle[] = [];
+  private vehiclesCache: CpVehicleDto[] = [];
   private cacheTimestamp = 0;
 
   constructor(
@@ -51,14 +29,14 @@ export class CpService {
     return configured ?? 30_000;
   }
 
-  private async fetchVehicles(): Promise<Vehicle[]> {
+  private async fetchVehicles(): Promise<CpVehicleDto[]> {
     const { data } = await firstValueFrom(
-      this.http.get<{ vehicles: Vehicle[] }>(this.apiUrl),
+      this.http.get<CpVehiclesApiResponse>(this.apiUrl),
     );
     return data.vehicles ?? [];
   }
 
-  async getVehicles(forceRefresh = false): Promise<Vehicle[]> {
+  async getVehicles(forceRefresh = false): Promise<CpVehicleDto[]> {
     const cacheIsFresh =
       Date.now() - this.cacheTimestamp < this.cacheTtlMs &&
       this.vehiclesCache.length > 0;
@@ -81,7 +59,7 @@ export class CpService {
     }
   }
 
-  async getVehicle(trainNumber: string): Promise<Vehicle | undefined> {
+  async getVehicle(trainNumber: string): Promise<CpVehicleDto | undefined> {
     const vehicles = await this.getVehicles();
     return vehicles.find(
       (vehicle) => String(vehicle.trainNumber) === String(trainNumber),

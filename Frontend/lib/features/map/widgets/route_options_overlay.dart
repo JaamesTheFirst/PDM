@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
+import 'package:provider/provider.dart';
 
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
+import '../../../../services/routes_service.dart';
+import '../state/otp_routes_controller.dart';
 
 /// ============= ARGS =============
 class RouteOptionsArgs {
@@ -71,10 +74,25 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     super.initState();
     _ensureDots();
     _selectMode('walking', draw: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchOtp());
+  }
+  bool _requestedOtp = false;
+
+  Future<void> _fetchOtp() async {
+    if (_requestedOtp) return;
+    _requestedOtp = true;
+    final ctrl = context.read<OtpRoutesController>();
+    await ctrl.fetch(
+      fromLat: widget.from.latitude,
+      fromLon: widget.from.longitude,
+      toLat: widget.to.latitude,
+      toLon: widget.to.longitude,
+    );
   }
 
   @override
   void dispose() {
+    context.read<OtpRoutesController>().clear();
     // mantemos anotações no mapa ao fechar
     super.dispose();
   }
@@ -395,6 +413,13 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                       ),
                     ),
 
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _TransitPreviewCard(),
+                    ),
+
+                    const SizedBox(height: 12),
+
                     // lista de modos
                     Expanded(
                       child: isCompact
@@ -627,6 +652,115 @@ class _ModeTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _TransitPreviewCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Consumer<OtpRoutesController>(
+      builder: (_, controller, __) {
+        if (controller.isLoading) {
+          return _TransitCardBase(
+            child: Row(
+              children: const [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('A calcular transporte público...'),
+              ],
+            ),
+          );
+        }
+
+        if (controller.error != null) {
+          return _TransitCardBase(
+            child: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.redAccent),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Erro ao obter rotas OTP: ${controller.error}',
+                    style: t.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (controller.itineraries.isEmpty) {
+          return _TransitCardBase(
+            child: Row(
+              children: const [
+                Icon(Icons.info_outline),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Sem itinerários disponíveis para este trajeto.',
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final itinerary = controller.itineraries.first;
+        final durationMin = (itinerary.duration / 60).round();
+        final summary = itinerary.legs
+            .map((leg) => leg.routeName ?? leg.mode)
+            .join(' · ');
+
+        return _TransitCardBase(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.directions_transit),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$durationMin min',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                summary,
+                style: t.textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TransitCardBase extends StatelessWidget {
+  final Widget child;
+  const _TransitCardBase({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: t.colorScheme.primaryContainer.withOpacity(0.35),
+      ),
+      child: child,
     );
   }
 }

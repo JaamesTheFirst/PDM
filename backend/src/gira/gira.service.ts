@@ -7,11 +7,15 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { existsSync } from 'fs';
 import { readFile, utils } from 'xlsx';
+import {
+  GiraStationRecordDto,
+  GiraStationsSliceDto,
+} from './dto';
 
 @Injectable()
 export class GiraService implements OnModuleInit {
   private readonly logger = new Logger(GiraService.name);
-  private stations: Record<string, any>[] = [];
+  private stations: GiraStationRecordDto[] = [];
 
   constructor(private readonly config: ConfigService) {}
 
@@ -40,7 +44,7 @@ export class GiraService implements OnModuleInit {
       throw new BadRequestException('GIRA workbook contains no sheets');
     }
     const worksheet = workbook.Sheets[firstSheetName];
-    const rows = utils.sheet_to_json<Record<string, any>>(worksheet, {
+    const rows = utils.sheet_to_json<GiraStationRecordDto>(worksheet, {
       defval: null,
     });
 
@@ -48,18 +52,18 @@ export class GiraService implements OnModuleInit {
     this.logger.log(`Loaded ${this.stations.length} GIRA station records`);
   }
 
-  getStations() {
+  getStations(): GiraStationRecordDto[] {
     return this.stations;
   }
 
-  getStationsSlice(limit = 100, offset = 0) {
+  getStationsSlice(limit = 100, offset = 0): GiraStationsSliceDto {
     const safeLimit = Math.min(Math.max(limit, 1), 1000);
     const safeOffset = Math.max(offset, 0);
     const slice = this.stations.slice(safeOffset, safeOffset + safeLimit);
     return { total: this.stations.length, slice };
   }
 
-  searchStations(field: string, value: string) {
+  searchStations(field: string, value: string): GiraStationRecordDto[] {
     if (!field || !value) {
       throw new BadRequestException(
         'Both "field" and "value" query parameters are required',
