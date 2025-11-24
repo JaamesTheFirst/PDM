@@ -31,7 +31,7 @@ export class AuthService {
         lastName: dto.lastName ?? null,
         preferences: {
           create: {
-            preferredTransportTypes: [],
+            preferredTransportModes: [],
             maxWalkingDistance: 500,
             avoidHighways: false,
             ecoFriendlyOnly: true,

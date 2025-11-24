@@ -1,0 +1,2773 @@
+1.
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/tempoEspera/Estacao/todos" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/tempoEspera/Estacao/todos
+Server response
+Code	Details
+200	
+Response body
+{
+  "resposta": [
+    {
+      "stop_id": "RM",
+      "cais": "AL4RMO",
+      "hora": "20251119011715",
+      "comboio": "7C",
+      "tempoChegada1": "--",
+      "comboio2": "2C",
+      "tempoChegada2": "--",
+      "comboio3": "4C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "IN",
+      "cais": "MM3INO",
+      "hora": "20251119011716",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "IN",
+      "cais": "MM4INO",
+      "hora": "20251119011714",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AR",
+      "cais": "MM3ARO",
+      "hora": "20251119011715",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "TE",
+      "cais": "TE5O",
+      "hora": "20251119011715",
+      "comboio": "7C",
+      "tempoChegada1": "--",
+      "comboio2": "2C",
+      "tempoChegada2": "--",
+      "comboio3": "4C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "CS",
+      "cais": "CS27O",
+      "hora": "20251119011636",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AR",
+      "cais": "MM4ARO",
+      "hora": "20251119011715",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AE",
+      "cais": "AL3AEO",
+      "hora": "20251119011715",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "CS",
+      "cais": "CS13O",
+      "hora": "20251119011716",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AN",
+      "cais": "MM4ANO",
+      "hora": "20251119011716",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AM",
+      "cais": "A18A1O",
+      "hora": "20251119011714",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "RM",
+      "cais": "AL5RMO",
+      "hora": "20251119011715",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AM",
+      "cais": "A13A1O",
+      "hora": "20251119011715",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "RO",
+      "cais": "B24ROO",
+      "hora": "20251119011715",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "MM",
+      "cais": "MM3O",
+      "hora": "20251119011716",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AL",
+      "cais": "AL3ALO",
+      "hora": "20251119011715",
+      "comboio": "7C",
+      "tempoChegada1": "--",
+      "comboio2": "2C",
+      "tempoChegada2": "--",
+      "comboio3": "4C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "TE",
+      "cais": "TE12O",
+      "hora": "20251119011715",
+      "comboio": "7C",
+      "tempoChegada1": "--",
+      "comboio2": "2C",
+      "tempoChegada2": "--",
+      "comboio3": "4C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "CG",
+      "cais": "G14O",
+      "hora": "20251119011716",
+      "comboio": "7C",
+      "tempoChegada1": "--",
+      "comboio2": "2C",
+      "tempoChegada2": "--",
+      "comboio3": "4C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "BC",
+      "cais": "B25O",
+      "hora": "20251119011714",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "BC",
+      "cais": "B24O",
+      "hora": "20251119011716",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AL",
+      "cais": "AL10ALO",
+      "hora": "20251119011714",
+      "comboio": "7C",
+      "tempoChegada1": "--",
+      "comboio2": "2C",
+      "tempoChegada2": "--",
+      "comboio3": "4C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "RO",
+      "cais": "MM3ROO",
+      "hora": "20251119011715",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "MM",
+      "cais": "MM4O",
+      "hora": "20251119011715",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AE",
+      "cais": "AL6AEO",
+      "hora": "20251119011716",
+      "comboio": "7C",
+      "tempoChegada1": "--",
+      "comboio2": "2C",
+      "tempoChegada2": "--",
+      "comboio3": "4C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "CS",
+      "cais": "CS6O",
+      "hora": "20251119011716",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "CG",
+      "cais": "G17O",
+      "hora": "20251119011715",
+      "comboio": "7C",
+      "tempoChegada1": "--",
+      "comboio2": "2C",
+      "tempoChegada2": "--",
+      "comboio3": "4C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "AX",
+      "cais": "LUC7AXO",
+      "hora": "20251119010619",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "PI",
+      "cais": "PI4O",
+      "hora": "20251119010730",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "45",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CG",
+      "cais": "G2C5O",
+      "hora": "20251119010620",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "LU",
+      "cais": "LUC3LUO",
+      "hora": "20251119010620",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "LU",
+      "cais": "LUC4LUO",
+      "hora": "20251119011418",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "MP",
+      "cais": "M28O",
+      "hora": "20251119010619",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "45",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SA",
+      "cais": "CU3SA1O",
+      "hora": "20251119010620",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "EC",
+      "cais": "CU5ECO",
+      "hora": "20251119010620",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "OD",
+      "cais": "ODC7ODO",
+      "hora": "20251119010619",
+      "comboio": "25B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CU",
+      "cais": "CU5O",
+      "hora": "20251119010619",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AX",
+      "cais": "LUC4AXO",
+      "hora": "20251119011419",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "QC",
+      "cais": "LUC3QMO",
+      "hora": "20251119010618",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CP",
+      "cais": "CU4CPO",
+      "hora": "20251119010940",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "45",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "EC",
+      "cais": "CU4ECO",
+      "hora": "20251119011100",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "MP",
+      "cais": "M23O",
+      "hora": "20251119010619",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SA",
+      "cais": "M24SA1O",
+      "hora": "20251119010839",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "45",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SR",
+      "cais": "SRC5SRO",
+      "hora": "20251119010619",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SR",
+      "cais": "SRC8SRO",
+      "hora": "20251119011418",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CU",
+      "cais": "CU6O",
+      "hora": "20251119011251",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "PI",
+      "cais": "PI5O",
+      "hora": "20251119010620",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "QC",
+      "cais": "LUC4QMO",
+      "hora": "20251119011419",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CP",
+      "cais": "CU3CPO",
+      "hora": "20251119010619",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "RA",
+      "cais": "RA12O",
+      "hora": "20251119010619",
+      "comboio": "25B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "MO",
+      "cais": "MO3MOO",
+      "hora": "20251119011334",
+      "comboio": "4D",
+      "tempoChegada1": "--",
+      "comboio2": "5D",
+      "tempoChegada2": "--",
+      "comboio3": "7D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AP",
+      "cais": "AP5APO",
+      "hora": "20251119011334",
+      "comboio": "7D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CH",
+      "cais": "CH3CHO",
+      "hora": "20251119011334",
+      "comboio": "4D",
+      "tempoChegada1": "--",
+      "comboio2": "5D",
+      "tempoChegada2": "--",
+      "comboio3": "7D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CR",
+      "cais": "CH3CRO",
+      "hora": "20251119011333",
+      "comboio": "4D",
+      "tempoChegada1": "--",
+      "comboio2": "5D",
+      "tempoChegada2": "--",
+      "comboio3": "7D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CR",
+      "cais": "MO4CRO",
+      "hora": "20251119011543",
+      "comboio": "2D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "EN",
+      "cais": "MO3ENO",
+      "hora": "20251119011334",
+      "comboio": "4D",
+      "tempoChegada1": "--",
+      "comboio2": "5D",
+      "tempoChegada2": "--",
+      "comboio3": "7D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SS",
+      "cais": "S27O",
+      "hora": "20251119011334",
+      "comboio": "5D",
+      "tempoChegada1": "--",
+      "comboio2": "7D",
+      "tempoChegada2": "--",
+      "comboio3": "4D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "OR",
+      "cais": "MO3ORO",
+      "hora": "20251119011334",
+      "comboio": "4D",
+      "tempoChegada1": "--",
+      "comboio2": "5D",
+      "tempoChegada2": "--",
+      "comboio3": "7D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AM",
+      "cais": "A29O",
+      "hora": "20251119011334",
+      "comboio": "5D",
+      "tempoChegada1": "--",
+      "comboio2": "7D",
+      "tempoChegada2": "--",
+      "comboio3": "4D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "OS",
+      "cais": "CH3OSO",
+      "hora": "20251119011333",
+      "comboio": "4D",
+      "tempoChegada1": "--",
+      "comboio2": "5D",
+      "tempoChegada2": "--",
+      "comboio3": "7D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "EN",
+      "cais": "AP4ENO",
+      "hora": "20251119011334",
+      "comboio": "7D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "OL",
+      "cais": "CH4OLO",
+      "hora": "20251119011543",
+      "comboio": "2D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "MO",
+      "cais": "MO6MOO",
+      "hora": "20251119011455",
+      "comboio": "2D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "BV",
+      "cais": "CH3BVO",
+      "hora": "20251119011334",
+      "comboio": "5D",
+      "tempoChegada1": "--",
+      "comboio2": "7D",
+      "tempoChegada2": "--",
+      "comboio3": "4D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SA",
+      "cais": "S23SA2O",
+      "hora": "20251119011334",
+      "comboio": "5D",
+      "tempoChegada1": "--",
+      "comboio2": "7D",
+      "tempoChegada2": "--",
+      "comboio3": "4D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AM",
+      "cais": "A26O",
+      "hora": "20251119011544",
+      "comboio": "2D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SA",
+      "cais": "A24SA2O",
+      "hora": "20251119011544",
+      "comboio": "5D",
+      "tempoChegada1": "--",
+      "comboio2": "2D",
+      "tempoChegada2": "--",
+      "comboio3": "4D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "BV",
+      "cais": "CH6BVO",
+      "hora": "20251119011544",
+      "comboio": "2D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "OR",
+      "cais": "MO4ORO",
+      "hora": "20251119011544",
+      "comboio": "2D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SS",
+      "cais": "S26O",
+      "hora": "20251119011545",
+      "comboio": "5D",
+      "tempoChegada1": "--",
+      "comboio2": "2D",
+      "tempoChegada2": "--",
+      "comboio3": "4D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AP",
+      "cais": "AP8APO",
+      "hora": "20251119011335",
+      "comboio": "7D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "OS",
+      "cais": "CH4OSO",
+      "hora": "20251119011544",
+      "comboio": "2D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "OL",
+      "cais": "A23OLO",
+      "hora": "20251119011335",
+      "comboio": "5D",
+      "tempoChegada1": "--",
+      "comboio2": "7D",
+      "tempoChegada2": "--",
+      "comboio3": "4D",
+      "tempoChegada3": "--",
+      "destino": "60",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CH",
+      "cais": "CH6CHO",
+      "hora": "20251119011545",
+      "comboio": "2D",
+      "tempoChegada1": "--",
+      "comboio2": "4D",
+      "tempoChegada2": "--",
+      "comboio3": "5D",
+      "tempoChegada3": "--",
+      "destino": "38",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "LA",
+      "cais": "LAC6LA",
+      "hora": "20251119010126",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CM",
+      "cais": "CMC9CM",
+      "hora": "20251119010055",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "PO",
+      "cais": "POC7PO",
+      "hora": "20251119005802",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "MP",
+      "cais": "M1C4MP1",
+      "hora": "20251119005400",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "BC",
+      "cais": "B1C6BC1",
+      "hora": "20251119004955",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CA",
+      "cais": "CAC3CA",
+      "hora": "20251119005926",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CA",
+      "cais": "CAC4CA",
+      "hora": "20251119010623",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AH",
+      "cais": "AHC3AH",
+      "hora": "20251119010225",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "LA",
+      "cais": "LAC5LA",
+      "hora": "20251119010351",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "PA",
+      "cais": "PAC3PA",
+      "hora": "20251119010935",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AF",
+      "cais": "AFC5AF",
+      "hora": "20251119005631",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "PA",
+      "cais": "PAC4PA",
+      "hora": "20251119005533",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "PE",
+      "cais": "PEC3PE",
+      "hora": "20251119010654",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "TP",
+      "cais": "TPC3TP",
+      "hora": "20251119011558",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AS",
+      "cais": "ASC8AS",
+      "hora": "20251119011112",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SS",
+      "cais": "S1C5SS1",
+      "hora": "20251119010817",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SS",
+      "cais": "S1C4SS1",
+      "hora": "20251119005645",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "JZ",
+      "cais": "JZC3JZ",
+      "hora": "20251119010521",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SP",
+      "cais": "SPC2SP",
+      "hora": "20240627150010",
+      "comboio": "003A",
+      "tempoChegada1": "--",
+      "comboio2": "011A",
+      "tempoChegada2": "--",
+      "comboio3": "006A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "RB",
+      "cais": "RBC7RB",
+      "hora": "20251119005230",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AV",
+      "cais": "AVC5AV",
+      "hora": "20251119011218",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AV",
+      "cais": "AVC4AV",
+      "hora": "20251119005237",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AF",
+      "cais": "AFC4AF",
+      "hora": "20251119010911",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "JZ",
+      "cais": "JZC4JZ",
+      "hora": "20251119005951",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "RB",
+      "cais": "RBC6RB",
+      "hora": "20251111064018",
+      "comboio": "006A",
+      "tempoChegada1": "--",
+      "comboio2": "007A",
+      "tempoChegada2": "--",
+      "comboio3": "008A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "TP",
+      "cais": "TPC10TP",
+      "hora": "20251119004807",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "RE",
+      "cais": "REC4RE",
+      "hora": "20251119005125",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "RE",
+      "cais": "REC3RE",
+      "hora": "20251119011317",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AH",
+      "cais": "AHC4AH",
+      "hora": "20251119010252",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "PO",
+      "cais": "POC4PO",
+      "hora": "20251119010747",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "MP",
+      "cais": "M1C5MP1",
+      "hora": "20251119011052",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "CM",
+      "cais": "CMC6CM",
+      "hora": "20251119010433",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "SP",
+      "cais": "SPC9SP",
+      "hora": "20251119010453",
+      "comboio": "014A",
+      "tempoChegada1": "--",
+      "comboio2": "007A",
+      "tempoChegada2": "--",
+      "comboio3": "010A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "PE",
+      "cais": "PEC6PE",
+      "hora": "20251119005820",
+      "comboio": "011A",
+      "tempoChegada1": "--",
+      "comboio2": "005A",
+      "tempoChegada2": "--",
+      "comboio3": "014A",
+      "tempoChegada3": "--",
+      "destino": "33",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "BC",
+      "cais": "B1C3BC1",
+      "hora": "20251119011435",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AS",
+      "cais": "ASC3AS",
+      "hora": "20251119005433",
+      "comboio": "009A",
+      "tempoChegada1": "--",
+      "comboio2": "010A",
+      "tempoChegada2": "--",
+      "comboio3": "004A",
+      "tempoChegada3": "--",
+      "destino": "42",
+      "sairServico": "0",
+      "UT": "1"
+    },
+    {
+      "stop_id": "AN",
+      "cais": "MM3ANO",
+      "hora": "20251119011715",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "CG",
+      "cais": "G2C8O",
+      "hora": "20251119011419",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0",
+      "UT": "1"
+    }
+  ],
+  "codigo": "200"
+}
+
+Response headers
+ content-length: 23495 
+ content-type: application/json; charset=UTF-8 
+
+
+
+2.
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoEstacao/IN" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoEstacao/IN
+Server response
+Code	Details
+200	
+Response body
+Download
+{
+  "resposta": [
+    {
+      "stop_id": "IN",
+      "stop_name": "Intendente",
+      "stop_lat": "38.7222",
+      "stop_lon": "-9.13531",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/intendente/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    }
+  ],
+  "codigo": "200"
+}
+Response headers
+ content-length: 212 
+ content-type: application/json; charset=UTF-8 
+(in this case "IN" is the ID for one of the stations, i just used it as an example)
+
+
+3.
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoEstacao/todos" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoEstacao/todos
+Server response
+Code	Details
+200	
+Response body
+{
+  "resposta": [
+    {
+      "stop_id": "AM",
+      "stop_name": "Alameda",
+      "stop_lat": "38.7373",
+      "stop_lon": "-9.13409",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/alameda-linha-verde/,https://www.metrolisboa.pt/viajar/alameda-linha-vermelha/]",
+      "linha": "[Verde, Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "AF",
+      "stop_name": "Alfornelos",
+      "stop_lat": "38.7606",
+      "stop_lon": "-9.20471",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/alfornelos/]",
+      "linha": "[Azul]",
+      "zone_id": "C"
+    },
+    {
+      "stop_id": "AH",
+      "stop_name": "Alto dos Moinhos",
+      "stop_lat": "38.7496",
+      "stop_lon": "-9.17995",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/alto-dos-moinhos/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "AL",
+      "stop_name": "Alvalade",
+      "stop_lat": "38.7535",
+      "stop_lon": "-9.14388",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/alvalade/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "AS",
+      "stop_name": "Amadora Este",
+      "stop_lat": "38.7584",
+      "stop_lon": "-9.21917",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/amadora-este/]",
+      "linha": "[Azul]",
+      "zone_id": "C"
+    },
+    {
+      "stop_id": "AX",
+      "stop_name": "Ameixoeira",
+      "stop_lat": "38.7799",
+      "stop_lon": "-9.15999",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/ameixoeira/]",
+      "linha": "[Amarela]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "AN",
+      "stop_name": "Anjos",
+      "stop_lat": "38.7266",
+      "stop_lon": "-9.13503",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/anjos/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "AE",
+      "stop_name": "Areeiro",
+      "stop_lat": "38.7426",
+      "stop_lon": "-9.13381",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/areeiro/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "AR",
+      "stop_name": "Arroios",
+      "stop_lat": "38.7335",
+      "stop_lon": "-9.13445",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/arroios/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "AV",
+      "stop_name": "Avenida",
+      "stop_lat": "38.7201",
+      "stop_lon": "-9.14582",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/avenida/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "BC",
+      "stop_name": "Baixa/Chiado",
+      "stop_lat": "38.7107",
+      "stop_lon": "-9.13909",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/baixa-chiado-linha-azul/,https://www.metrolisboa.pt/viajar/baixa-chiado-linha-verde/]",
+      "linha": "[Azul, Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "BV",
+      "stop_name": "Bela Vista",
+      "stop_lat": "38.7477",
+      "stop_lon": "-9.11855",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/bela-vista/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "CR",
+      "stop_name": "Cabo Ruivo",
+      "stop_lat": "38.7632",
+      "stop_lon": "-9.10409",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/cabo-ruivo/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "CS",
+      "stop_name": "Cais do Sodré",
+      "stop_lat": "38.7062",
+      "stop_lon": "-9.14503",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/cais-do-sodre/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "CG",
+      "stop_name": "Campo Grande",
+      "stop_lat": "38.7599",
+      "stop_lon": "-9.15794",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/campo-grande-linha-amarela/,https://www.metrolisboa.pt/viajar/campo-grande-linha-verde/]",
+      "linha": "[Amarela, Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "CP",
+      "stop_name": "Campo Pequeno",
+      "stop_lat": "38.7414",
+      "stop_lon": "-9.14703",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/campo-pequeno/]",
+      "linha": "[Amarela]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "CA",
+      "stop_name": "Carnide",
+      "stop_lat": "38.7593",
+      "stop_lon": "-9.19281",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/carnide/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "CH",
+      "stop_name": "Chelas",
+      "stop_lat": "38.7553",
+      "stop_lon": "-9.11414",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/chelas/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "CU",
+      "stop_name": "Cidade Universitária",
+      "stop_lat": "38.7519",
+      "stop_lon": "-9.15863",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/cidade-universitaria/]",
+      "linha": "[Amarela]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "CM",
+      "stop_name": "Colégio Militar/Luz",
+      "stop_lat": "38.7533",
+      "stop_lon": "-9.18866",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/colegio-militar-luz/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "EC",
+      "stop_name": "Entre Campos",
+      "stop_lat": "38.7479",
+      "stop_lon": "-9.14856",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/entre-campos/]",
+      "linha": "[Amarela]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "IN",
+      "stop_name": "Intendente",
+      "stop_lat": "38.7222",
+      "stop_lon": "-9.13531",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/intendente/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "JZ",
+      "stop_name": "Jardim Zoológico",
+      "stop_lat": "38.7422",
+      "stop_lon": "-9.16872",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/jardim-zoologico/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "LA",
+      "stop_name": "Laranjeiras",
+      "stop_lat": "38.7485",
+      "stop_lon": "-9.17243",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/laranjeiras/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "LU",
+      "stop_name": "Lumiar",
+      "stop_lat": "38.7728",
+      "stop_lon": "-9.1597",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/lumiar/]",
+      "linha": "[Amarela]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "MP",
+      "stop_name": "Marquês de Pombal",
+      "stop_lat": "38.7249",
+      "stop_lon": "-9.15081",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/marques-de-pombal-linha-amarela/,https://www.metrolisboa.pt/viajar/marques-de-pombal-linha-azul/]",
+      "linha": "[Amarela, Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "MM",
+      "stop_name": "Martim Moniz",
+      "stop_lat": "38.7168",
+      "stop_lon": "-9.13575",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/martim-moniz/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "OD",
+      "stop_name": "Odivelas",
+      "stop_lat": "38.7932",
+      "stop_lon": "-9.17322",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/odivelas/]",
+      "linha": "[Amarela]",
+      "zone_id": "C"
+    },
+    {
+      "stop_id": "OL",
+      "stop_name": "Olaias",
+      "stop_lat": "38.7392",
+      "stop_lon": "-9.12366",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/olaias/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "OS",
+      "stop_name": "Olivais",
+      "stop_lat": "38.7613",
+      "stop_lon": "-9.11204",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/olivais/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "OR",
+      "stop_name": "Oriente",
+      "stop_lat": "38.7678",
+      "stop_lon": "-9.09977",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/oriente/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "PA",
+      "stop_name": "Parque",
+      "stop_lat": "38.7297",
+      "stop_lon": "-9.15028",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/parque/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "PI",
+      "stop_name": "Picoas",
+      "stop_lat": "38.7306",
+      "stop_lon": "-9.1465",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/picoas/]",
+      "linha": "[Amarela]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "PO",
+      "stop_name": "Pontinha",
+      "stop_lat": "38.7624",
+      "stop_lon": "-9.19693",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/pontinha/]",
+      "linha": "[Azul]",
+      "zone_id": "C"
+    },
+    {
+      "stop_id": "PE",
+      "stop_name": "Praça de Espanha",
+      "stop_lat": "38.7377",
+      "stop_lon": "-9.15845",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/praca-de-espanha/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "QC",
+      "stop_name": "Quinta das Conchas",
+      "stop_lat": "38.7671",
+      "stop_lon": "-9.15546",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/quinta-das-conchas/]",
+      "linha": "[Amarela]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "RA",
+      "stop_name": "Rato",
+      "stop_lat": "38.7201",
+      "stop_lon": "-9.15411",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/rato/]",
+      "linha": "[Amarela]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "RE",
+      "stop_name": "Restauradores",
+      "stop_lat": "38.7151",
+      "stop_lon": "-9.14162",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/restauradores/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "RM",
+      "stop_name": "Roma",
+      "stop_lat": "38.7485",
+      "stop_lon": "-9.14135",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/roma/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "RO",
+      "stop_name": "Rossio",
+      "stop_lat": "38.7138",
+      "stop_lon": "-9.13896",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/rossio/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "SA",
+      "stop_name": "Saldanha",
+      "stop_lat": "38.7353",
+      "stop_lon": "-9.14558",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/saldanha-linha-amarela/,https://www.metrolisboa.pt/viajar/saldanha-linha-vermelha/]",
+      "linha": "[Amarela, Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "SP",
+      "stop_name": "Santa Apolónia",
+      "stop_lat": "38.7138",
+      "stop_lon": "-9.12256",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/santa-apolonia/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "SS",
+      "stop_name": "São Sebastião",
+      "stop_lat": "38.7348",
+      "stop_lon": "-9.15423",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/sao-sebastiao-linha-azul/,https://www.metrolisboa.pt/viajar/sao-sebastiao-linha-vermelha/]",
+      "linha": "[Azul, Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "SR",
+      "stop_name": "Senhor Roubado",
+      "stop_lat": "38.7858",
+      "stop_lon": "-9.17215",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/senhor-roubado/]",
+      "linha": "[Amarela]",
+      "zone_id": "C"
+    },
+    {
+      "stop_id": "TE",
+      "stop_name": "Telheiras",
+      "stop_lat": "38.7604",
+      "stop_lon": "-9.16606",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/telheiras/]",
+      "linha": "[Verde]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "TP",
+      "stop_name": "Terreiro do Paço",
+      "stop_lat": "38.7072",
+      "stop_lon": "-9.13335",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/terreiro-do-paco/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "MO",
+      "stop_name": "Moscavide",
+      "stop_lat": "38.7748",
+      "stop_lon": "-9.10266",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/moscavide/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "EN",
+      "stop_name": "Encarnação",
+      "stop_lat": "38.775",
+      "stop_lon": "-9.11498",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/encarnacao/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "AP",
+      "stop_name": "Aeroporto",
+      "stop_lat": "38.7686",
+      "stop_lon": "-9.12833",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/aeroporto/]",
+      "linha": "[Vermelha]",
+      "zone_id": "L"
+    },
+    {
+      "stop_id": "RB",
+      "stop_name": "Reboleira",
+      "stop_lat": "38.7522",
+      "stop_lon": "-9.22414",
+      "stop_url": "[https://www.metrolisboa.pt/viajar/reboleira/]",
+      "linha": "[Azul]",
+      "zone_id": "L"
+    }
+  ],
+  "codigo": "200"
+}
+Response headers
+ content-length: 9777 
+ content-type: application/json; charset=UTF-8 
+
+
+4. 
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/estadoLinha/todos" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/estadoLinha/todos
+Server response
+Code	Details
+200	
+Response body
+Download
+{
+  "resposta": {
+    "amarela": " Ok",
+    "azul": " Ok",
+    "verde": " Ok",
+    "vermelha": " Ok",
+    "tipo_msg_am": "0",
+    "tipo_msg_az": "0",
+    "tipo_msg_vd": "0",
+    "tipo_msg_vm": "0",
+    "amarela_curta": "normal",
+    "azul_curta": "normal",
+    "verde_curta": "normal",
+    "vermelha_curta": "normal"
+  },
+  "codigo": "200"
+}
+Response headers
+ content-length: 257 
+ content-type: application/json; charset=UTF-8 
+
+
+5.
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/estadoLinha/amarela" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/estadoLinha/amarela
+Server response
+Code	Details
+200	
+Response body
+Download
+{
+  "resposta": {
+    "amarela": " Ok",
+    "tipo_msg_am": "0",
+    "amarela_curta": "normal"
+  },
+  "codigo": "200"
+}
+Response headers
+ content-length: 88 
+ content-type: application/json; charset=UTF-8 
+(in this case i used "amarela" as an example)
+
+6.
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/tempoEspera/Linha/amarela" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/tempoEspera/Linha/amarela
+Server response
+Code	Details
+200	
+Response body
+{
+  "resposta": [
+    {
+      "stop_id": "OD",
+      "cais": "ODC7ODO",
+      "hora": "20251119010619",
+      "comboio": "25B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "RA",
+      "cais": "RA12O",
+      "hora": "20251119010619",
+      "comboio": "25B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "MP",
+      "cais": "M28O",
+      "hora": "20251119010619",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "45",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "SR",
+      "cais": "SRC5SRO",
+      "hora": "20251119010619",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "AX",
+      "cais": "LUC7AXO",
+      "hora": "20251119010619",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "PI",
+      "cais": "PI4O",
+      "hora": "20251119010730",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "45",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "LU",
+      "cais": "LUC3LUO",
+      "hora": "20251119010620",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "SA",
+      "cais": "M24SA1O",
+      "hora": "20251119010839",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "45",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "CP",
+      "cais": "CU4CPO",
+      "hora": "20251119010940",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "45",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "QC",
+      "cais": "LUC3QMO",
+      "hora": "20251119010618",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "EC",
+      "cais": "CU4ECO",
+      "hora": "20251119011100",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "CG",
+      "cais": "G2C5O",
+      "hora": "20251119010620",
+      "comboio": "32B",
+      "tempoChegada1": "--",
+      "comboio2": "25B",
+      "tempoChegada2": "--",
+      "comboio3": "29B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "CU",
+      "cais": "CU5O",
+      "hora": "20251119010619",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "CU",
+      "cais": "CU6O",
+      "hora": "20251119011251",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "CG",
+      "cais": "G2C8O",
+      "hora": "20251119011419",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "EC",
+      "cais": "CU5ECO",
+      "hora": "20251119010620",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "CP",
+      "cais": "CU3CPO",
+      "hora": "20251119010619",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "QC",
+      "cais": "LUC4QMO",
+      "hora": "20251119011419",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "LU",
+      "cais": "LUC4LUO",
+      "hora": "20251119011418",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "SA",
+      "cais": "CU3SA1O",
+      "hora": "20251119010620",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "PI",
+      "cais": "PI5O",
+      "hora": "20251119010620",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "AX",
+      "cais": "LUC4AXO",
+      "hora": "20251119011419",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "MP",
+      "cais": "M23O",
+      "hora": "20251119010619",
+      "comboio": "29B",
+      "tempoChegada1": "--",
+      "comboio2": "32B",
+      "tempoChegada2": "--",
+      "comboio3": "25B",
+      "tempoChegada3": "--",
+      "destino": "48",
+      "sairServico": "0"
+    },
+    {
+      "stop_id": "SR",
+      "cais": "SRC8SRO",
+      "hora": "20251119011418",
+      "comboio": "31B",
+      "tempoChegada1": "--",
+      "comboio2": "29B",
+      "tempoChegada2": "--",
+      "comboio3": "32B",
+      "tempoChegada3": "--",
+      "destino": "43",
+      "sairServico": "0"
+    }
+  ],
+  "codigo": "200"
+}
+Response headers
+ content-length: 4897 
+ content-type: application/json; charset=UTF-8 
+(as you can see, the waiting times are not available rn, but we can work that out later)
+
+
+7. 
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/tempoEspera/Estacao/IN" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/tempoEspera/Estacao/IN
+Server response
+Code	Details
+200	
+Response body
+{
+  "resposta": [
+    {
+      "stop_id": "IN",
+      "cais": "MM3INO",
+      "hora": "20251119011716",
+      "comboio": "2C",
+      "tempoChegada1": "--",
+      "comboio2": "4C",
+      "tempoChegada2": "--",
+      "comboio3": "7C",
+      "tempoChegada3": "--",
+      "destino": "50",
+      "sairServico": "0",
+      "UT": "2"
+    },
+    {
+      "stop_id": "IN",
+      "cais": "MM4INO",
+      "hora": "20251119011714",
+      "comboio": "4C",
+      "tempoChegada1": "--",
+      "comboio2": "7C",
+      "tempoChegada2": "--",
+      "comboio3": "2C",
+      "tempoChegada3": "--",
+      "destino": "54",
+      "sairServico": "0",
+      "UT": "2"
+    }
+  ],
+  "codigo": "200"
+}
+Response headers
+ content-length: 447 
+ content-type: application/json; charset=UTF-8 
+(again, unavailable rn. also i used "IN" as example station ID again)
+
+8.
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoDestinos/todos" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoDestinos/todos
+Server response
+Code	Details
+200	
+Response body
+{
+  "resposta": [
+    {
+      "id_destino": "33",
+      "nome_destino": "Reboleira"
+    },
+    {
+      "id_destino": "34",
+      "nome_destino": "Amadora Este"
+    },
+    {
+      "id_destino": "35",
+      "nome_destino": "Pontinha"
+    },
+    {
+      "id_destino": "36",
+      "nome_destino": "Colégio Militar/Luz"
+    },
+    {
+      "id_destino": "37",
+      "nome_destino": "Laranjeiras"
+    },
+    {
+      "id_destino": "38",
+      "nome_destino": "São Sebastião"
+    },
+    {
+      "id_destino": "39",
+      "nome_destino": "Avenida"
+    },
+    {
+      "id_destino": "40",
+      "nome_destino": "Baixa-Chiado"
+    },
+    {
+      "id_destino": "41",
+      "nome_destino": "Terreiro do Paço"
+    },
+    {
+      "id_destino": "42",
+      "nome_destino": "Santa Apolónia"
+    },
+    {
+      "id_destino": "43",
+      "nome_destino": "Odivelas"
+    },
+    {
+      "id_destino": "44",
+      "nome_destino": "Lumiar"
+    },
+    {
+      "id_destino": "45",
+      "nome_destino": "Campo Grande"
+    },
+    {
+      "id_destino": "46",
+      "nome_destino": "Campo Pequeno"
+    },
+    {
+      "id_destino": "48",
+      "nome_destino": "Rato"
+    },
+    {
+      "id_destino": "50",
+      "nome_destino": "Telheiras"
+    },
+    {
+      "id_destino": "51",
+      "nome_destino": "Alvalade"
+    },
+    {
+      "id_destino": "52",
+      "nome_destino": "Alameda"
+    },
+    {
+      "id_destino": "53",
+      "nome_destino": "Martim Moniz"
+    },
+    {
+      "id_destino": "54",
+      "nome_destino": "Cais do Sodré"
+    },
+    {
+      "id_destino": "56",
+      "nome_destino": "Bela Vista"
+    },
+    {
+      "id_destino": "57",
+      "nome_destino": "Chelas"
+    },
+    {
+      "id_destino": "59",
+      "nome_destino": "Moscavide"
+    },
+    {
+      "id_destino": "60",
+      "nome_destino": "Aeroporto"
+    }
+  ],
+  "codigo": "200"
+}
+Response headers
+ content-length: 1195 
+ content-type: application/json; charset=UTF-8 
+
+
+9.
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoIntervalos/azul/S/111111" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoIntervalos/azul/S/111111
+Server response
+Code	Details
+200	
+Response body
+Download
+{
+  "resposta": {
+    "Linha": "Azul",
+    "HoraInicio": "10:00:00",
+    "HoraFim": "16:44:59",
+    "Intervalo": "06:40:00",
+    "UT": 2
+  },
+  "codigo": "200"
+}
+Response headers
+ content-length: 119 
+ content-type: application/json; charset=UTF-8 
+(here as ex, i used "azul", "S", "111111")
+
+
+10.
+Curl
+curl -k -X GET "https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoIntervalos/azul/S" -H "accept: application/json" -H "Authorization: Bearer 5ef660f8-24cb-398f-aa4c-f9f5f6755e5c"
+Request URL
+https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1/infoIntervalos/azul/S
+Server response
+Code	Details
+200	
+Response body
+{
+  "resposta": [
+    {
+      "Linha": "Azul",
+      "HoraInicio": "06:30:00",
+      "HoraFim": "06:59:59",
+      "Intervalo": "07:00:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "07:00:00",
+      "HoraFim": "07:29:59",
+      "Intervalo": "05:50:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "07:30:00",
+      "HoraFim": "09:29:59",
+      "Intervalo": "04:35:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "09:30:00",
+      "HoraFim": "09:59:59",
+      "Intervalo": "04:55:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "10:00:00",
+      "HoraFim": "16:44:59",
+      "Intervalo": "06:40:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "16:45:00",
+      "HoraFim": "18:59:59",
+      "Intervalo": "04:55:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "19:00:00",
+      "HoraFim": "19:59:59",
+      "Intervalo": "05:50:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "20:00:00",
+      "HoraFim": "20:29:59",
+      "Intervalo": "06:40:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "20:30:00",
+      "HoraFim": "20:59:59",
+      "Intervalo": "07:20:00",
+      "UT": 2,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "21:00:00",
+      "HoraFim": "21:29:59",
+      "Intervalo": "08:05:00",
+      "UT": 1,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "21:30:00",
+      "HoraFim": "22:29:59",
+      "Intervalo": "08:05:00",
+      "UT": 1,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "22:30:00",
+      "HoraFim": "23:59:59",
+      "Intervalo": "09:10:00",
+      "UT": 1,
+      "Dia": "s"
+    },
+    {
+      "Linha": "Azul",
+      "HoraInicio": "00:00:00",
+      "HoraFim": "01:05:00",
+      "Intervalo": "09:10:00",
+      "UT": 1,
+      "Dia": "s"
+    }
+  ],
+  "codigo": "200"
+}
+Response headers
+ content-length: 1355 
+(here i used as ex "azul", "S")
+
+
+
