@@ -75,3 +75,46 @@ GET http://localhost:3002/cp/vehicles
 
 Once these calls succeed, the local environment matches the team setup. Share this doc with anyone onboarding so they can reproduce the data requirements without digging through old messages.***
 
+---
+
+### 8. OpenTripPlanner (OTP) routing service
+
+We run OTP in Docker so everyone can generate multimodal itineraries locally.
+
+1. **Create folders**
+   ```
+   cd ~/PDM
+   mkdir -p EXTERNALS/otp/build
+   ```
+2. **Download data into `EXTERNALS/otp/build/`**
+   ```
+   cd ~/PDM/EXTERNALS/otp/build
+   curl -L https://api.carrismetropolitana.pt/gtfs -o carris.gtfs.zip
+   curl -L https://download.geofabrik.de/europe/portugal-latest.osm.pbf -o portugal.osm.pbf
+   ```
+   (Add more GTFS feeds later by dropping additional `*gtfs*.zip` files here.)
+3. **Build the OTP graph**
+   ```
+   cd ~/PDM
+   docker run --rm \
+     -e JAVA_TOOL_OPTIONS='-Xmx8g' \
+     -v "$PWD/EXTERNALS/otp/build:/var/opentripplanner" \
+     docker.io/opentripplanner/opentripplanner:latest \
+     --build --save
+   ```
+   This produces `EXTERNALS/otp/build/graph.obj`.
+4. **Serve OTP**
+   ```
+   docker run -it --rm -p 8080:8080 \
+     -e JAVA_TOOL_OPTIONS='-Xmx8g' \
+     -v "$PWD/EXTERNALS/otp/build:/var/opentripplanner" \
+     docker.io/opentripplanner/opentripplanner:latest \
+     --load --serve
+   ```
+   OTP now listens on `http://localhost:8080`. Use the built-in debug UI (`http://localhost:8080/`) or the GraphQL endpoint at `http://localhost:8080/otp/routers/default/index/graphql`.
+5. **Backend integration**
+   - Add `OTP_BASE_URL=http://localhost:8080/otp` (or similar) to your `.env`.
+   - The Nest backend will proxy OTP queries so the frontend doesn’t call it directly.
+
+Re-run steps 2–4 whenever GTFS/OSM data changes. Keep these large files in `EXTERNALS/` so they stay out of Git.
+

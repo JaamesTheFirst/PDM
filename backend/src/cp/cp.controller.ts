@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CpService } from './cp.service';
+import { CpVehicleDto } from './dto';
 
 @Controller('cp')
 export class CpController {
@@ -17,12 +18,14 @@ export class CpController {
   getVehicles(
     @Query('refresh', new DefaultValuePipe(false), ParseBoolPipe)
     refresh: boolean,
-  ): Promise<any> {
+  ): Promise<CpVehicleDto[]> {
     return this.cpService.getVehicles(refresh);
   }
 
   @Get('vehicles/:trainNumber')
-  async getVehicle(@Param('trainNumber') trainNumber: string) {
+  async getVehicle(
+    @Param('trainNumber') trainNumber: string,
+  ): Promise<CpVehicleDto> {
     const vehicle = await this.cpService.getVehicle(trainNumber);
     if (!vehicle) {
       throw new NotFoundException(

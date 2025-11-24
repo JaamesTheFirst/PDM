@@ -3,6 +3,13 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { MetroTokenService } from './metro-token.service';
+import {
+  MetroDestinationDto,
+  MetroIntervalDto,
+  MetroLineStatusSummaryDto,
+  MetroStationInfoDto,
+  MetroWaitingTimeDto,
+} from './dto';
 
 interface MetroApiResponse<T> {
   resposta: T;
@@ -44,47 +51,57 @@ export class MetroService {
     }
   }
 
-  getAllStationWaitingTimes() {
-    return this.callMetroApi('/tempoEspera/Estacao/todos');
+  getAllStationWaitingTimes(): Promise<MetroWaitingTimeDto[]> {
+    return this.callMetroApi<MetroWaitingTimeDto[]>(
+      '/tempoEspera/Estacao/todos',
+    );
   }
 
-  getStationWaitingTimes(stationId: string) {
-    return this.callMetroApi(`/tempoEspera/Estacao/${stationId}`);
+  getStationWaitingTimes(stationId: string): Promise<MetroWaitingTimeDto[]> {
+    return this.callMetroApi<MetroWaitingTimeDto[]>(
+      `/tempoEspera/Estacao/${stationId}`,
+    );
   }
 
-  getLineWaitingTimes(lineId: string) {
-    return this.callMetroApi(`/tempoEspera/Linha/${lineId}`);
+  getLineWaitingTimes(lineId: string): Promise<MetroWaitingTimeDto[]> {
+    return this.callMetroApi<MetroWaitingTimeDto[]>(
+      `/tempoEspera/Linha/${lineId}`,
+    );
   }
 
-  getStationInfo(stationId: string) {
-    return this.callMetroApi(`/infoEstacao/${stationId}`);
+  getStationInfo(stationId: string): Promise<MetroStationInfoDto[]> {
+    return this.callMetroApi<MetroStationInfoDto[]>(
+      `/infoEstacao/${stationId}`,
+    );
   }
 
-  getAllStationsInfo() {
-    return this.callMetroApi('/infoEstacao/todos');
+  getAllStationsInfo(): Promise<MetroStationInfoDto[]> {
+    return this.callMetroApi<MetroStationInfoDto[]>('/infoEstacao/todos');
   }
 
-  getAllLineStatus() {
-    return this.callMetroApi('/estadoLinha/todos');
+  getAllLineStatus(): Promise<MetroLineStatusSummaryDto> {
+    return this.callMetroApi<MetroLineStatusSummaryDto>('/estadoLinha/todos');
   }
 
-  getLineStatus(lineId: string) {
-    return this.callMetroApi(`/estadoLinha/${lineId}`);
+  getLineStatus(lineId: string): Promise<Partial<MetroLineStatusSummaryDto>> {
+    return this.callMetroApi<Partial<MetroLineStatusSummaryDto>>(
+      `/estadoLinha/${lineId}`,
+    );
   }
 
-  getDestinations() {
-    return this.callMetroApi('/infoDestinos/todos');
+  getDestinations(): Promise<MetroDestinationDto[]> {
+    return this.callMetroApi<MetroDestinationDto[]>('/infoDestinos/todos');
   }
 
   getIntervalsByLine(
     lineId: string,
     directionCode: string,
     serviceCode?: string,
-  ) {
+  ): Promise<MetroIntervalDto | MetroIntervalDto[]> {
     const suffix = serviceCode
       ? `/${serviceCode}`
       : '';
-    return this.callMetroApi(
+    return this.callMetroApi<MetroIntervalDto | MetroIntervalDto[]>(
       `/infoIntervalos/${lineId}/${directionCode}${suffix}`,
     );
   }

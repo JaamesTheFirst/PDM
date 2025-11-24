@@ -7,6 +7,8 @@ import 'features/auth/state/auth_controller.dart';
 import 'app/state/theme_controller.dart';
 import 'app/app_shell.dart';
 import 'mapbox_config.dart';
+import 'features/map/state/otp_routes_controller.dart';
+import 'services/routes_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +21,9 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthController()),
         ChangeNotifierProvider(create: (_) => ThemeController()),
+        ChangeNotifierProvider(
+          create: (_) => OtpRoutesController(RoutesService()),
+        ),
       ],
       child: const EcoApp(),
     ),
