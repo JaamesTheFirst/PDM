@@ -6,6 +6,9 @@ import { UsersModule } from './users/users.module';
 import { RoutesModule } from './routes/routes.module';
 import { StationsModule } from './stations/stations.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
+import { MetroModule } from './metro/metro.module';
+import { GiraModule } from './gira/gira.module';
+import { CpModule } from './cp/cp.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -19,6 +22,9 @@ import { HealthController } from './health/health.controller';
     RoutesModule,
     StationsModule,
     VehiclesModule,
+    MetroModule,
+    GiraModule,
+    CpModule,
   ],
   controllers: [HealthController],
 })
