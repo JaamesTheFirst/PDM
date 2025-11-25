@@ -10,6 +10,7 @@ import { MetroModule } from './metro/metro.module';
 import { GiraModule } from './gira/gira.module';
 import { CpModule } from './cp/cp.module';
 import { HealthController } from './health/health.controller';
+import { GbfsModule } from './gbfs/gbfs.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { HealthController } from './health/health.controller';
     MetroModule,
     GiraModule,
     CpModule,
+    GbfsModule,
   ],
   controllers: [HealthController],
 })
