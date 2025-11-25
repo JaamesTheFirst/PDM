@@ -445,3 +445,21 @@ model EmissionFactor {
 
   @@map("emission_factors")
 }
+
+//
+// Sistemas GBFS (dados vindos do systems_PT.csv)
+//
+
+model GbfsSystem {
+  id                    Int    @id @default(autoincrement())
+  countryCode           String
+  name                  String
+  location              String?
+  systemId              String @unique
+  url                   String?
+  autoDiscoveryUrl      String?
+  supportedVersions     String?
+  authenticationInfoUrl String?
+
+  @@map("gbfs_systems")
+}
