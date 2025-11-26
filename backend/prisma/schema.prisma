@@ -463,3 +463,25 @@ model GbfsSystem {
 
   @@map("gbfs_systems")
 }
+
+model GiraStation {
+  id          Int      @id @default(autoincrement())
+
+  // Id da estação no ficheiro original (podes adaptar aos nomes reais das colunas)
+  externalId  String?  // ex: "ID", "Station ID", etc.
+  name        String?
+  address     String?
+  parish      String?  // freguesia / zona, se tiveres
+  latitude    Float?
+  longitude   Float?
+  capacity    Int?     // número total de docks / bikes
+  // podes ir afinando estes campos conforme as colunas reais do Excel
+
+  // Guarda o registo bruto para não perder nada
+  raw         Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("gira_stations")
+}

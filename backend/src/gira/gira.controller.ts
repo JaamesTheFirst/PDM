@@ -1,11 +1,11 @@
 import {
-  Controller,
-  Get,
-  Query,
-  Post,
   Body,
-  ParseIntPipe,
+  Controller,
   DefaultValuePipe,
+  Get,
+  ParseIntPipe,
+  Post,
+  Query,
 } from '@nestjs/common';
 import { GiraService } from './gira.service';
 
@@ -14,11 +14,15 @@ export class GiraController {
   constructor(private readonly giraService: GiraService) {}
 
   @Get('stations')
-  getStations(
+  async getStations(
     @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
   ) {
-    const { total, slice } = this.giraService.getStationsSlice(limit, offset);
+    const { total, slice } = await this.giraService.getStationsSlice(
+      limit,
+      offset,
+    );
+
     return {
       total,
       limit,
@@ -28,11 +32,14 @@ export class GiraController {
   }
 
   @Get('stations/search')
-  searchStations(@Query('field') field: string, @Query('value') value: string) {
-    const results = this.giraService.searchStations(field, value);
+  async searchStations(
+    @Query('field') field: string,
+    @Query('value') value: string,
+  ) {
+    const records = await this.giraService.searchStations(field, value);
     return {
-      count: results.length,
-      records: results,
+      count: records.length,
+      records,
     };
   }
 
@@ -42,4 +49,3 @@ export class GiraController {
     return { message: 'GIRA station data reloaded successfully' };
   }
 }
-
