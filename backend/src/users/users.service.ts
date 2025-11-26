@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersPreferencesService } from './preferences/users-preferences.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
@@ -7,7 +8,7 @@ import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private usersPreferencesService: UsersPreferencesService) {}
 
   async create(data: CreateUserDto) {
     // valida unicidade do email
@@ -108,42 +109,10 @@ export class UsersService {
   }
 
   async updatePreferences(userId: string, prefs: UpdatePreferencesDto) {
-    // Map DTO to Prisma-friendly shape (TransportMode[] requires { set: [...] })
-    const updateData: any = {};
-    if (prefs.preferredTransportModes !== undefined) {
-      updateData.preferredTransportModes = { set: prefs.preferredTransportModes };
-    }
-    if (prefs.maxWalkingDistance !== undefined) {
-      updateData.maxWalkingDistance = prefs.maxWalkingDistance;
-    }
-    if (prefs.avoidHighways !== undefined) {
-      updateData.avoidHighways = prefs.avoidHighways;
-    }
-    if (prefs.ecoFriendlyOnly !== undefined) {
-      updateData.ecoFriendlyOnly = prefs.ecoFriendlyOnly;
-    }
-
-    try {
-      const res = await this.prisma.userPreferences.upsert({
-        where: { userId },
-        update: updateData,
-        create: {
-          user: { connect: { id: userId } },
-          ...updateData,
-        },
-      });
-      return res;
-    } catch (err) {
-      // Log full error for debugging
-      console.error('ERROR users.updatePreferences', err);
-      // Re-throw a clearer error to the client in dev
-      throw new InternalServerErrorException(err?.message || 'Failed to update preferences');
-    }
+    return this.usersPreferencesService.updatePreferences(userId, prefs);
   }
 
   async getPreferences(userId: string) {
-    return this.prisma.userPreferences.findUnique({
-      where: { userId },
-    });
+    return this.usersPreferencesService.getPreferences(userId);
   }
 }
