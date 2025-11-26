@@ -90,7 +90,9 @@ We run OTP in Docker so everyone can generate multimodal itineraries locally.
    ```
    cd ~/PDM/EXTERNALS/otp/build
    curl -L https://api.carrismetropolitana.pt/gtfs -o carris.gtfs.zip
+   curl -L https://publico.cp.pt/gtfs/gtfs.zip -o cp.gtfs.zip
    curl -L https://download.geofabrik.de/europe/portugal-latest.osm.pbf -o portugal.osm.pbf
+
    ```
    (Add more GTFS feeds later by dropping additional `*gtfs*.zip` files here.)
 3. **Build the OTP graph**
