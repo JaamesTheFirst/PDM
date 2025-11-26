@@ -1,12 +1,214 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+// src/cp/cp.service.ts
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  NotFoundException,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
-import { CpVehicleDto, CpVehiclesApiResponse } from './dto';
+import {
+  CpVehicleDto,
+  CpVehiclesApiResponse,
+  CpGraphRouteDto,
+  CpGraphRouteDetailDto,
+  CpStopBasicDto,
+  CpStopSearchResultDto,
+  CpStopDeparturesDto,
+  CpDepartureDto,
+  CpStopBoardDto,
+  CpStopBoardRowDto,
+} from './dto';
+
+interface GtfsGraphQlError {
+  message: string;
+}
+
+interface GtfsRoutesResponse {
+  data?: {
+    routes: Array<{
+      gtfsId: string;
+      shortName?: string | null;
+      longName?: string | null;
+      mode: string;
+      agency?: {
+        gtfsId?: string | null;
+        name?: string | null;
+      } | null;
+    }>;
+  };
+  errors?: GtfsGraphQlError[];
+}
+
+interface GtfsRouteDetailResponse {
+  data?: {
+    route: {
+      gtfsId: string;
+      shortName?: string | null;
+      longName?: string | null;
+      mode: string;
+      agency?: {
+        gtfsId?: string | null;
+        name?: string | null;
+      } | null;
+      patterns: Array<{
+        stops: Array<{
+          gtfsId: string;
+          name: string;
+          lat?: number;
+          lon?: number;
+        }>;
+      }>;
+    } | null;
+  };
+  errors?: GtfsGraphQlError[];
+}
+
+interface GtfsStopsSearchResponse {
+  data?: {
+    stops: Array<{
+      gtfsId: string;
+      name: string;
+      lat?: number;
+      lon?: number;
+    }>;
+  };
+  errors?: GtfsGraphQlError[];
+}
+
+interface GtfsStopDeparturesResponse {
+  data?: {
+    stop: {
+      gtfsId: string;
+      name: string;
+      lat?: number;
+      lon?: number;
+      stoptimesForPatterns: Array<{
+        pattern: {
+          headsign?: string | null;
+          route?: {
+            gtfsId: string;
+            shortName?: string | null;
+            longName?: string | null;
+            mode: string;
+            agency?: {
+              gtfsId?: string | null;
+              name?: string | null;
+            } | null;
+          } | null;
+        } | null;
+        stoptimes: Array<{
+          scheduledDeparture: number;
+          realtimeDeparture: number;
+          realtime: boolean;
+          serviceDay: number;
+          headsign?: string | null;
+        }>;
+      }>;
+    } | null;
+  };
+  errors?: GtfsGraphQlError[];
+}
+
+// ===== GraphQL queries (OTP/GTFS) =====
+
+const ROUTES_QUERY = `
+  query Routes {
+    routes {
+      gtfsId
+      shortName
+      longName
+      mode
+      agency {
+        gtfsId
+        name
+      }
+    }
+  }
+`;
+
+const ROUTE_DETAIL_QUERY = `
+  query RouteDetail($id: String!) {
+    route(id: $id) {
+      gtfsId
+      shortName
+      longName
+      mode
+      agency {
+        gtfsId
+        name
+      }
+      patterns {
+        stops {
+          gtfsId
+          name
+          lat
+          lon
+        }
+      }
+    }
+  }
+`;
+
+const STOPS_SEARCH_QUERY = `
+  query StopsSearch($name: String!) {
+    stops(name: $name) {
+      gtfsId
+      name
+      lat
+      lon
+    }
+  }
+`;
+
+const STOP_DEPARTURES_QUERY = `
+  query StopDepartures(
+    $stopId: String!,
+    $startTime: Long!,
+    $timeRange: Int!,
+    $numberOfDepartures: Int!
+  ) {
+    stop(id: $stopId) {
+      gtfsId
+      name
+      lat
+      lon
+      stoptimesForPatterns(
+        startTime: $startTime,
+        timeRange: $timeRange,
+        numberOfDepartures: $numberOfDepartures
+      ) {
+        pattern {
+          headsign
+          route {
+            gtfsId
+            shortName
+            longName
+            mode
+            agency {
+              gtfsId
+              name
+            }
+          }
+        }
+        stoptimes {
+          scheduledDeparture
+          realtimeDeparture
+          realtime
+          serviceDay
+          headsign
+        }
+      }
+    }
+  }
+`;
 
 @Injectable()
 export class CpService {
   private readonly logger = new Logger(CpService.name);
+
+  // cache da API comboios.live
   private vehiclesCache: CpVehicleDto[] = [];
   private cacheTimestamp = 0;
 
@@ -15,7 +217,9 @@ export class CpService {
     private readonly configService: ConfigService,
   ) {}
 
-  private get apiUrl(): string {
+  // ===== CONFIG / URLs =====
+
+  private get vehiclesApiUrl(): string {
     return (
       this.configService.get<string>('CP_VEHICLES_API_URL') ||
       'https://comboios.live/api/vehicles'
@@ -29,9 +233,18 @@ export class CpService {
     return configured ?? 30_000;
   }
 
+  private get otpGraphQlUrl(): string {
+    const base =
+      this.configService.get<string>('OTP_BASE_URL') ||
+      'http://localhost:8080/otp';
+    return `${base.replace(/\/$/, '')}/routers/default/index/graphql`;
+  }
+
+  // ===== COMBOIOS.LIVE (REALTIME VEHICLES) =====
+
   private async fetchVehicles(): Promise<CpVehicleDto[]> {
     const { data } = await firstValueFrom(
-      this.http.get<CpVehiclesApiResponse>(this.apiUrl),
+      this.http.get<CpVehiclesApiResponse>(this.vehiclesApiUrl),
     );
     return data.vehicles ?? [];
   }
@@ -65,5 +278,307 @@ export class CpService {
       (vehicle) => String(vehicle.trainNumber) === String(trainNumber),
     );
   }
-}
 
+  // ===== OTP (GRAFO GTFS) – LINHAS CP =====
+
+  async getCpRoutesFromGraph(): Promise<CpGraphRouteDto[]> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<GtfsRoutesResponse>(
+          this.otpGraphQlUrl,
+          {
+            query: ROUTES_QUERY,
+          },
+          {
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        this.logger.error(
+          response.data.errors.map((e) => e.message).join('; '),
+        );
+        throw new ServiceUnavailableException('OTP returned an error');
+      }
+
+      const routes = response.data.data?.routes ?? [];
+
+      const cpRoutes = routes.filter((r) => {
+        const agencyName = (r.agency?.name || '').toLowerCase();
+        const isRail = r.mode === 'RAIL' || r.mode === 'TRAIN';
+        const isCp =
+          agencyName.includes('comboios de portugal') ||
+          agencyName.startsWith('cp ');
+        return isRail || isCp;
+      });
+
+      return cpRoutes.map((r) => ({
+        gtfsId: r.gtfsId,
+        shortName: r.shortName ?? null,
+        longName: r.longName ?? null,
+        mode: r.mode,
+        agencyName: r.agency?.name ?? null,
+        agencyGtfsId: r.agency?.gtfsId ?? null,
+      }));
+    } catch (error) {
+      this.logger.error('Failed to fetch CP routes from OTP', error as any);
+      throw new ServiceUnavailableException(
+        'Failed to fetch CP routes from OTP',
+      );
+    }
+  }
+
+  async getCpRouteDetail(routeGtfsId: string): Promise<CpGraphRouteDetailDto> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<GtfsRouteDetailResponse>(
+          this.otpGraphQlUrl,
+          {
+            query: ROUTE_DETAIL_QUERY,
+            variables: { id: routeGtfsId },
+          },
+          {
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        this.logger.error(
+          response.data.errors.map((e) => e.message).join('; '),
+        );
+        throw new ServiceUnavailableException('OTP returned an error');
+      }
+
+      const route = response.data.data?.route;
+      if (!route) {
+        throw new NotFoundException(
+          `Route ${routeGtfsId} not found in OTP graph`,
+        );
+      }
+
+      // juntar stops de todos os patterns (podes ordenar/deduplicar se quiseres)
+      const stopsMap = new Map<string, CpStopBasicDto>();
+      for (const pattern of route.patterns || []) {
+        for (const st of pattern.stops || []) {
+          if (!stopsMap.has(st.gtfsId)) {
+            stopsMap.set(st.gtfsId, {
+              gtfsId: st.gtfsId,
+              name: st.name,
+              lat: st.lat,
+              lon: st.lon,
+            });
+          }
+        }
+      }
+
+      return {
+        gtfsId: route.gtfsId,
+        shortName: route.shortName ?? null,
+        longName: route.longName ?? null,
+        mode: route.mode,
+        agencyName: route.agency?.name ?? null,
+        agencyGtfsId: route.agency?.gtfsId ?? null,
+        stops: Array.from(stopsMap.values()),
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch CP route detail ${routeGtfsId} from OTP`,
+        error as any,
+      );
+      throw new ServiceUnavailableException(
+        'Failed to fetch CP route detail from OTP',
+      );
+    }
+  }
+
+  // ===== OTP (GRAFO GTFS) – SEARCH DE STOPS =====
+
+  async searchStops(q: string, limit = 10): Promise<CpStopSearchResultDto[]> {
+    if (!q || q.trim().length === 0) return [];
+
+    try {
+      const response = await firstValueFrom(
+        this.http.post<GtfsStopsSearchResponse>(
+          this.otpGraphQlUrl,
+          {
+            query: STOPS_SEARCH_QUERY,
+            variables: { name: q },
+          },
+          {
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        this.logger.error(
+          response.data.errors.map((e) => e.message).join('; '),
+        );
+        throw new ServiceUnavailableException('OTP returned an error');
+      }
+
+      const stops = response.data.data?.stops ?? [];
+      const trimmed = stops.slice(0, limit);
+
+      return trimmed.map((s) => ({
+        gtfsId: s.gtfsId,
+        name: s.name,
+        lat: s.lat,
+        lon: s.lon,
+      }));
+    } catch (error) {
+      this.logger.error('Failed to search stops in OTP', error as any);
+      throw new ServiceUnavailableException('Failed to search stops in OTP');
+    }
+  }
+
+  // ===== OTP (GRAFO GTFS) – PARTIDAS POR PARAGEM =====
+
+  async getStopDeparturesFromGraph(
+    stopGtfsId: string,
+    opts?: {
+      startTime?: number; // epoch seconds
+      timeRange?: number; // segundos
+      numberOfDepartures?: number;
+    },
+  ): Promise<CpStopDeparturesDto> {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    const startTime = opts?.startTime ?? nowSeconds;
+    const timeRange = opts?.timeRange ?? 3600;
+    const numberOfDepartures = opts?.numberOfDepartures ?? 20;
+
+    try {
+      const response = await firstValueFrom(
+        this.http.post<GtfsStopDeparturesResponse>(
+          this.otpGraphQlUrl,
+          {
+            query: STOP_DEPARTURES_QUERY,
+            variables: {
+              stopId: stopGtfsId,
+              startTime,
+              timeRange,
+              numberOfDepartures,
+            },
+          },
+          {
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        this.logger.error(
+          response.data.errors.map((e) => e.message).join('; '),
+        );
+        throw new ServiceUnavailableException('OTP returned an error');
+      }
+
+      const stop = response.data.data?.stop;
+      if (!stop) {
+        throw new NotFoundException(
+          `Stop ${stopGtfsId} not found in OTP graph`,
+        );
+      }
+
+      const departures: CpDepartureDto[] = [];
+
+      for (const patternRow of stop.stoptimesForPatterns || []) {
+        const route = patternRow.pattern?.route;
+        const patternHeadsign = patternRow.pattern?.headsign ?? undefined;
+        const agencyName = route?.agency?.name ?? undefined;
+
+        const isRail =
+          route?.mode === 'RAIL' || route?.mode === 'TRAIN';
+        const isCp =
+          (agencyName || '').toLowerCase().includes('comboios de portugal') ||
+          (agencyName || '').toLowerCase().startsWith('cp ');
+
+        if (!isRail && !isCp) {
+          continue;
+        }
+
+        for (const st of patternRow.stoptimes || []) {
+          departures.push({
+            routeGtfsId: route?.gtfsId,
+            routeShortName: route?.shortName ?? null,
+            routeLongName: route?.longName ?? null,
+            mode: route?.mode ?? 'RAIL',
+            agencyName,
+            headsign: st.headsign ?? patternHeadsign ?? undefined,
+            scheduledDeparture: st.scheduledDeparture,
+            realtimeDeparture: st.realtimeDeparture,
+            realtime: st.realtime,
+            serviceDay: st.serviceDay,
+          });
+        }
+      }
+
+      return {
+        stopId: stop.gtfsId,
+        stopName: stop.name,
+        lat: stop.lat,
+        lon: stop.lon,
+        departures,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch departures for stop ${stopGtfsId} from OTP`,
+        error as any,
+      );
+      throw new ServiceUnavailableException(
+        'Failed to fetch departures for this stop from OTP',
+      );
+    }
+  }
+
+  // ===== “BOARD” PARA UI – HORÁRIOS FORMATADOS =====
+
+  async getStopBoard(
+    stopGtfsId: string,
+    opts?: {
+      startTime?: number;
+      timeRange?: number;
+      numberOfDepartures?: number;
+    },
+  ): Promise<CpStopBoardDto> {
+    const raw = await this.getStopDeparturesFromGraph(stopGtfsId, opts);
+
+    const rows: CpStopBoardRowDto[] = raw.departures
+      .map((d) => {
+        const departureEpochSeconds = d.serviceDay + d.realtimeDeparture;
+        const scheduledEpochSeconds = d.serviceDay + d.scheduledDeparture;
+
+        const date = new Date(departureEpochSeconds * 1000);
+        const hh = String(date.getHours()).padStart(2, '0');
+        const mm = String(date.getMinutes()).padStart(2, '0');
+        const time = `${hh}:${mm}`;
+
+        const delaySeconds =
+          d.realtimeDeparture - d.scheduledDeparture;
+        const delayMinutes = Math.round(delaySeconds / 60);
+
+        return {
+          time,
+          destination: d.headsign ?? null,
+          lineShortName: d.routeShortName ?? null,
+          lineLongName: d.routeLongName ?? null,
+          routeGtfsId: d.routeGtfsId,
+          delayMinutes,
+          isRealtime: d.realtime,
+        } as CpStopBoardRowDto;
+      })
+      // ordenar por hora
+      .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+
+    return {
+      stopId: raw.stopId,
+      stopName: raw.stopName,
+      lat: raw.lat,
+      lon: raw.lon,
+      departures: rows,
+    };
+  }
+}
