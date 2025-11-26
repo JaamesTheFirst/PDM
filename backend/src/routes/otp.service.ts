@@ -6,90 +6,165 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
-import { PlanItineraryDto } from './dto/plan-itinerary.dto';
+import { PlanItineraryDto, TransportMode } from './dto/plan-itinerary.dto';
+
+export interface OtpLeg {
+  mode: string;
+  distance: number;
+  duration: number;
+  startTime: number;  // OTP manda ms
+  endTime: number;
+  from: {
+    name: string;
+    lat: number;
+    lon: number;
+  };
+  to: {
+    name: string;
+    lat: number;
+    lon: number;
+  };
+  route?: {
+    shortName?: string;
+    longName?: string;
+  } | null;
+  legGeometry?: {
+    points: string;
+  } | null;
+}
+
+export interface OtpItinerary {
+  duration: number;
+  walkDistance: number;
+  startTime: number;
+  endTime: number;
+  legs: OtpLeg[];
+}
+
+export interface OtpPlanResult {
+  itineraries: OtpItinerary[];
+}
+
+interface OtpPlanData {
+  plan?: OtpPlanResult | null;
+}
 
 interface OtpGraphQlError {
   message: string;
 }
 
 interface OtpPlanResponse {
-  data?: {
-    plan?: {
-      itineraries: OtpItinerary[];
-    } | null;
-  };
+  data?: OtpPlanData;
   errors?: OtpGraphQlError[];
 }
 
-export interface OtpItinerary {
-  duration: number;
-  walkDistance: number;
-  legs: Array<{
-    mode: string;
-    distance: number;
-    duration: number;
-    startTime: string;
-    endTime: string;
-    from: {
-      name: string;
-      lat: number;
-      lon: number;
-    };
-    to: {
-      name: string;
-      lat: number;
-      lon: number;
-    };
-    route?: {
-      shortName?: string;
-      longName?: string;
-    };
-  }>;
+interface OtpPlanVariables {
+  from: { lat: number; lon: number };
+  to: { lat: number; lon: number };
+  date?: string;
+  time?: string;
+  numItineraries?: number;
+  transportModes?: { mode: string }[];
 }
 
 const PLAN_QUERY = `
-query Plan($from: String!, $to: String!) {
-  plan(
-    fromPlace: $from,
-    toPlace: $to
+  query Plan(
+    $from: InputCoordinates!,
+    $to: InputCoordinates!,
+    $date: String,
+    $time: String,
+    $numItineraries: Int,
+    $transportModes: [TransportMode]
   ) {
-    itineraries {
-      duration
-      walkDistance
-      legs {
-        mode
-        distance
+    plan(
+      from: $from,
+      to: $to,
+      date: $date,
+      time: $time,
+      numItineraries: $numItineraries,
+      transportModes: $transportModes
+    ) {
+      itineraries {
         duration
+        walkDistance
         startTime
         endTime
-        from { name lat lon }
-        to { name lat lon }
-        route { shortName longName }
+        legs {
+          mode
+          distance
+          duration
+          startTime
+          endTime
+          from { name lat lon }
+          to   { name lat lon }
+          route { shortName longName }
+          legGeometry { points }
+        }
       }
     }
   }
-}
 `;
 
 @Injectable()
 export class OtpService {
   private readonly logger = new Logger(OtpService.name);
   private readonly otpBaseUrl: string;
+  private readonly graphqlPath = '/routers/default/index/graphql';
 
   constructor(
     private readonly http: HttpService,
     private readonly config: ConfigService,
   ) {
-    this.otpBaseUrl =
+    const base =
       this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
+    this.otpBaseUrl = base.replace(/\/$/, '');
   }
 
-  async plan(dto: PlanItineraryDto): Promise<OtpItinerary[]> {
-    const endpoint = `${this.otpBaseUrl.replace(/\/$/, '')}/routers/default/index/graphql`;
+  private buildEndpoint(): string {
+    return `${this.otpBaseUrl}${this.graphqlPath}`;
+  }
 
-    const variables = {
-      from: `${dto.fromLat},${dto.fromLon}`,
-      to: `${dto.toLat},${dto.toLon}`,
+  private resolveDateAndTime(dto: PlanItineraryDto): { date: string; time: string } {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    if (dto.date && dto.time) {
+      return { date: dto.date, time: dto.time };
+    }
+
+    if (dto.dateTime) {
+      const d = new Date(dto.dateTime);
+      if (!isNaN(d.getTime())) {
+        const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return { date, time };
+      }
+    }
+
+    const now = new Date();
+    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    return { date, time };
+  }
+
+  private resolveTransportModes(dto: PlanItineraryDto): { mode: string }[] {
+    const modes = dto.modes && dto.modes.length > 0
+      ? dto.modes
+      : [TransportMode.WALK, TransportMode.TRANSIT];
+
+    return modes.map((m) => ({ mode: m }));
+  }
+
+  async plan(dto: PlanItineraryDto): Promise<OtpPlanResult> {
+    const endpoint = this.buildEndpoint();
+    const { date, time } = this.resolveDateAndTime(dto);
+
+    const variables: OtpPlanVariables = {
+      from: { lat: dto.fromLat, lon: dto.fromLon },
+      to: { lat: dto.toLat, lon: dto.toLon },
+      date,
+      time,
+      numItineraries: dto.numItineraries ?? 5,
+      transportModes: this.resolveTransportModes(dto),
     };
 
     try {
@@ -100,23 +175,26 @@ export class OtpService {
             query: PLAN_QUERY,
             variables,
           },
-          {
-            headers: { 'Content-Type': 'application/json' },
-          },
+          { headers: { 'Content-Type': 'application/json' } },
         ),
       );
 
-      if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(response.data.errors.map((e) => e.message).join('; '));
+      if (response.data.errors?.length) {
+        const msg = response.data.errors.map((e) => e.message).join('; ');
+        this.logger.error(`OTP GraphQL errors: ${msg}`);
         throw new BadGatewayException('OTP returned an error');
       }
 
-      return response.data.data?.plan?.itineraries ?? [];
+      const plan = response.data.data?.plan;
+      if (!plan) {
+        this.logger.warn('OTP returned no plan');
+        return { itineraries: [] };
+      }
+
+      return plan;
     } catch (error) {
-      this.logger.error('Failed to fetch itinerary from OTP', error as any);
-      throw new BadGatewayException('Failed to fetch itinerary from OTP');
+      this.logger.error('Failed to fetch trip from OTP', error as any);
+      throw new BadGatewayException('Failed to fetch trip from OTP');
     }
   }
-
 }
-
