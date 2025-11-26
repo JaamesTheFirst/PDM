@@ -31,6 +31,7 @@ export enum FilterMode {
   RAIL_ONLY = 'RAIL_ONLY',
   CAR_ONLY = 'CAR_ONLY',
   BICYCLE_ONLY = 'BICYCLE_ONLY',
+  METRO_ONLY = 'METRO_ONLY',
 }
 
 export class PlanItineraryDto {
