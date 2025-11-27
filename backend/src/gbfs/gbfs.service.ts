@@ -2,11 +2,16 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { GbfsIndexDto, GbfsFeedMeta } from './dto/gbfs-index.dto';
+import { StationType } from '@prisma/client';
+import {
+  GbfsIndexDto,
+  GbfsFeedMeta,
+} from './dto/gbfs-index.dto';
 import { GbfsSystemDto } from './dto/gbfs-system.dto';
 
 @Injectable()
@@ -16,9 +21,9 @@ export class GbfsService {
     private readonly http: HttpService,
   ) {}
 
-  //
-  // =============== SISTEMAS (BD) ===============
-  //
+  // =========================
+  //  SISTEMAS (BD)
+  // =========================
 
   async findAllSystems(): Promise<GbfsSystemDto[]> {
     return this.prisma.gbfsSystem.findMany({
@@ -40,11 +45,10 @@ export class GbfsService {
     return system;
   }
 
-  //
-  // =============== GBFS INDEX (auto-discovery) ===============
-  //
+  // =========================
+  //  GBFS INDEX (gbfs.json)
+  // =========================
 
-  /** Vai à BD buscar o sistema e depois faz request ao autoDiscoveryUrl (gbfs.json) */
   async getGbfsIndex(systemId: string): Promise<GbfsIndexDto> {
     const system = await this.findSystemBySystemId(systemId);
 
@@ -54,13 +58,17 @@ export class GbfsService {
       );
     }
 
-    const response$ = this.http.get<GbfsIndexDto>(system.autoDiscoveryUrl);
-    const response = await lastValueFrom(response$);
-
-    return response.data;
+    try {
+      const response$ = this.http.get<GbfsIndexDto>(system.autoDiscoveryUrl);
+      const response = await lastValueFrom(response$);
+      return response.data;
+    } catch (error) {
+      throw new ServiceUnavailableException(
+        `Failed to fetch gbfs index for system "${systemId}"`,
+      );
+    }
   }
 
-  /** Decide qual linguagem usar (pt, en, etc.) */
   private pickLanguage(
     data: GbfsIndexDto['data'],
     preferredLang?: string,
@@ -70,27 +78,31 @@ export class GbfsService {
       throw new NotFoundException('No languages available in GBFS index');
     }
 
+    // 1. o idioma pedido, se existir
     if (preferredLang && langs.includes(preferredLang)) return preferredLang;
+
+    // 2. pt se existir
     if (langs.includes('pt')) return 'pt';
+
+    // 3. en se existir
     if (langs.includes('en')) return 'en';
+
+    // 4. senão, o primeiro
     return langs[0];
   }
 
-  /** Devolve a lista de feeds disponíveis para um sistema */
   async listFeeds(systemId: string, lang?: string): Promise<GbfsFeedMeta[]> {
     const index = await this.getGbfsIndex(systemId);
     const chosenLang = this.pickLanguage(index.data, lang);
-
     const feeds = index.data[chosenLang]?.feeds ?? [];
     return feeds;
   }
 
-  //
-  // =============== CORE: FEED GENÉRICO ===============
-  //
-
-  /** Vai buscar um feed específico (station_information, station_status, etc.) */
-  async getFeed(systemId: string, feedName: string, lang?: string): Promise<any> {
+  async getFeed(
+    systemId: string,
+    feedName: string,
+    lang?: string,
+  ): Promise<any> {
     const index = await this.getGbfsIndex(systemId);
     const chosenLang = this.pickLanguage(index.data, lang);
     const feeds = index.data[chosenLang]?.feeds ?? [];
@@ -103,20 +115,31 @@ export class GbfsService {
       );
     }
 
-    const resp$ = this.http.get(feed.url);
-    const resp = await lastValueFrom(resp$);
-
-    return resp.data;
+    try {
+      const resp$ = this.http.get(feed.url);
+      const resp = await lastValueFrom(resp$);
+      return resp.data;
+    } catch (error) {
+      throw new ServiceUnavailableException(
+        `Failed to fetch feed "${feedName}" for system "${systemId}"`,
+      );
+    }
   }
 
-  //
-  // =============== WRAPPERS ESPECÍFICOS POR FEED ===============
-  //
+  // =========================
+  //  WRAPPERS DE FEEDS
+  // =========================
 
+  // metadados / versões
   async getSystemInformation(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'system_information', lang);
   }
 
+  async getGbfsVersions(systemId: string, lang?: string) {
+    return this.getFeed(systemId, 'gbfs_versions', lang);
+  }
+
+  // estações / veículos
   async getStationInformation(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'station_information', lang);
   }
@@ -129,6 +152,7 @@ export class GbfsService {
     return this.getFeed(systemId, 'free_bike_status', lang);
   }
 
+  // tipos, preços, regiões, geofencing
   async getVehicleTypes(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'vehicle_types', lang);
   }
@@ -145,18 +169,10 @@ export class GbfsService {
     return this.getFeed(systemId, 'geofencing_zones', lang);
   }
 
-  async getGbfsVersions(systemId: string, lang?: string) {
-    return this.getFeed(systemId, 'gbfs_versions', lang);
-  }
+  // =========================
+  //  ESTAÇÕES + STATUS (MEMÓRIA)
+  // =========================
 
-  //
-  // =============== “BONUS”: ESTAÇÕES + STATUS JUNTO ===============
-  //
-
-  /**
-   * Junta station_information + station_status e devolve uma lista de estações
-   * com disponibilidade, pronto para o frontend usar.
-   */
   async getStationsWithStatus(systemId: string, lang?: string) {
     const [info, status] = await Promise.all([
       this.getStationInformation(systemId, lang),
@@ -166,15 +182,15 @@ export class GbfsService {
     const infoStations = info?.data?.stations ?? [];
     const statusStations = status?.data?.stations ?? [];
 
-    const statusById = new Map(
+    const statusById = new Map<string, any>(
       statusStations.map((s: any) => [s.station_id, s]),
     );
 
     const merged = infoStations.map((s: any) => {
-      const st = statusById.get(s.station_id);
+      const st = statusById.get(s.station_id) ?? {};
       return {
         ...s,
-        ...(st as any), // num_bikes_available, num_docks_available, etc.
+        ...(st as any),
       };
     });
 
@@ -185,6 +201,130 @@ export class GbfsService {
       data: {
         stations: merged,
       },
+    };
+  }
+
+  // =========================
+  //  SYNC PARA BD (Station)
+  // =========================
+
+  async syncStationsFromGbfs(systemId: string, lang?: string) {
+    // 1) sistema na BD
+    const system = await this.findSystemBySystemId(systemId);
+
+    // 2) info + status do GBFS
+    const [info, status] = await Promise.all([
+      this.getStationInformation(systemId, lang),
+      this.getStationStatus(systemId, lang),
+    ]);
+
+    const infoStations = info?.data?.stations ?? [];
+    const statusStations = status?.data?.stations ?? [];
+
+    const statusById = new Map<string, any>(
+      statusStations.map((s: any) => [s.station_id, s]),
+    );
+
+    if (!infoStations.length) {
+      return {
+        systemId,
+        systemDbId: system.id,
+        synced: 0,
+        message: 'No stations found in station_information feed',
+      };
+    }
+
+    // 3) preparar upserts
+    const upserts = infoStations
+      .map((s: any) => {
+        const stationId = s.station_id as string | undefined;
+
+        if (!stationId) {
+          // se não tiver station_id, ignoramos
+          return null;
+        }
+
+        const st = statusById.get(stationId) ?? {};
+
+        const latitude = s.lat;
+        const longitude = s.lon;
+        const name = s.name ?? `Station ${stationId}`;
+        const address = s.address ?? null;
+
+        const capacity =
+          typeof s.capacity === 'number'
+            ? s.capacity
+            : typeof st.num_docks_available === 'number'
+              ? st.num_docks_available
+              : typeof st.num_bikes_available === 'number'
+                ? st.num_bikes_available
+                : null;
+
+        const availableVehicles =
+          typeof st.num_bikes_available === 'number'
+            ? st.num_bikes_available
+            : null;
+
+        const availableDocks =
+          typeof st.num_docks_available === 'number'
+            ? st.num_docks_available
+            : null;
+
+        return this.prisma.station.upsert({
+          where: {
+            gbfsSystemId_externalId: {
+              gbfsSystemId: system.id,
+              externalId: stationId,
+            },
+          },
+          create: {
+            name,
+            description: null,
+            latitude,
+            longitude,
+            address,
+            city: system.location ?? null,
+            country: system.countryCode ?? null,
+            externalId: stationId,
+            stationType: StationType.BIKE_STATION, // troca para SCOOTER_STATION se o sistema for só trotinetes
+            isActive: true,
+            capacity,
+            availableVehicles,
+            availableDocks,
+            gbfsSystemId: system.id,
+          },
+          update: {
+            name,
+            latitude,
+            longitude,
+            address,
+            city: system.location ?? null,
+            country: system.countryCode ?? null,
+            capacity,
+            availableVehicles,
+            availableDocks,
+            isActive: true,
+          },
+        });
+      })
+      .filter(Boolean);
+
+    if (!upserts.length) {
+      return {
+        systemId,
+        systemDbId: system.id,
+        synced: 0,
+        message: 'No valid stations with station_id to sync',
+      };
+    }
+
+    // 4) transacção
+    await this.prisma.$transaction(upserts as any[]);
+
+    return {
+      systemId,
+      systemDbId: system.id,
+      synced: upserts.length,
     };
   }
 }

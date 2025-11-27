@@ -1,4 +1,3 @@
-// backend/src/gbfs/gbfs.module.ts
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { GbfsService } from './gbfs.service';

@@ -1,16 +1,22 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  Post,
+} from '@nestjs/common';
 import { GbfsService } from './gbfs.service';
 import { GbfsSystemDto } from './dto/gbfs-system.dto';
-import { GetGbfsFeedQueryDto } from './dto/get-gbfs-feed.dto';
 import { GbfsFeedMeta } from './dto/gbfs-index.dto';
+import { GetGbfsFeedQueryDto } from './dto/get-gbfs-feed.dto';
 
 @Controller('gbfs')
 export class GbfsController {
   constructor(private readonly gbfsService: GbfsService) {}
 
-  //
-  // =============== SISTEMAS (BD) ===============
-  //
+  // =========================
+  //  SISTEMAS (BD)
+  // =========================
 
   // GET /gbfs/systems
   @Get('systems')
@@ -20,21 +26,23 @@ export class GbfsController {
 
   // GET /gbfs/systems/:systemId
   @Get('systems/:systemId')
-  async getSystem(@Param('systemId') systemId: string): Promise<GbfsSystemDto> {
+  async getSystem(
+    @Param('systemId') systemId: string,
+  ): Promise<GbfsSystemDto> {
     return this.gbfsService.findSystemBySystemId(systemId);
   }
 
-  //
-  // =============== INDEX + FEEDS GENÉRICOS ===============
-  //
+  // =========================
+  //  INDEX + FEEDS
+  // =========================
 
-  // GET /gbfs/:systemId/index  -> devolve o gbfs.json (auto-discovery)
+  // GET /gbfs/:systemId/index
   @Get(':systemId/index')
   async getIndex(@Param('systemId') systemId: string) {
     return this.gbfsService.getGbfsIndex(systemId);
   }
 
-  // GET /gbfs/:systemId/feeds -> lista feeds disponíveis
+  // GET /gbfs/:systemId/feeds?lang=pt
   @Get(':systemId/feeds')
   async listFeeds(
     @Param('systemId') systemId: string,
@@ -43,7 +51,7 @@ export class GbfsController {
     return this.gbfsService.listFeeds(systemId, lang);
   }
 
-  // GET /gbfs/:systemId/feed?name=station_information&lang=pt (debug / genérico)
+  // GET /gbfs/:systemId/feed?name=station_information&lang=pt
   @Get(':systemId/feed')
   async getFeed(
     @Param('systemId') systemId: string,
@@ -52,12 +60,12 @@ export class GbfsController {
     return this.gbfsService.getFeed(systemId, query.name, query.lang);
   }
 
-  //
-  // =============== ENDPOINTS ESPECÍFICOS POR FEED ===============
-  //
+  // =========================
+  //  FEEDS ESPECÍFICOS
+  // =========================
 
-  // system_information
-  // GET /gbfs/:systemId/system
+  // SYSTEM INFORMATION
+  // GET /gbfs/:systemId/system?lang=pt
   @Get(':systemId/system')
   async getSystemInfo(
     @Param('systemId') systemId: string,
@@ -66,8 +74,8 @@ export class GbfsController {
     return this.gbfsService.getSystemInformation(systemId, lang);
   }
 
-  // station_information
-  // GET /gbfs/:systemId/stations/info
+  // STATION INFORMATION
+  // GET /gbfs/:systemId/stations/info?lang=pt
   @Get(':systemId/stations/info')
   async getStationInfo(
     @Param('systemId') systemId: string,
@@ -76,8 +84,8 @@ export class GbfsController {
     return this.gbfsService.getStationInformation(systemId, lang);
   }
 
-  // station_status
-  // GET /gbfs/:systemId/stations/status
+  // STATION STATUS
+  // GET /gbfs/:systemId/stations/status?lang=pt
   @Get(':systemId/stations/status')
   async getStationStatus(
     @Param('systemId') systemId: string,
@@ -86,8 +94,8 @@ export class GbfsController {
     return this.gbfsService.getStationStatus(systemId, lang);
   }
 
-  // ESTAÇÕES + STATUS JUNTO (para o frontend)
-  // GET /gbfs/:systemId/stations
+  // ESTAÇÕES + STATUS (apenas em memória)
+  // GET /gbfs/:systemId/stations?lang=pt
   @Get(':systemId/stations')
   async getStations(
     @Param('systemId') systemId: string,
@@ -96,8 +104,8 @@ export class GbfsController {
     return this.gbfsService.getStationsWithStatus(systemId, lang);
   }
 
-  // free_bike_status
-  // GET /gbfs/:systemId/free-bikes
+  // FREE BIKE STATUS
+  // GET /gbfs/:systemId/free-bikes?lang=pt
   @Get(':systemId/free-bikes')
   async getFreeBikes(
     @Param('systemId') systemId: string,
@@ -106,8 +114,8 @@ export class GbfsController {
     return this.gbfsService.getFreeBikeStatus(systemId, lang);
   }
 
-  // vehicle_types
-  // GET /gbfs/:systemId/vehicle-types
+  // VEHICLE TYPES
+  // GET /gbfs/:systemId/vehicle-types?lang=pt
   @Get(':systemId/vehicle-types')
   async getVehicleTypes(
     @Param('systemId') systemId: string,
@@ -116,8 +124,8 @@ export class GbfsController {
     return this.gbfsService.getVehicleTypes(systemId, lang);
   }
 
-  // system_pricing_plans
-  // GET /gbfs/:systemId/pricing-plans
+  // PRICING PLANS
+  // GET /gbfs/:systemId/pricing-plans?lang=pt
   @Get(':systemId/pricing-plans')
   async getPricingPlans(
     @Param('systemId') systemId: string,
@@ -126,8 +134,8 @@ export class GbfsController {
     return this.gbfsService.getPricingPlans(systemId, lang);
   }
 
-  // system_regions
-  // GET /gbfs/:systemId/regions
+  // REGIONS
+  // GET /gbfs/:systemId/regions?lang=pt
   @Get(':systemId/regions')
   async getRegions(
     @Param('systemId') systemId: string,
@@ -136,8 +144,8 @@ export class GbfsController {
     return this.gbfsService.getRegions(systemId, lang);
   }
 
-  // geofencing_zones
-  // GET /gbfs/:systemId/geofencing-zones
+  // GEOFENCING ZONES
+  // GET /gbfs/:systemId/geofencing-zones?lang=pt
   @Get(':systemId/geofencing-zones')
   async getGeofencingZones(
     @Param('systemId') systemId: string,
@@ -146,13 +154,26 @@ export class GbfsController {
     return this.gbfsService.getGeofencingZones(systemId, lang);
   }
 
-  // gbfs_versions
-  // GET /gbfs/:systemId/versions
+  // GBFS VERSIONS
+  // GET /gbfs/:systemId/versions?lang=pt
   @Get(':systemId/versions')
   async getGbfsVersions(
     @Param('systemId') systemId: string,
     @Query('lang') lang?: string,
   ) {
     return this.gbfsService.getGbfsVersions(systemId, lang);
+  }
+
+  // =========================
+  //  SYNC ESTAÇÕES -> BD
+  // =========================
+
+  // POST /gbfs/:systemId/sync-stations?lang=pt
+  @Post(':systemId/sync-stations')
+  async syncStationsFromGbfs(
+    @Param('systemId') systemId: string,
+    @Query('lang') lang?: string,
+  ) {
+    return this.gbfsService.syncStationsFromGbfs(systemId, lang);
   }
 }
