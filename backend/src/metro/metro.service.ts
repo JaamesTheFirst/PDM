@@ -98,12 +98,9 @@ export class MetroService {
     directionCode: string,
     serviceCode?: string,
   ): Promise<MetroIntervalDto | MetroIntervalDto[]> {
-    const suffix = serviceCode
-      ? `/${serviceCode}`
-      : '';
+    const suffix = serviceCode ? `/${serviceCode}` : '';
     return this.callMetroApi<MetroIntervalDto | MetroIntervalDto[]>(
       `/infoIntervalos/${lineId}/${directionCode}${suffix}`,
     );
   }
 }
-
