@@ -7,18 +7,31 @@ export class UsersPreferencesService {
   constructor(private prisma: PrismaService) {}
 
   async updatePreferences(userId: string, prefs: UpdatePreferencesDto) {
+    // Normalize alias fields to canonical names
+    const normalized: any = { ...prefs };
+    if (prefs.preferredTransport && !prefs.preferredTransportModes) {
+      normalized.preferredTransportModes = prefs.preferredTransport;
+    }
+    if (prefs.preferredModes && !prefs.preferredTransportModes) {
+      normalized.preferredTransportModes = prefs.preferredModes;
+    }
+    if (prefs.radiusKm !== undefined && prefs.maxWalkingDistance === undefined) {
+      // convert km -> meters
+      normalized.maxWalkingDistance = Math.round(Number(prefs.radiusKm) * 1000);
+    }
+
     const updateData: any = {};
-    if (prefs.preferredTransportModes !== undefined) {
-      updateData.preferredTransportModes = { set: prefs.preferredTransportModes };
+    if (normalized.preferredTransportModes !== undefined) {
+      updateData.preferredTransportModes = { set: normalized.preferredTransportModes };
     }
-    if (prefs.maxWalkingDistance !== undefined) {
-      updateData.maxWalkingDistance = prefs.maxWalkingDistance;
+    if (normalized.maxWalkingDistance !== undefined) {
+      updateData.maxWalkingDistance = normalized.maxWalkingDistance;
     }
-    if (prefs.avoidHighways !== undefined) {
-      updateData.avoidHighways = prefs.avoidHighways;
+    if (normalized.avoidHighways !== undefined) {
+      updateData.avoidHighways = normalized.avoidHighways;
     }
-    if (prefs.ecoFriendlyOnly !== undefined) {
-      updateData.ecoFriendlyOnly = prefs.ecoFriendlyOnly;
+    if (normalized.ecoFriendlyOnly !== undefined) {
+      updateData.ecoFriendlyOnly = normalized.ecoFriendlyOnly;
     }
 
     try {
