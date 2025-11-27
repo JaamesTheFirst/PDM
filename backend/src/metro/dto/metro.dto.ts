@@ -1,3 +1,5 @@
+// src/metro/dto/metro.dto.ts
+
 export type MetroLineId = 'amarela' | 'azul' | 'verde' | 'vermelha';
 
 export interface MetroLineStatusSummaryDto {
@@ -53,4 +55,3 @@ export interface MetroIntervalDto {
   UT: number;
   Dia?: string;
 }
-
