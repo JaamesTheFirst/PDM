@@ -107,16 +107,16 @@ model User {
 }
 
 model UserPreferences {
-  id       String @id @default(cuid())
-  userId   String @unique
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Transport preferences
-  preferredTransportModes TransportMode[]  // ex: [WALKING, BIKE, BUS]
-  maxWalkingDistance      Int      @default(500) // meters
-  avoidHighways           Boolean  @default(false)
-  ecoFriendlyOnly         Boolean  @default(true)
-  
+  preferredTransportModes TransportMode[] // ex: [WALKING, BIKE, BUS]
+  maxWalkingDistance      Int             @default(500) // meters
+  avoidHighways           Boolean         @default(false)
+  ecoFriendlyOnly         Boolean         @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -128,19 +128,19 @@ model UserPreferences {
 //
 
 model Station {
-  id          String      @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
-  
+
   // Location data
-  latitude    Float
-  longitude   Float
-  address     String?
-  city        String?
-  country     String?
+  latitude  Float
+  longitude Float
+  address   String?
+  city      String?
+  country   String?
 
   // Optional external reference (GTFS/API/etc.)
-  externalId  String?     @unique
+  externalId String? // ex: station_id do GBFS, stop_id do GTFS, etc.
 
   // Station type and capabilities
   stationType StationType // BUS_STOP, BIKE_STATION, etc.
@@ -153,44 +153,49 @@ model Station {
 
   // Energy/sustainability info (para estações de carregamento, hubs, etc.)
   energySource    String? // "solar", "wind", "grid", ...
-  carbonFootprint Float?  // kg CO2 per kWh
-  
+  carbonFootprint Float? // kg CO2 per kWh
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  gbfsSystemId Int?
+  gbfsSystem   GbfsSystem? @relation(fields: [gbfsSystemId], references: [id])
+
   // Relations
   routes       RouteStation[]
-  startRoutes  Route[]          @relation("RouteStartStation")
-  endRoutes    Route[]          @relation("RouteEndStation")
+  startRoutes  Route[]           @relation("RouteStartStation")
+  endRoutes    Route[]           @relation("RouteEndStation")
   transitLines TransitLineStop[]
   vehicles     Vehicle[]
 
+  // NOVO: garantir que não há duplicados por sistema+externalId
+  @@unique([gbfsSystemId, externalId])
   @@map("stations")
 }
 
 model Vehicle {
-  id          String       @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
-  vehicleType VehicleType  // "ELECTRIC_BUS", "BIKE", etc.
+  vehicleType VehicleType // "ELECTRIC_BUS", "BIKE", etc.
   mode        TransportMode
 
   // Vehicle specs
-  capacity    Int?         // passenger capacity
+  capacity Int? // passenger capacity
 
-  energyType  EnergyType   // "ELECTRIC", "HYBRID", etc.
-  batteryLevel Float?      // percentage (0-100)
-  
+  energyType   EnergyType // "ELECTRIC", "HYBRID", etc.
+  batteryLevel Float? // percentage (0-100)
+
   // Location
   currentLatitude  Float?
   currentLongitude Float?
   currentStationId String?
-  currentStation   Station?  @relation(fields: [currentStationId], references: [id])
-  isInService      Boolean   @default(true)
-  
+  currentStation   Station? @relation(fields: [currentStationId], references: [id])
+  isInService      Boolean  @default(true)
+
   // Sustainability metrics (fallback/local override de EmissionFactor)
   co2PerKm         Float? // kg CO2 per kilometer
   energyEfficiency Float? // kWh per km
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -208,35 +213,35 @@ model Route {
   id          String  @id @default(cuid())
   name        String
   description String?
-  
+
   // Route details (entre estações / pontos fixos)
   startStationId String
   endStationId   String
   startStation   Station @relation("RouteStartStation", fields: [startStationId], references: [id])
   endStation     Station @relation("RouteEndStation", fields: [endStationId], references: [id])
-  
+
   // Transport modes desta rota
-  mainMode       TransportMode
-  modes          TransportMode[] // ex: [BUS], [BIKE], etc.
-  
+  mainMode TransportMode
+  modes    TransportMode[] // ex: [BUS], [BIKE], etc.
+
   // Route metrics
-  distance      Float            // kilometers
-  estimatedTime Int              // minutes
+  distance      Float // kilometers
+  estimatedTime Int // minutes
   difficulty    RouteDifficulty?
-  
+
   // Sustainability metrics
-  carbonFootprint  Float? // kg CO2 for entire route
+  carbonFootprint   Float? // kg CO2 for entire route
   energyConsumption Float? // kWh for entire route
   ecoScore          Float? // 0-100 sustainability score
-  
+
   // Geometry
-  polyline   String? // encoded polyline
-  geometry   Json?   // GeoJSON ou similar
-  
+  polyline String? // encoded polyline
+  geometry Json? // GeoJSON ou similar
+
   // Route status
   isActive   Boolean @default(true)
   isVerified Boolean @default(false)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -251,11 +256,11 @@ model Route {
 }
 
 model RouteStation {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   routeId   String
   stationId String
-  order     Int     // order of stations in the route
-  
+  order     Int // order of stations in the route
+
   route   Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
   station Station @relation(fields: [stationId], references: [id])
 
@@ -267,7 +272,7 @@ model RouteVehicle {
   id        String @id @default(cuid())
   routeId   String
   vehicleId String
-  
+
   route   Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
 
@@ -282,34 +287,34 @@ model RouteVehicle {
 model TransitLine {
   id          String        @id @default(cuid())
   name        String
-  code        String?       // ex: "708"
+  code        String? // ex: "708"
   description String?
   lineType    TransportMode // BUS, TRAIN, METRO, ...
-  color       String?       // hex para UI (ex: "#FF6B6B")
+  color       String? // hex para UI (ex: "#FF6B6B")
 
   // Horários / frequências (pode ser GTFS simplificado ou um blob)
-  schedule    Json?         // ex: { weekday: { headwayMinutes: 15, ... } }
+  schedule Json? // ex: { weekday: { headwayMinutes: 15, ... } }
 
-  isActive    Boolean       @default(true)
+  isActive Boolean @default(true)
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  stops       TransitLineStop[]
+  stops TransitLineStop[]
 
   @@map("transit_lines")
 }
 
 model TransitLineStop {
-  id                   String       @id @default(cuid())
-  transitLineId        String
-  stationId            String
-  order                Int          // ordem na linha
-  distanceFromPrevMeters      Int?
-  travelTimeFromPrevSeconds   Int?
+  id                        String @id @default(cuid())
+  transitLineId             String
+  stationId                 String
+  order                     Int // ordem na linha
+  distanceFromPrevMeters    Int?
+  travelTimeFromPrevSeconds Int?
 
-  transitLine          TransitLine  @relation(fields: [transitLineId], references: [id], onDelete: Cascade)
-  station              Station      @relation(fields: [stationId], references: [id])
+  transitLine TransitLine @relation(fields: [transitLineId], references: [id], onDelete: Cascade)
+  station     Station     @relation(fields: [stationId], references: [id])
 
   @@unique([transitLineId, stationId])
   @@index([stationId])
@@ -325,11 +330,11 @@ model ServiceArea {
   name        String
   description String?
   areaType    ServiceAreaType
-  polygon     Json?           // GeoJSON polygon
+  polygon     Json? // GeoJSON polygon
   isActive    Boolean         @default(true)
 
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("service_areas")
 }
@@ -339,18 +344,18 @@ model ServiceArea {
 //
 
 model SearchHistory {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  query       String             // texto que o user escreveu
-  placeId     String?            // id vindo da API (Mapbox, etc.)
-  placeName   String             // nome formatado para mostrar depois
-  latitude    Float?             // coords do resultado principal
-  longitude   Float?
-  raw         Json?              // payload bruto da API, se quiseres guardar
+  query     String // texto que o user escreveu
+  placeId   String? // id vindo da API (Mapbox, etc.)
+  placeName String // nome formatado para mostrar depois
+  latitude  Float? // coords do resultado principal
+  longitude Float?
+  raw       Json? // payload bruto da API, se quiseres guardar
 
-  searchedAt  DateTime @default(now())
+  searchedAt DateTime @default(now())
 
   @@index([userId, searchedAt(sort: Desc)])
   @@map("search_history")
@@ -361,44 +366,44 @@ model SearchHistory {
 //
 
 model RouteHistory {
-  id      String @id @default(cuid())
-  userId  String
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // opcional: ligação a uma Route "template" (linha, percurso sugerido, etc.)
   routeId String?
-  route   Route? @relation(fields: [routeId], references: [id])
+  route   Route?  @relation(fields: [routeId], references: [id])
 
   // Origem & destino (texto + coords) – pode vir da SearchHistory
-  originName             String
-  originLatitude         Float
-  originLongitude        Float
-  destinationName        String
-  destinationLatitude    Float
-  destinationLongitude   Float
+  originName           String
+  originLatitude       Float
+  originLongitude      Float
+  destinationName      String
+  destinationLatitude  Float
+  destinationLongitude Float
 
   // Modos usados nesta viagem
-  primaryMode            TransportMode         // modo principal para UI
-  modes                  TransportMode[]       // multimodal ex: [WALKING, BUS, WALKING]
+  primaryMode TransportMode // modo principal para UI
+  modes       TransportMode[] // multimodal ex: [WALKING, BUS, WALKING]
 
   // Métricas agregadas
-  distanceMeters         Int                   // total em metros
-  durationSeconds        Int                   // total em segundos
-  co2Kg                  Float                 // CO2 da viagem
-  co2SavedVsCarKg        Float?                // CO2 poupado vs cenário carro
+  distanceMeters  Int // total em metros
+  durationSeconds Int // total em segundos
+  co2Kg           Float // CO2 da viagem
+  co2SavedVsCarKg Float? // CO2 poupado vs cenário carro
 
   // Estado da viagem / timeline
-  status                 RouteStatus @default(PLANNED)
-  startedAt              DateTime
-  finishedAt             DateTime?
+  status     RouteStatus @default(PLANNED)
+  startedAt  DateTime
+  finishedAt DateTime?
 
   // Geometria & segmentos
-  polyline               String?    // polyline da rota completa
-  segments               Json?      // array JSON com segmentos (tipo, distância, modo, etc.)
-  metadata               Json?      // payload bruto da API de direções / debug
+  polyline String? // polyline da rota completa
+  segments Json? // array JSON com segmentos (tipo, distância, modo, etc.)
+  metadata Json? // payload bruto da API de direções / debug
 
-  createdAt              DateTime   @default(now())
-  updatedAt              DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, startedAt(sort: Desc)])
   @@index([primaryMode])
@@ -410,21 +415,21 @@ model RouteHistory {
 //
 
 model EcoStatsAggregate {
-  id                   String        @id @default(cuid())
-  userId               String
-  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // ex: "2025-11-13" (day), "2025-11" (month), "2025" (year)
-  period               String
-  periodType           EcoPeriodType
+  period     String
+  periodType EcoPeriodType
 
-  totalDistanceMeters  Int           @default(0)
-  totalDurationSeconds Int           @default(0)
-  totalCo2Kg           Float         @default(0)
-  co2SavedVsCarKg      Float         @default(0)
+  totalDistanceMeters  Int   @default(0)
+  totalDurationSeconds Int   @default(0)
+  totalCo2Kg           Float @default(0)
+  co2SavedVsCarKg      Float @default(0)
 
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, period, periodType])
   @@map("eco_stats_aggregate")
@@ -437,11 +442,11 @@ model EcoStatsAggregate {
 model EmissionFactor {
   id         String        @id @default(cuid())
   mode       TransportMode @unique
-  kgCo2PerKm Float         // fator base para cálculo: co2_kg = factor * (distance_km)
+  kgCo2PerKm Float // fator base para cálculo: co2_kg = factor * (distance_km)
   notes      String?
 
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("emission_factors")
 }
@@ -451,37 +456,39 @@ model EmissionFactor {
 //
 
 model GbfsSystem {
-  id                    Int    @id @default(autoincrement())
+  id                    Int     @id @default(autoincrement())
   countryCode           String
   name                  String
   location              String?
-  systemId              String @unique
+  systemId              String  @unique
   url                   String?
   autoDiscoveryUrl      String?
   supportedVersions     String?
   authenticationInfoUrl String?
 
+  stations Station[]
+
   @@map("gbfs_systems")
 }
 
 model GiraStation {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   // Id da estação no ficheiro original (podes adaptar aos nomes reais das colunas)
-  externalId  String?  // ex: "ID", "Station ID", etc.
-  name        String?
-  address     String?
-  parish      String?  // freguesia / zona, se tiveres
-  latitude    Float?
-  longitude   Float?
-  capacity    Int?     // número total de docks / bikes
+  externalId String? // ex: "ID", "Station ID", etc.
+  name       String?
+  address    String?
+  parish     String? // freguesia / zona, se tiveres
+  latitude   Float?
+  longitude  Float?
+  capacity   Int? // número total de docks / bikes
   // podes ir afinando estes campos conforme as colunas reais do Excel
 
   // Guarda o registo bruto para não perder nada
-  raw         Json?
+  raw Json?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("gira_stations")
 }

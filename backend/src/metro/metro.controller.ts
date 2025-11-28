@@ -1,48 +1,62 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+// src/metro/metro.controller.ts
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { MetroService } from './metro.service';
+import { MetroPortoService } from './metro-porto.service';
 
 @Controller('metro')
 export class MetroController {
-  constructor(private readonly metroService: MetroService) {}
+  constructor(
+    private readonly metroLisboa: MetroService,
+    private readonly metroPorto: MetroPortoService,
+  ) {}
+
+  // ===== METRO LISBOA =====
 
   @Get('waiting-times/stations')
   getAllStationWaitingTimes() {
-    return this.metroService.getAllStationWaitingTimes();
+    return this.metroLisboa.getAllStationWaitingTimes();
   }
 
   @Get('waiting-times/stations/:stationId')
   getStationWaitingTimes(@Param('stationId') stationId: string) {
-    return this.metroService.getStationWaitingTimes(stationId);
+    return this.metroLisboa.getStationWaitingTimes(stationId);
   }
 
   @Get('waiting-times/lines/:lineId')
   getLineWaitingTimes(@Param('lineId') lineId: string) {
-    return this.metroService.getLineWaitingTimes(lineId);
+    return this.metroLisboa.getLineWaitingTimes(lineId);
   }
 
   @Get('stations')
   getAllStationsInfo() {
-    return this.metroService.getAllStationsInfo();
+    return this.metroLisboa.getAllStationsInfo();
   }
 
   @Get('stations/:stationId')
   getStationInfo(@Param('stationId') stationId: string) {
-    return this.metroService.getStationInfo(stationId);
+    return this.metroLisboa.getStationInfo(stationId);
   }
 
   @Get('lines/status')
   getAllLineStatus() {
-    return this.metroService.getAllLineStatus();
+    return this.metroLisboa.getAllLineStatus();
   }
 
   @Get('lines/:lineId/status')
   getLineStatus(@Param('lineId') lineId: string) {
-    return this.metroService.getLineStatus(lineId);
+    return this.metroLisboa.getLineStatus(lineId);
   }
 
   @Get('destinations')
   getDestinations() {
-    return this.metroService.getDestinations();
+    return this.metroLisboa.getDestinations();
   }
 
   @Get('intervals/:lineId/:direction')
@@ -51,7 +65,46 @@ export class MetroController {
     @Param('direction') direction: string,
     @Query('serviceCode') serviceCode?: string,
   ) {
-    return this.metroService.getIntervalsByLine(lineId, direction, serviceCode);
+    return this.metroLisboa.getIntervalsByLine(lineId, direction, serviceCode);
+  }
+
+  // ===== METRO DO PORTO (OTP) =====
+
+  @Get('porto/agency')
+  getPortoAgency() {
+    return this.metroPorto.getAgencyInfo();
+  }
+
+  @Get('porto/routes')
+  getPortoRoutes() {
+    return this.metroPorto.getRoutes();
+  }
+
+  @Get('porto/routes/:routeId')
+  getPortoRoute(@Param('routeId') routeId: string) {
+    return this.metroPorto.getRoute(routeId);
+  }
+
+  @Get('porto/stops')
+  getPortoStops() {
+    return this.metroPorto.getStops();
+  }
+
+  @Get('porto/stops/:stopId')
+  getPortoStop(@Param('stopId') stopId: string) {
+    return this.metroPorto.getStop(stopId);
+  }
+
+  @Get('porto/routes/:routeId/stops')
+  getPortoStopsByRoute(@Param('routeId') routeId: string) {
+    return this.metroPorto.getStopsByRoute(routeId);
+  }
+
+  @Get('porto/stops/:stopId/departures')
+  getPortoDepartures(
+    @Param('stopId') stopId: string,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.metroPorto.getUpcomingDeparturesByStop(stopId, limit);
   }
 }
-
