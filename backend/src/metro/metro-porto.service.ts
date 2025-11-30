@@ -49,8 +49,6 @@ interface OtpStop {
 }
 
 interface OtpStoptime {
-  stopId: string;
-  stopName: string;
   serviceDay: number;
   scheduledDeparture: number;
   realtimeDeparture: number;
@@ -79,6 +77,23 @@ interface GraphQlResponse<T> {
   data?: T;
   errors?: Array<{ message: string }>;
 }
+
+// ----- QUERY para SEARCH de stops por nome -----
+const STOPS_SEARCH_QUERY = `
+  query MetroStopsSearch($name: String!) {
+    stops(name: $name) {
+      id
+      code
+      name
+      desc
+      lat
+      lon
+      zoneId
+      url
+      parentStation { id }
+    }
+  }
+`;
 
 @Injectable()
 export class MetroPortoService {
@@ -304,6 +319,34 @@ export class MetroPortoService {
     }));
   }
 
+  /**
+   * Pesquisa por nome de estação (para o autocomplete no frontend).
+   */
+  async searchStops(q: string, limit = 10): Promise<MetroPortoStopDto[]> {
+    const term = (q ?? '').trim();
+    if (!term) return [];
+
+    const result = await this.graphqlRequest<{ stops: OtpStop[] }>(
+      STOPS_SEARCH_QUERY,
+      { name: term },
+    );
+
+    const stops = result.stops ?? [];
+    const trimmed = stops.slice(0, limit);
+
+    return trimmed.map((s) => ({
+      id: s.id,
+      code: s.code,
+      name: s.name,
+      desc: s.desc,
+      lat: s.lat,
+      lon: s.lon,
+      zoneId: s.zoneId,
+      url: s.url,
+      parentStation: s.parentStation?.id ?? undefined,
+    }));
+  }
+
   async getStop(stopId: string): Promise<MetroPortoStopDto | null> {
     const query = `
       query MetroStopByNode($id: ID!) {
@@ -407,51 +450,49 @@ export class MetroPortoService {
     limit = 10,
   ): Promise<MetroPortoUpcomingDepartureDto[]> {
     const query = `
-      query MetroStopDeparturesByNode($id: ID!, $limit: Int!) {
-        node(id: $id) {
-          __typename
-          ... on Stop {
-            id
-            name
-            lat
-            lon
-            stoptimesForPatterns(numberOfDepartures: $limit) {
-              pattern {
-                route {
-                  id
-                  shortName
-                  longName
-                  mode
-                  color
-                  textColor
-                  agency {
-                    id
-                    name
-                    url
-                    timezone
-                    lang
-                    phone
-                  }
-                }
+  query MetroStopDeparturesByNode($id: ID!, $limit: Int!) {
+    node(id: $id) {
+      __typename
+      ... on Stop {
+        id
+        name
+        lat
+        lon
+        stoptimesForPatterns(numberOfDepartures: $limit) {
+          pattern {
+            route {
+              id
+              shortName
+              longName
+              mode
+              color
+              textColor
+              agency {
+                id
+                name
+                url
+                timezone
+                lang
+                phone
               }
-              stoptimes {
-                stopId
-                stopName
-                serviceDay
-                scheduledDeparture
-                realtimeDeparture
-                departureDelay
-                headsign
-                trip {
-                  id
-                  directionId
-                }
-              }
+            }
+          }
+          stoptimes {
+            serviceDay
+            scheduledDeparture
+            realtimeDeparture
+            departureDelay
+            headsign
+            trip {
+              id
+              directionId
             }
           }
         }
       }
-    `;
+    }
+  }
+`;
 
     const result = await this.graphqlRequest<{
       node: (OtpStopWithStoptimes & { __typename: string }) | null;
@@ -491,8 +532,10 @@ export class MetroPortoService {
 
       for (const st of patternEntry.stoptimes) {
         const stopTime: MetroPortoStopTimeDto = {
-          stopId: st.stopId,
-          stopName: st.stopName,
+          // como o Stoptime já não traz stopId/stopName,
+          // usamos sempre o da paragem base
+          stopId: baseStop.id,
+          stopName: baseStop.name,
           serviceDay: st.serviceDay,
           scheduledDeparture: st.scheduledDeparture,
           realtimeDeparture: st.realtimeDeparture,
