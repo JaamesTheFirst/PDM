@@ -85,6 +85,15 @@ export class MetroController {
     return this.metroPorto.getRoute(routeId);
   }
 
+  // ⚠️ IMPORTANTE: SEARCH vem ANTES de :stopId
+  @Get('porto/stops/search')
+  searchPortoStops(
+    @Query('q') q: string,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.metroPorto.searchStops(q, limit);
+  }
+
   @Get('porto/stops')
   getPortoStops() {
     return this.metroPorto.getStops();
