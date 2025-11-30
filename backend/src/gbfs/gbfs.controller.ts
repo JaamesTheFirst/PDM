@@ -104,6 +104,16 @@ export class GbfsController {
     return this.gbfsService.getStationsWithStatus(systemId, lang);
   }
 
+  // AVAILABILITY (stations + free bikes)
+  // GET /gbfs/:systemId/availability?lang=pt
+  @Get(':systemId/availability')
+  async getAvailability(
+    @Param('systemId') systemId: string,
+    @Query('lang') lang?: string,
+  ) {
+    return this.gbfsService.getAvailability(systemId, lang);
+  }
+
   // FREE BIKE STATUS
   // GET /gbfs/:systemId/free-bikes?lang=pt
   @Get(':systemId/free-bikes')

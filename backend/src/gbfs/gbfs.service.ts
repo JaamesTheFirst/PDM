@@ -205,6 +205,95 @@ export class GbfsService {
   }
 
   // =========================
+  //  AVAILABILITY (stations + free bikes)
+  // =========================
+
+  private async safeGetStationsWithStatus(systemId: string, lang?: string) {
+    try {
+      return await this.getStationsWithStatus(systemId, lang);
+    } catch (err) {
+      // se o sistema não tiver stations ou o feed falhar,
+      // tratamos como "sem estações" para este endpoint
+      if (
+        err instanceof NotFoundException ||
+        err instanceof ServiceUnavailableException
+      ) {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  private async safeGetFreeBikeStatus(systemId: string, lang?: string) {
+    try {
+      return await this.getFreeBikeStatus(systemId, lang);
+    } catch (err) {
+      // idem para free_bike_status
+      if (
+        err instanceof NotFoundException ||
+        err instanceof ServiceUnavailableException
+      ) {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  async getAvailability(systemId: string, lang?: string) {
+    const [stationsResp, freeBikesResp] = await Promise.all([
+      this.safeGetStationsWithStatus(systemId, lang),
+      this.safeGetFreeBikeStatus(systemId, lang),
+    ]);
+
+    const stations = stationsResp?.data?.stations ?? [];
+
+    // alguns sistemas usam data.bikes, outros data.vehicles
+    const fbData = freeBikesResp?.data ?? {};
+    const freeBikes = Array.isArray(fbData.bikes)
+      ? fbData.bikes
+      : Array.isArray(fbData.vehicles)
+        ? fbData.vehicles
+        : [];
+
+    // last_updated / ttl combinados
+    const lastUpdatedCandidates: number[] = [];
+    if (typeof stationsResp?.last_updated === 'number') {
+      lastUpdatedCandidates.push(stationsResp.last_updated);
+    }
+    if (typeof freeBikesResp?.last_updated === 'number') {
+      lastUpdatedCandidates.push(freeBikesResp.last_updated);
+    }
+
+    const ttlCandidates: number[] = [];
+    if (typeof stationsResp?.ttl === 'number') {
+      ttlCandidates.push(stationsResp.ttl);
+    }
+    if (typeof freeBikesResp?.ttl === 'number') {
+      ttlCandidates.push(freeBikesResp.ttl);
+    }
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    const last_updated =
+      lastUpdatedCandidates.length > 0
+        ? Math.max(...lastUpdatedCandidates)
+        : nowSeconds;
+
+    const ttl =
+      ttlCandidates.length > 0 ? Math.min(...ttlCandidates) : 60;
+
+    return {
+      system_id: systemId,
+      last_updated,
+      ttl,
+      data: {
+        stations,
+        free_bikes: freeBikes,
+      },
+    };
+  }
+
+  // =========================
   //  SYNC PARA BD (Station)
   // =========================
 
