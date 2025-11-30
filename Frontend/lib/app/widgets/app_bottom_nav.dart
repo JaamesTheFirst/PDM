@@ -14,34 +14,31 @@ class AppBottomNav extends StatelessWidget {
   // Design System tokens
   static const _ecoMint = Color(0xFF3CD4A0);
   static const _coolGrey = Color(0xFFA1A1A1);
-  static const _deepCharcoal = Color(0xFF1C1C1C);
   static const _offWhiteSand = Color(0xFFF8F7F4);
 
   @override
   Widget build(BuildContext context) {
-    const int tabCount = 4;
+    const int tabCount = 5; // <-- AGORA 5 TABS
     const double barHeight = 94;
     const double horizontalPadding = 12;
 
-    // Barra superior (indicador)
-    const double indicatorHeight = 5;    // grossura revertida (mais fino)
+    const double indicatorHeight = 5;
     const duration = Duration(milliseconds: 300);
     const curve = Curves.easeOutCubic;
 
     final t = Theme.of(context);
     final isDark = t.brightness == Brightness.dark;
 
-    // Fundo claro no light; no dark usa o tema
     final bg = isDark ? t.scaffoldBackgroundColor : _offWhiteSand;
 
-    // System nav bar Android coerente
     final systemUi = SystemUiOverlayStyle(
       systemNavigationBarColor: bg,
-      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
       systemNavigationBarDividerColor: Colors.transparent,
     );
 
-    // Alinhamento fracionado pro (evita jitter)
+    // alinhamento da barra verde
     final step = 2 / (tabCount - 1);
     final alignX = -1.0 + step * currentIndex;
 
@@ -52,7 +49,6 @@ class AppBottomNav extends StatelessWidget {
         child: SizedBox(
           height: barHeight,
           child: Container(
-            // cantos retos (sem bordas/raio)
             decoration: const BoxDecoration(
               color: null,
             ),
@@ -69,18 +65,16 @@ class AppBottomNav extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  // ===== Barra de transição (TOP, sem spacing por cima) =====
-                  // Sem padding: ocupa de canto a canto e fica flush ao topo.
+                  // ===== Barra verde no topo =====
                   AnimatedAlign(
                     alignment: Alignment(alignX, -1.0),
                     duration: duration,
                     curve: curve,
                     child: const FractionallySizedBox(
-                      widthFactor: 1 / tabCount, // 4 tabs => 25% da largura total
+                      widthFactor: 1 / tabCount,
                       child: SizedBox(
                         height: indicatorHeight,
                         child: DecoratedBox(
-                          // linha sólida, sem qualquer radius/borda
                           decoration: BoxDecoration(color: _ecoMint),
                         ),
                       ),
@@ -91,14 +85,20 @@ class AppBottomNav extends StatelessWidget {
                   Align(
                     alignment: Alignment.bottomCenter,
                     child: Padding(
-                      // padding só para os itens (a barra não é afetada)
-                      padding: const EdgeInsets.fromLTRB(horizontalPadding, 10, horizontalPadding, 14),
+                      padding: const EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        10,
+                        horizontalPadding,
+                        14,
+                      ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Expanded(
                             child: _NavItem(
-                              icon: currentIndex == 0 ? Icons.map : Icons.map_outlined,
+                              icon: currentIndex == 0
+                                  ? Icons.map
+                                  : Icons.map_outlined,
                               label: 'Mapa',
                               selected: currentIndex == 0,
                               onTap: () => onTap(0),
@@ -114,18 +114,32 @@ class AppBottomNav extends StatelessWidget {
                           ),
                           Expanded(
                             child: _NavItem(
-                              icon: currentIndex == 2 ? Icons.insights : Icons.insights_outlined,
-                              label: 'Impacto',
+                              icon: currentIndex == 2
+                                  ? Icons.schedule
+                                  : Icons.schedule_outlined,
+                              label: 'Horários',
                               selected: currentIndex == 2,
                               onTap: () => onTap(2),
                             ),
                           ),
                           Expanded(
                             child: _NavItem(
-                              icon: currentIndex == 3 ? Icons.settings : Icons.settings_outlined,
-                              label: 'Definições',
+                              icon: currentIndex == 3
+                                  ? Icons.insights
+                                  : Icons.insights_outlined,
+                              label: 'Impacto',
                               selected: currentIndex == 3,
                               onTap: () => onTap(3),
+                            ),
+                          ),
+                          Expanded(
+                            child: _NavItem(
+                              icon: currentIndex == 4
+                                  ? Icons.settings
+                                  : Icons.settings_outlined,
+                              label: 'Definições',
+                              selected: currentIndex == 4,
+                              onTap: () => onTap(4),
                             ),
                           ),
                         ],
@@ -155,7 +169,6 @@ class _NavItem extends StatelessWidget {
     required this.onTap,
   });
 
-  // tokens
   static const _ecoMint = Color(0xFF3CD4A0);
   static const _coolGrey = Color(0xFFA1A1A1);
 
@@ -164,7 +177,8 @@ class _NavItem extends StatelessWidget {
     final t = Theme.of(context);
     final isDark = t.brightness == Brightness.dark;
 
-    final iconColor = selected ? _ecoMint : (isDark ? Colors.white70 : _coolGrey);
+    final iconColor =
+        selected ? _ecoMint : (isDark ? Colors.white70 : _coolGrey);
     final textColor = selected
         ? (isDark ? Colors.white : const Color(0xFF1C1C1C))
         : (isDark ? Colors.white70 : _coolGrey);
@@ -196,7 +210,8 @@ class _NavItem extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 13.5,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w600,
                   color: textColor,
                 ),
                 child: Text(
