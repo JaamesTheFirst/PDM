@@ -67,6 +67,18 @@ services:
     restart: unless-stopped
     command: sh -lc "npm ci && npx prisma generate && npm run start:dev"
 
+  otp:
+    image: docker.io/opentripplanner/opentripplanner:latest
+    container_name: otp
+    environment:
+      JAVA_TOOL_OPTIONS: -Xmx8g
+    volumes:
+      - ./EXTERNALS/otp/build:/var/opentripplanner
+    ports:
+      - "8080:8080"
+    command: --load --serve
+    depends_on: []
+
 volumes:
   postgres_data:
   redis_data:
