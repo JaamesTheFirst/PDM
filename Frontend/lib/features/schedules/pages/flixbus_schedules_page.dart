@@ -644,6 +644,37 @@ class _FlixbusRouteDetailSheetState
     }
   }
 
+  /// Decide o destino a mostrar na linha da partida:
+  /// 1) se o backend mandar destination, usa
+  /// 2) senão, tenta usar o último ponto do nome da rota
+  ///    (ex: "Coimbra - Fatima - Lisbon" -> "Lisbon")
+  /// 3) fallback: "Destino desconhecido"
+  String _getDestinationForRow(FlixbusStopBoardRow row) {
+    final rawDest = row.destination?.trim();
+
+    if (rawDest != null && rawDest.isNotEmpty && rawDest != '—') {
+      return rawDest;
+    }
+
+    final routeName =
+        (widget.route.longName ?? widget.route.shortName)?.trim();
+
+    if (routeName != null && routeName.isNotEmpty) {
+      final parts = routeName
+          .split('-')
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty)
+          .toList();
+
+      if (parts.isNotEmpty) {
+        return parts.last; // destino = última cidade
+      }
+      return routeName;
+    }
+
+    return 'Destino desconhecido';
+  }
+
   Future<void> _toggleStopBoard(FlixbusStopBasic stop) async {
     final stopId = stop.gtfsId;
 
@@ -856,12 +887,16 @@ class _FlixbusRouteDetailSheetState
                         )
                       : Column(
                           children: rows.map((row) {
+                            final destination = _getDestinationForRow(row);
+
                             final departure = Departure(
                               time: row.time,
-                              destination: row.destination ?? '—',
+                              destination: destination,
                               line: row.lineShortName ??
                                   row.lineLongName ??
-                                  '',
+                                  (widget.route.shortName ??
+                                      widget.route.longName ??
+                                      ''),
                               platform: '—',
                               operator: 'FlixBus',
                             );
