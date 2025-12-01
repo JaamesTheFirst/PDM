@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
+import '../../../../services/eco_score_service.dart';
 import 'package:sustainable_transport_app/utils/polyline_decoder.dart';
 import '../state/otp_routes_controller.dart';
 
@@ -649,6 +650,10 @@ class _OtpItinerariesPanel extends StatelessWidget {
                     .map((leg) => leg.routeName ?? leg.mode)
                     .join(' • ');
                 final walkKm = itinerary.walkDistance / 1000.0;
+                
+                // Calculate Eco Score
+                final ecoScore = EcoScoreService.instance.calculateScore(itinerary);
+                final scoreColor = Color(EcoScoreService.instance.getScoreColor(ecoScore.score));
 
                 return GestureDetector(
                   onTap: () => controller.selectItinerary(index),
@@ -672,14 +677,16 @@ class _OtpItinerariesPanel extends StatelessWidget {
                           children: [
                             const Icon(Icons.directions_transit, size: 18),
                             const SizedBox(width: 8),
-                            Text(
-                              '${_formatTime(itinerary.startTime)} – ${_formatTime(itinerary.endTime)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
+                            Expanded(
+                              child: Text(
+                                '${_formatTime(itinerary.startTime)} – ${_formatTime(itinerary.endTime)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             Text('$durationMin min'),
                           ],
                         ),
@@ -688,10 +695,76 @@ class _OtpItinerariesPanel extends StatelessWidget {
                           legsSummary,
                           style: t.textTheme.bodyMedium,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Percurso a pé: ${walkKm.toStringAsFixed(1)} km',
-                          style: t.textTheme.bodySmall,
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            // Eco Score badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: scoreColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: scoreColor.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    ecoScore.hasPhysicalActivity 
+                                        ? Icons.fitness_center 
+                                        : Icons.eco,
+                                    size: 14,
+                                    color: scoreColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Eco: ${ecoScore.score}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: scoreColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // CO2 badge with total and per km
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: t.colorScheme.surfaceVariant.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    EcoScoreService.instance.formatCo2(ecoScore.co2Kg),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: t.colorScheme.onSurface.withOpacity(0.9),
+                                    ),
+                                  ),
+                                  Text(
+                                    EcoScoreService.instance.formatCo2PerKm(ecoScore.co2PerKm),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: t.colorScheme.onSurface.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            // Walking distance
+                            Text(
+                              '${walkKm.toStringAsFixed(1)} km a pé',
+                              style: t.textTheme.bodySmall,
+                            ),
+                          ],
                         ),
                       ],
                     ),
