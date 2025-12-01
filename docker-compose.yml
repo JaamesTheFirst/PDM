@@ -54,6 +54,7 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
       PORT: 3000
+      OTP_BASE_URL: http://otp:8080/otp
     ports:
       - "3000:3000"
     volumes:
@@ -62,6 +63,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - otp
     networks:
       - app-network
     restart: unless-stopped
@@ -77,6 +79,8 @@ services:
     ports:
       - "8080:8080"
     command: --load --serve
+    networks:
+      - app-network
     depends_on: []
 
 volumes:
