@@ -49,10 +49,13 @@ class _AuthGateState extends State<AuthGate> {
   Future<void> _check() async {
     final auth = context.read<AuthController>();
     final logged = await auth.isLoggedIn();
+    print('[AuthGate] Checking auth status: logged=$logged');
     if (!mounted) return;
     if (logged) {
+      print('[AuthGate] User is logged in, navigating to /home');
       Navigator.of(context).pushReplacementNamed('/home');
     } else {
+      print('[AuthGate] User is not logged in, navigating to /login');
       Navigator.of(context).pushReplacementNamed('/login');
     }
   }
