@@ -509,12 +509,27 @@ class _OtpItinerariesPanel extends StatelessWidget {
         final itineraries = controller.itineraries;
         if (itineraries.isEmpty) {
           return _TransitCardBase(
-            child: Row(
-              children: const [
-                Icon(Icons.info_outline),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text('Sem itinerários disponíveis para este trajeto.'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.info_outline),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Sem itinerários disponíveis para este trajeto.',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'OTP não encontrou rotas de transporte público para esta ligação. Tenta outro destino ou verifica se há cobertura de transportes nesta área.',
+                  style: t.textTheme.bodySmall?.copyWith(
+                    color: t.colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
               ],
             ),

@@ -15,7 +15,10 @@ String _computeRoutesBase() {
       const String custom =
           String.fromEnvironment('ROUTES_BASE_URL', defaultValue: '');
       if (custom.isNotEmpty) return custom;
-      // Android emulator -> host machine
+      // Android emulator -> host machine (10.0.2.2)
+      // For physical Android devices, you MUST set ROUTES_BASE_URL:
+      // flutter run --dart-define=ROUTES_BASE_URL=http://YOUR_WINDOWS_IP:3000
+      // Default to 10.0.2.2 (emulator) - will fail on physical devices
       return 'http://10.0.2.2:3000';
     }
   } catch (_) {}
@@ -48,17 +51,27 @@ class OtpLeg {
   });
 
   factory OtpLeg.fromJson(Map<String, dynamic> json) {
+    // Handle null/missing from/to objects
+    final fromObj = json['from'] as Map<String, dynamic>? ?? {};
+    final toObj = json['to'] as Map<String, dynamic>? ?? {};
+    final routeObj = json['route'] as Map<String, dynamic>?;
+    final legGeometryObj = json['legGeometry'] as Map<String, dynamic>?;
+    
     return OtpLeg(
-      mode: json['mode'] as String,
-      distance: (json['distance'] as num).toDouble(),
-      duration: (json['duration'] as num).toInt(),
-      startTime: DateTime.fromMillisecondsSinceEpoch(json['startTime'] as int),
-      endTime: DateTime.fromMillisecondsSinceEpoch(json['endTime'] as int),
-      fromName: json['from']['name'] as String,
-      toName: json['to']['name'] as String,
-      routeName: json['route']?['shortName'] as String? ??
-          json['route']?['longName'] as String?,
-      polyline: json['legGeometry']?['points'] as String?,
+      mode: json['mode'] as String? ?? 'UNKNOWN',
+      distance: (json['distance'] as num?)?.toDouble() ?? 0.0,
+      duration: (json['duration'] as num?)?.toInt() ?? 0,
+      startTime: DateTime.fromMillisecondsSinceEpoch(
+        (json['startTime'] as num?)?.toInt() ?? 0,
+      ),
+      endTime: DateTime.fromMillisecondsSinceEpoch(
+        (json['endTime'] as num?)?.toInt() ?? 0,
+      ),
+      fromName: fromObj['name'] as String? ?? 'Origin',
+      toName: toObj['name'] as String? ?? 'Destination',
+      routeName: routeObj?['shortName'] as String? ??
+          routeObj?['longName'] as String?,
+      polyline: legGeometryObj?['points'] as String?,
     );
   }
 }
@@ -79,13 +92,27 @@ class OtpItinerary {
   });
 
   factory OtpItinerary.fromJson(Map<String, dynamic> json) {
+    final legsJson = json['legs'] as List<dynamic>? ?? [];
+    
     return OtpItinerary(
-      duration: (json['duration'] as num).toInt(),
-      walkDistance: (json['walkDistance'] as num).toDouble(),
-      startTime: DateTime.fromMillisecondsSinceEpoch(json['startTime'] as int),
-      endTime: DateTime.fromMillisecondsSinceEpoch(json['endTime'] as int),
-      legs: (json['legs'] as List<dynamic>)
-          .map((leg) => OtpLeg.fromJson(leg as Map<String, dynamic>))
+      duration: (json['duration'] as num?)?.toInt() ?? 0,
+      walkDistance: (json['walkDistance'] as num?)?.toDouble() ?? 0.0,
+      startTime: DateTime.fromMillisecondsSinceEpoch(
+        (json['startTime'] as num?)?.toInt() ?? 0,
+      ),
+      endTime: DateTime.fromMillisecondsSinceEpoch(
+        (json['endTime'] as num?)?.toInt() ?? 0,
+      ),
+      legs: legsJson
+          .map((leg) {
+            try {
+              return OtpLeg.fromJson(leg as Map<String, dynamic>);
+            } catch (e) {
+              print('[OtpItinerary] Error parsing leg: $e');
+              print('[OtpItinerary] Leg data: $leg');
+              rethrow;
+            }
+          })
           .toList(),
     );
   }
@@ -139,15 +166,16 @@ class RoutesService {
             const Duration(seconds: 30),
             onTimeout: () {
               print('[RoutesService] Request timed out after 30 seconds');
-              throw Exception('Request timed out');
+              throw Exception('Request timed out. Verifica se o backend está a correr e se a ligação à rede está ativa.');
             },
           );
 
       print('[RoutesService] Response status: ${response.statusCode}');
       print('[RoutesService] Response body: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
 
-      if (response.statusCode != 200) {
-        throw Exception('OTP request failed: ${response.body}');
+      // Accept both 200 (OK) and 201 (Created) as success
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Erro do servidor: ${response.statusCode}. ${response.body.length > 200 ? response.body.substring(0, 200) : response.body}');
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -157,9 +185,32 @@ class RoutesService {
           (decoded['itineraries'] as List<dynamic>? ?? const []);
       print('[RoutesService] Found ${itinerariesJson.length} itineraries');
       
-      final itineraries = itinerariesJson
-          .map((e) => OtpItinerary.fromJson(e as Map<String, dynamic>))
-          .toList();
+      if (itinerariesJson.isNotEmpty) {
+        print('[RoutesService] First itinerary keys: ${(itinerariesJson[0] as Map).keys.toList()}');
+        if ((itinerariesJson[0] as Map).containsKey('legs')) {
+          final firstLegs = (itinerariesJson[0] as Map)['legs'] as List?;
+          if (firstLegs != null && firstLegs.isNotEmpty) {
+            print('[RoutesService] First leg keys: ${(firstLegs[0] as Map).keys.toList()}');
+            print('[RoutesService] First leg from: ${(firstLegs[0] as Map)['from']}');
+            print('[RoutesService] First leg to: ${(firstLegs[0] as Map)['to']}');
+          }
+        }
+      }
+      
+      final itineraries = <OtpItinerary>[];
+      for (var i = 0; i < itinerariesJson.length; i++) {
+        try {
+          final itinerary = OtpItinerary.fromJson(itinerariesJson[i] as Map<String, dynamic>);
+          itineraries.add(itinerary);
+          print('[RoutesService] Successfully parsed itinerary $i with ${itinerary.legs.length} legs');
+        } catch (e, stackTrace) {
+          print('[RoutesService] Error parsing itinerary $i: $e');
+          print('[RoutesService] Itinerary data: ${itinerariesJson[i]}');
+          print('[RoutesService] Stack: $stackTrace');
+          // Continue parsing other itineraries instead of failing completely
+        }
+      }
+      print('[RoutesService] Successfully parsed ${itineraries.length} out of ${itinerariesJson.length} itineraries');
 
       return PlannedRoutesResult(
         originalCount:
