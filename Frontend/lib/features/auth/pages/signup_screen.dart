@@ -135,6 +135,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _firstName,
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
                             decoration: const InputDecoration(labelText: 'Primeiro nome (opcional)'),
                             textCapitalization: TextCapitalization.words,
                           ),
@@ -143,6 +144,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _lastName,
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
                             decoration: const InputDecoration(labelText: 'Último nome (opcional)'),
                             textCapitalization: TextCapitalization.words,
                           ),
@@ -153,6 +155,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     TextFormField(
                       controller: _username,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
                       decoration: const InputDecoration(labelText: 'Username'),
                       validator: (v) => (v == null || v.trim().isEmpty) ? 'Escolhe um username' : null,
                     ),
@@ -160,6 +163,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     TextFormField(
                       controller: _email,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
                       decoration: const InputDecoration(labelText: 'Email'),
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.username, AutofillHints.email],
@@ -173,6 +177,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     TextFormField(
                       controller: _password,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
                       decoration: InputDecoration(
                         labelText: 'Password',
                         suffixIcon: IconButton(
@@ -193,6 +198,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     TextFormField(
                       controller: _confirm,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
                       decoration: const InputDecoration(labelText: 'Confirmar password'),
                       obscureText: true,
                       validator: (v) => (v != _password.text) ? 'As passwords não coincidem' : null,

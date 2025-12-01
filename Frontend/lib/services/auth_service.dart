@@ -40,16 +40,28 @@ class AuthService {
   Future<bool> _saveTokenIfOk(http.Response res) async {
     if (res.statusCode == 200 || res.statusCode == 201) {
       final token = (jsonDecode(res.body)['access_token'] as String?) ?? '';
-      if (token.isEmpty) return false;
+      if (token.isEmpty) {
+        print('[AuthService] Login response missing access_token');
+        return false;
+      }
       await _storage.write(key: 'token', value: token);
+      print('[AuthService] Token saved successfully (length: ${token.length})');
+      // Verify it was saved
+      final saved = await _storage.read(key: 'token');
+      print('[AuthService] Token verification: ${saved != null ? "OK" : "FAILED"}');
       return true;
     }
+    print('[AuthService] Login failed with status: ${res.statusCode}');
     return false;
   }
 
   Future<void> logout() async => _storage.delete(key: 'token');
 
-  Future<String?> getToken() async => _storage.read(key: 'token');
+  Future<String?> getToken() async {
+    final token = await _storage.read(key: 'token');
+    print('[AuthService] getToken() called, result: ${token != null ? "token found (length: ${token.length})" : "null"}');
+    return token;
+  }
 
   Future<http.Response> me() async {
     final token = await getToken();

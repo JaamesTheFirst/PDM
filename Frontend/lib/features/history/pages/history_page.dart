@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../services/history_service.dart';
 import '../../../app/app_shell.dart';
 import '../../map/pages/map_page.dart';
 import '../../../app/app_router.dart';
+import '../../auth/state/auth_controller.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -21,6 +23,36 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
+    _checkAuthAndLoad();
+    // Listen to auth state changes (e.g., when user logs in)
+    context.read<AuthController>().addListener(_onAuthStateChanged);
+  }
+
+  @override
+  void dispose() {
+    context.read<AuthController>().removeListener(_onAuthStateChanged);
+    super.dispose();
+  }
+
+  void _onAuthStateChanged() {
+    // Reload history when auth state changes (e.g., after login)
+    if (mounted) {
+      _checkAuthAndLoad();
+    }
+  }
+
+  Future<void> _checkAuthAndLoad() async {
+    final authController = context.read<AuthController>();
+    final isLoggedIn = await authController.isLoggedIn();
+    
+    if (!isLoggedIn) {
+      setState(() {
+        _isLoading = false;
+        _error = 'Por favor, inicia sessão para veres o teu histórico';
+      });
+      return;
+    }
+    
     _loadHistory();
   }
 
@@ -42,7 +74,8 @@ class _HistoryPageState extends State<HistoryPage> {
         if (e.toString().contains('Not authenticated') || 
             e.toString().contains('not authenticated')) {
           _error = 'Por favor, inicia sessão para veres o teu histórico';
-        } else if (e.toString().contains('Failed to fetch')) {
+        } else if (e.toString().contains('Failed to fetch') || 
+                   e.toString().contains('timed out')) {
           _error = 'Erro ao conectar ao servidor. Verifica a tua ligação à internet.';
         } else {
           _error = e.toString();
@@ -142,6 +175,18 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
+    
+    // Check auth state when building - if we have an auth error but user is now logged in, reload
+    if (_error != null && _error!.toLowerCase().contains('not authenticated')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final authController = context.read<AuthController>();
+        authController.isLoggedIn().then((isLoggedIn) {
+          if (isLoggedIn && mounted) {
+            _checkAuthAndLoad();
+          }
+        });
+      });
+    }
 
     if (_isLoading) {
       return Container(
@@ -184,6 +229,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 ElevatedButton.icon(
                   onPressed: () {
                     // Navigate to login screen
+                    // After login, AuthController will notify listeners and _onAuthStateChanged will reload
                     Navigator.of(context).pushNamed('/login');
                   },
                   icon: const Icon(Icons.login),

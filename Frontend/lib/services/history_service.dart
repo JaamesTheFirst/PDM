@@ -96,29 +96,54 @@ class HistoryService {
   Future<List<RouteHistoryItem>> getHistory({int limit = 20}) async {
     final token = await _auth.getToken();
     if (token == null) {
+      print('[HistoryService] No token found - user not authenticated');
       throw Exception('Not authenticated');
     }
 
     final uri = Uri.parse('$kHistoryBaseUrl/routes/history')
         .replace(queryParameters: {'limit': limit.toString()});
+    
+    print('[HistoryService] Fetching history from: $uri');
+    print('[HistoryService] Using base URL: $kHistoryBaseUrl');
 
-    final response = await _client.get(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    try {
+      final response = await _client.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Request timed out');
+        },
+      );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch history: ${response.body}');
+      print('[HistoryService] Response status: ${response.statusCode}');
+      print('[HistoryService] Response body length: ${response.body.length}');
+
+      if (response.statusCode == 401) {
+        print('[HistoryService] 401 Unauthorized - token might be invalid');
+        throw Exception('Not authenticated');
+      }
+
+      if (response.statusCode != 200) {
+        print('[HistoryService] Error response: ${response.body}');
+        throw Exception('Failed to fetch history: ${response.statusCode} ${response.body}');
+      }
+
+      final decoded = jsonDecode(response.body) as List<dynamic>;
+      print('[HistoryService] Found ${decoded.length} history items');
+      
+      return decoded
+          .map((e) => RouteHistoryItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('[HistoryService] Exception: $e');
+      rethrow;
     }
-
-    final decoded = jsonDecode(response.body) as List<dynamic>;
-    return decoded
-        .map((e) => RouteHistoryItem.fromJson(e as Map<String, dynamic>))
-        .toList();
   }
 }
 

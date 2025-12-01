@@ -123,6 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     TextFormField(
                       controller: _identifier,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
                       decoration: const InputDecoration(
                         labelText: 'Email ou username',
                         hintText: 'ex.: joana | joana@email.com',
@@ -134,6 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     TextFormField(
                       controller: _password,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
                       decoration: InputDecoration(
                         labelText: 'Password',
                         suffixIcon: IconButton(
