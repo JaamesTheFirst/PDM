@@ -245,7 +245,41 @@ class _MapPageState extends State<MapPage> {
 
   // === flow: Search (FULL) -> Options (overlay 50%) ===
   Future<void> _openSearchAsScreens() async {
-    if (!_isMapAlive || mapboxMap == null || _currentLocation == null) return;
+    if (!_isMapAlive || mapboxMap == null) {
+      print('[MapPage] Cannot open search: map not ready');
+      return;
+    }
+    
+    if (_currentLocation == null) {
+      print('[MapPage] Cannot open search: current location is null');
+      // Try to get location again
+      final pos = await LocationService.instance.getCurrentLocation();
+      if (pos == null) {
+        print('[MapPage] Failed to get current location');
+        // Show error to user
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível obter a tua localização. Verifica as permissões de GPS.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      setState(() {
+        _currentLocation = mbx.Point(
+          coordinates: mbx.Position(pos.longitude, pos.latitude),
+        );
+      });
+    }
+
+    final coords = _currentLocation!.coordinates;
+    print('[MapPage] Opening search screen with location: lat=${coords.lat}, lng=${coords.lng}');
+    
+    if (coords.lat == 0.0 && coords.lng == 0.0) {
+      print('[MapPage] WARNING: Location appears to be invalid (0,0)');
+    }
 
     // enquanto o fluxo de rotas está ativo, escondemos o botão "Para onde?"
     MapPage.fullscreenNotifier.value = true;
