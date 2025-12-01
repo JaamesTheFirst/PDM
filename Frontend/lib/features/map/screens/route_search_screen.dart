@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 
 import '../widgets/route_search_overlay.dart';
-import '../widgets/route_options_overlay.dart'; // RouteOptionsArgs
 
 class RouteSearchScreenArgs {
   final mbx.MapboxMap mapboxMap;

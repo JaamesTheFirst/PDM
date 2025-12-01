@@ -1,11 +1,10 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 import 'package:provider/provider.dart';
 
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
-import '../../../../services/routes_service.dart';
+import 'package:sustainable_transport_app/utils/polyline_decoder.dart';
 import '../state/otp_routes_controller.dart';
 
 /// ============= ARGS =============
@@ -61,6 +60,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
   // cache de rotas por modo
   final Map<String, _RouteData> _cache = {};
+  late final OtpRoutesController _otpController;
+  int? _lastDrawnOtpIndex;
 
   /// quanto o painel está "colapsado".
   /// 0 = expandido ao máximo; valor maior = painel mais baixo (mais mapa visível em cima).
@@ -72,6 +73,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   @override
   void initState() {
     super.initState();
+    _otpController = context.read<OtpRoutesController>();
+    _otpController.addListener(_handleOtpSelectionChange);
     _ensureDots();
     _selectMode('walking', draw: true);
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchOtp());
@@ -79,22 +82,73 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   bool _requestedOtp = false;
 
   Future<void> _fetchOtp() async {
-    if (_requestedOtp) return;
+    if (_requestedOtp) {
+      print('[RouteOptionsOverlay] _fetchOtp: Already requested, skipping');
+      return;
+    }
+    print('[RouteOptionsOverlay] _fetchOtp: Starting fetch');
+    print('[RouteOptionsOverlay] From: ${widget.from.latitude}, ${widget.from.longitude}');
+    print('[RouteOptionsOverlay] To: ${widget.to.latitude}, ${widget.to.longitude}');
     _requestedOtp = true;
-    final ctrl = context.read<OtpRoutesController>();
-    await ctrl.fetch(
+    await _otpController.fetch(
       fromLat: widget.from.latitude,
       fromLon: widget.from.longitude,
       toLat: widget.to.latitude,
       toLon: widget.to.longitude,
     );
+    print('[RouteOptionsOverlay] _fetchOtp: Fetch complete, drawing itinerary');
+    await _drawSelectedOtpItinerary();
   }
 
   @override
   void dispose() {
-    context.read<OtpRoutesController>().clear();
-    // mantemos anotações no mapa ao fechar
+    _otpController.removeListener(_handleOtpSelectionChange);
+    // Don't call clear() here - it triggers notifyListeners during dispose
+    // The controller will be reused for the next route search
     super.dispose();
+  }
+
+  void _handleOtpSelectionChange() {
+    final index = _otpController.selectedIndex;
+    if (index == null || index == _lastDrawnOtpIndex) return;
+    _drawSelectedOtpItinerary();
+  }
+
+  Future<void> _drawSelectedOtpItinerary() async {
+    final index = _otpController.selectedIndex;
+    if (index == null) return;
+    final itineraries = _otpController.itineraries;
+    if (index < 0 || index >= itineraries.length) return;
+
+    final itinerary = itineraries[index];
+    final coords = <List<num>>[];
+
+    for (var legIdx = 0; legIdx < itinerary.legs.length; legIdx++) {
+      final leg = itinerary.legs[legIdx];
+      if (leg.polyline == null || leg.polyline!.isEmpty) continue;
+      final decoded = decodePolyline(leg.polyline!);
+      for (var pt = 0; pt < decoded.length; pt++) {
+        if (pt == 0 && coords.isNotEmpty) continue;
+        final lat = decoded[pt][0];
+        final lon = decoded[pt][1];
+        coords.add([lon, lat]);
+      }
+    }
+
+    if (coords.isEmpty) return;
+
+    final totalDistance =
+        itinerary.legs.fold<double>(0, (sum, leg) => sum + leg.distance);
+
+    await _drawRoute(
+      _RouteData(
+        geometry: coords,
+        distance: totalDistance,
+        duration: itinerary.duration.toDouble(),
+      ),
+    );
+    await _fitRouteGeometry(coords);
+    _lastDrawnOtpIndex = index;
   }
 
   Future<void> _ensureDots() async {
@@ -253,77 +307,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         // limiar real em px para snap + "modo compacto"
         final double snapThreshold = maxCollapse * _snapThresholdRatio;
 
-        // modos disponíveis
-        final modes = <_ModeCard>[
-          _ModeCard(
-            keyId: 'walking',
-            title: 'Caminhar',
-            icon: Icons.directions_walk,
-            badge: 'Eco',
-          ),
-          _ModeCard(
-            keyId: 'cycling',
-            title: 'Bicicleta',
-            icon: Icons.directions_bike,
-          ),
-          _ModeCard(
-            keyId: 'scooter',
-            title: 'Scooter',
-            icon: Icons.electric_scooter,
-          ),
-          _ModeCard(
-            keyId: 'bike_share',
-            title: 'Bicicleta (partilha)',
-            icon: Icons.pedal_bike,
-          ),
-          _ModeCard(
-            keyId: 'scooter_share',
-            title: 'Scooter (partilha)',
-            icon: Icons.two_wheeler,
-          ),
-          _ModeCard(
-            keyId: 'taxi',
-            title: 'Táxi',
-            icon: Icons.local_taxi,
-          ),
-          _ModeCard(
-            keyId: 'driving',
-            title: 'Carro',
-            icon: Icons.directions_car,
-          ),
-          _ModeCard(
-            keyId: 'bus_disabled',
-            title: 'Autocarro',
-            icon: Icons.directions_bus,
-            disabled: true,
-            note: 'em breve',
-          ),
-          _ModeCard(
-            keyId: 'train_disabled',
-            title: 'Comboio',
-            icon: Icons.train,
-            disabled: true,
-            note: 'em breve',
-          ),
-        ];
-
-        // estamos em modo "compacto"? (quase colapsado)
-        final bool isCompact = effectiveCollapse >= snapThreshold && maxCollapse > 0;
-
-        _ModeCard selectedCard =
-            modes.firstWhere((m) => _effectiveKeyFor(m) == _selected, orElse: () => modes.first);
-
-        String _subtitleFor(_ModeCard m) {
-          final effectiveKey = _effectiveKeyFor(m);
-          final isDisabled = m.disabled;
-          final cached = _cache[effectiveKey];
-          if (isDisabled) return m.note ?? 'indisponível';
-          if (cached == null) {
-            return (_loading && _selected == effectiveKey) ? 'a calcular…' : '—';
-          }
-          return '${_fmt(cached.distance)} • ${_fmtDur(cached.duration)}';
-        }
-
         return Container(
           color: Colors.transparent,
           child: Align(
@@ -413,61 +396,16 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                       ),
                     ),
 
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _TransitPreviewCard(),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _OtpItinerariesPanel(
+                          onSelectMode: _selectMode,
+                        ),
+                      ),
                     ),
 
                     const SizedBox(height: 12),
-
-                    // lista de modos
-                    Expanded(
-                      child: isCompact
-                          ? Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Align(
-                                alignment: Alignment.topCenter,
-                                child: _ModeTile(
-                                  icon: selectedCard.icon,
-                                  title: selectedCard.title,
-                                  subtitle: _subtitleFor(selectedCard),
-                                  badge: selectedCard.badge,
-                                  disabled: selectedCard.disabled,
-                                  selected: true,
-                                  onTap: selectedCard.disabled
-                                      ? null
-                                      : () => _selectMode(
-                                            _effectiveKeyFor(selectedCard),
-                                            draw: true,
-                                          ),
-                                ),
-                              ),
-                            )
-                          : ListView.separated(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemBuilder: (_, i) {
-                                final m = modes[i];
-                                final isDisabled = m.disabled;
-                                final effectiveKey = _effectiveKeyFor(m);
-                                final isSelected = _selected == effectiveKey;
-                                final subtitle = _subtitleFor(m);
-                                return _ModeTile(
-                                  icon: m.icon,
-                                  title: m.title,
-                                  subtitle: subtitle,
-                                  badge: m.badge,
-                                  disabled: isDisabled,
-                                  selected: isSelected,
-                                  onTap: isDisabled
-                                      ? null
-                                      : () async =>
-                                          _selectMode(effectiveKey, draw: true),
-                                );
-                              },
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
-                              itemCount: modes.length,
-                            ),
-                    ),
 
                     // ações no fundo
                     Padding(
@@ -519,150 +457,23 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     );
   }
 
-  String _effectiveKeyFor(_ModeCard m) {
-    return m.keyId.endsWith('_disabled')
-        ? m.keyId.replaceAll('_disabled', '')
-        : m.keyId;
-  }
 }
 
-class _ModeCard {
-  final String keyId;
-  final String title;
-  final IconData icon;
-  final bool disabled;
-  final String? badge;
-  final String? note;
-  _ModeCard({
-    required this.keyId,
-    required this.title,
-    required this.icon,
-    this.disabled = false,
-    this.badge,
-    this.note,
-  });
-}
+class _OtpItinerariesPanel extends StatelessWidget {
+  final Function(String mode, {bool draw})? onSelectMode;
+  
+  const _OtpItinerariesPanel({this.onSelectMode});
 
-class _ModeTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool disabled;
-  final bool selected;
-  final String? badge;
-  final VoidCallback? onTap;
+  String _formatTime(DateTime dt) =>
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
-  const _ModeTile({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.disabled = false,
-    this.selected = false,
-    this.badge,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final baseColor = disabled
-        ? t.colorScheme.onSurface.withOpacity(.12)
-        : (selected
-            ? t.colorScheme.primary.withOpacity(.12)
-            : t.cardColor);
-
-    return Material(
-      color: baseColor,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: disabled ? null : onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: disabled
-                    ? t.colorScheme.onSurface.withOpacity(.4)
-                    : t.colorScheme.onSurface,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                              color: disabled
-                                  ? t.colorScheme.onSurface.withOpacity(.5)
-                                  : t.colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (badge != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3CD4A0),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              badge!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        if (selected) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.check_circle,
-                            size: 20,
-                            color: t.colorScheme.primary,
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: t.colorScheme.onSurface.withOpacity(.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TransitPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     return Consumer<OtpRoutesController>(
       builder: (_, controller, __) {
-        if (controller.isLoading) {
+          
+          if (controller.isLoading) {
           return _TransitCardBase(
             child: Row(
               children: const [
@@ -672,7 +483,7 @@ class _TransitPreviewCard extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 SizedBox(width: 12),
-                Text('A calcular transporte público...'),
+                Text('A calcular itinerários de transporte público...'),
               ],
             ),
           );
@@ -695,52 +506,186 @@ class _TransitPreviewCard extends StatelessWidget {
           );
         }
 
-        if (controller.itineraries.isEmpty) {
+        final itineraries = controller.itineraries;
+        if (itineraries.isEmpty) {
           return _TransitCardBase(
             child: Row(
               children: const [
                 Icon(Icons.info_outline),
                 SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    'Sem itinerários disponíveis para este trajeto.',
-                  ),
+                  child: Text('Sem itinerários disponíveis para este trajeto.'),
                 ),
               ],
             ),
           );
         }
 
-        final itinerary = controller.itineraries.first;
-        final durationMin = (itinerary.duration / 60).round();
-        final summary = itinerary.legs
-            .map((leg) => leg.routeName ?? leg.mode)
-            .join(' · ');
-
-        return _TransitCardBase(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.directions_transit),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$durationMin min',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Rotas de transporte público',
+                    style: t.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
+                ),
+                if (onSelectMode != null)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    tooltip: 'Modos de transporte',
+                    onSelected: (mode) => onSelectMode!(mode, draw: true),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'walking',
+                        child: Row(
+                          children: [
+                            Icon(Icons.directions_walk, size: 20),
+                            SizedBox(width: 12),
+                            Text('Caminhar'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'cycling',
+                        child: Row(
+                          children: [
+                            Icon(Icons.directions_bike, size: 20),
+                            SizedBox(width: 12),
+                            Text('Bicicleta'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'scooter',
+                        child: Row(
+                          children: [
+                            Icon(Icons.electric_scooter, size: 20),
+                            SizedBox(width: 12),
+                            Text('Scooter'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'bike_share',
+                        child: Row(
+                          children: [
+                            Icon(Icons.pedal_bike, size: 20),
+                            SizedBox(width: 12),
+                            Text('Bicicleta (partilha)'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'scooter_share',
+                        child: Row(
+                          children: [
+                            Icon(Icons.two_wheeler, size: 20),
+                            SizedBox(width: 12),
+                            Text('Scooter (partilha)'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'taxi',
+                        child: Row(
+                          children: [
+                            Icon(Icons.local_taxi, size: 20),
+                            SizedBox(width: 12),
+                            Text('Táxi'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'driving',
+                        child: Row(
+                          children: [
+                            Icon(Icons.directions_car, size: 20),
+                            SizedBox(width: 12),
+                            Text('Carro'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${itineraries.length} opções disponíveis',
+              style: t.textTheme.bodySmall?.copyWith(
+                color: t.colorScheme.onSurface.withOpacity(0.6),
               ),
-              const SizedBox(height: 6),
-              Text(
-                summary,
-                style: t.textTheme.bodyMedium,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ListView.separated(
+                itemCount: itineraries.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
+                final itinerary = itineraries[index];
+                final selected = controller.selectedIndex == index;
+                final durationMin = (itinerary.duration / 60).round();
+                final legsSummary = itinerary.legs
+                    .map((leg) => leg.routeName ?? leg.mode)
+                    .join(' • ');
+                final walkKm = itinerary.walkDistance / 1000.0;
+
+                return GestureDetector(
+                  onTap: () => controller.selectItinerary(index),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? _RouteOptionsOverlayState._ecoMint.withOpacity(0.15)
+                          : t.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: selected
+                            ? _RouteOptionsOverlayState._ecoMint
+                            : t.colorScheme.onSurface.withOpacity(.1),
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.directions_transit, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${_formatTime(itinerary.startTime)} – ${_formatTime(itinerary.endTime)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text('$durationMin min'),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          legsSummary,
+                          style: t.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Percurso a pé: ${walkKm.toStringAsFixed(1)} km',
+                          style: t.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            ),
+          ],
         );
       },
     );

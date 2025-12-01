@@ -9,6 +9,8 @@ import '../features/schedules/pages/schedules_page.dart';
 import 'widgets/app_bottom_nav.dart';
 
 class AppShell extends StatefulWidget {
+  static final ValueNotifier<int?> navigateToTab = ValueNotifier<int?>(null);
+  
   const AppShell({super.key});
 
   @override
@@ -25,6 +27,26 @@ class _AppShellState extends State<AppShell> {
     ImpactPage(),
     SettingsPage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    AppShell.navigateToTab.addListener(_handleTabNavigation);
+  }
+
+  @override
+  void dispose() {
+    AppShell.navigateToTab.removeListener(_handleTabNavigation);
+    super.dispose();
+  }
+
+  void _handleTabNavigation() {
+    final targetIndex = AppShell.navigateToTab.value;
+    if (targetIndex != null && targetIndex >= 0 && targetIndex < _pages.length) {
+      AppShell.navigateToTab.value = null; // Clear the navigation request
+      setState(() => _index = targetIndex);
+    }
+  }
 
   void _onTapNav(int i) => setState(() => _index = i);
 

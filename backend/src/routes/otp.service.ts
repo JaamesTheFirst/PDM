@@ -140,9 +140,12 @@ export class OtpService {
       }
     }
 
-    const now = new Date();
-    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    // Default to tomorrow at 8 AM to ensure transit is available
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(8, 0, 0, 0);
+    const date = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
+    const time = '08:00';
     return { date, time };
   }
 
