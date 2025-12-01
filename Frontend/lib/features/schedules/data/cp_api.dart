@@ -98,7 +98,7 @@ class CpApiClient {
   final http.Client _client;
 
   // ⚠️ METE AQUI O IP DA TUA MÁQUINA
-  static const String _baseUrl = 'http://172.22.101.208:3000';
+  static const String _baseUrl = 'http://192.168.1.244:3000';
   static const Duration _timeout = Duration(seconds: 8);
 
   Uri _buildUri(String path, [Map<String, dynamic>? query]) {

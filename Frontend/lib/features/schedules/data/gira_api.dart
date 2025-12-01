@@ -98,7 +98,7 @@ class GiraApiClient {
             const String.fromEnvironment(
               'API_BASE_URL',
               // mete aqui o teu IP se quiseres fixo
-              defaultValue: 'http://172.22.101.208:3000',
+              defaultValue: 'http://192.168.1.244:3000',
             );
 
   Uri _uri(String path, [Map<String, String>? query]) {
