@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart' show Position;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 
 import '../../../services/location_service.dart';
+import '../../../services/mapbox_searchbox_service.dart';
 
 // screens + bottom-sheet route + tipos
 import '../nav/bottom_sheet_route.dart';
@@ -13,6 +14,7 @@ import '../widgets/route_options_overlay.dart'; // RouteOptionsArgs (tipo)
 
 class MapPage extends StatefulWidget {
   static final ValueNotifier<bool> fullscreenNotifier = ValueNotifier(false);
+  static final ValueNotifier<Map<String, dynamic>?> pendingRouteSearch = ValueNotifier<Map<String, dynamic>?>(null);
 
   const MapPage({super.key});
 
@@ -40,6 +42,51 @@ class _MapPageState extends State<MapPage> {
   void initState() {
     super.initState();
     _init();
+    // Listen for pending route search from HistoryPage
+    MapPage.pendingRouteSearch.addListener(_handlePendingRouteSearch);
+  }
+
+  @override
+  void dispose() {
+    MapPage.pendingRouteSearch.removeListener(_handlePendingRouteSearch);
+    super.dispose();
+  }
+
+  void _handlePendingRouteSearch() {
+    final data = MapPage.pendingRouteSearch.value;
+    if (data != null && mapboxMap != null && _isMapAlive) {
+      // Clear the pending search
+      MapPage.pendingRouteSearch.value = null;
+      
+      // Create SearchboxPlace objects from the data
+      final fromPlace = SearchboxPlace(
+        id: data['fromId'] as String,
+        name: data['fromName'] as String,
+        placeName: data['fromName'] as String,
+        longitude: data['fromLon'] as double,
+        latitude: data['fromLat'] as double,
+      );
+
+      final toPlace = SearchboxPlace(
+        id: data['toId'] as String,
+        name: data['toName'] as String,
+        placeName: data['toName'] as String,
+        longitude: data['toLon'] as double,
+        latitude: data['toLat'] as double,
+      );
+
+      // Create RouteOptionsArgs and set it
+      final args = RouteOptionsArgs(
+        mapboxMap: mapboxMap!,
+        from: fromPlace,
+        to: toPlace,
+      );
+
+      setState(() {
+        _routeOptionsArgs = args;
+      });
+      MapPage.fullscreenNotifier.value = true;
+    }
   }
 
   Future<void> _init() async {

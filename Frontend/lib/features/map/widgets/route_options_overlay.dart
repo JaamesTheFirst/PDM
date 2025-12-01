@@ -1,11 +1,9 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 import 'package:provider/provider.dart';
 
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
-import '../../../../services/routes_service.dart';
 import 'package:sustainable_transport_app/utils/polyline_decoder.dart';
 import '../state/otp_routes_controller.dart';
 
@@ -309,77 +307,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         // limiar real em px para snap + "modo compacto"
         final double snapThreshold = maxCollapse * _snapThresholdRatio;
 
-        // modos disponíveis
-        final modes = <_ModeCard>[
-          _ModeCard(
-            keyId: 'walking',
-            title: 'Caminhar',
-            icon: Icons.directions_walk,
-            badge: 'Eco',
-          ),
-          _ModeCard(
-            keyId: 'cycling',
-            title: 'Bicicleta',
-            icon: Icons.directions_bike,
-          ),
-          _ModeCard(
-            keyId: 'scooter',
-            title: 'Scooter',
-            icon: Icons.electric_scooter,
-          ),
-          _ModeCard(
-            keyId: 'bike_share',
-            title: 'Bicicleta (partilha)',
-            icon: Icons.pedal_bike,
-          ),
-          _ModeCard(
-            keyId: 'scooter_share',
-            title: 'Scooter (partilha)',
-            icon: Icons.two_wheeler,
-          ),
-          _ModeCard(
-            keyId: 'taxi',
-            title: 'Táxi',
-            icon: Icons.local_taxi,
-          ),
-          _ModeCard(
-            keyId: 'driving',
-            title: 'Carro',
-            icon: Icons.directions_car,
-          ),
-          _ModeCard(
-            keyId: 'bus_disabled',
-            title: 'Autocarro',
-            icon: Icons.directions_bus,
-            disabled: true,
-            note: 'em breve',
-          ),
-          _ModeCard(
-            keyId: 'train_disabled',
-            title: 'Comboio',
-            icon: Icons.train,
-            disabled: true,
-            note: 'em breve',
-          ),
-        ];
-
-        // estamos em modo "compacto"? (quase colapsado)
-        final bool isCompact = effectiveCollapse >= snapThreshold && maxCollapse > 0;
-
-        _ModeCard selectedCard =
-            modes.firstWhere((m) => _effectiveKeyFor(m) == _selected, orElse: () => modes.first);
-
-        String _subtitleFor(_ModeCard m) {
-          final effectiveKey = _effectiveKeyFor(m);
-          final isDisabled = m.disabled;
-          final cached = _cache[effectiveKey];
-          if (isDisabled) return m.note ?? 'indisponível';
-          if (cached == null) {
-            return (_loading && _selected == effectiveKey) ? 'a calcular…' : '—';
-          }
-          return '${_fmt(cached.distance)} • ${_fmtDur(cached.duration)}';
-        }
-
         return Container(
           color: Colors.transparent,
           child: Align(
@@ -530,141 +457,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     );
   }
 
-  String _effectiveKeyFor(_ModeCard m) {
-    return m.keyId.endsWith('_disabled')
-        ? m.keyId.replaceAll('_disabled', '')
-        : m.keyId;
-  }
-}
-
-class _ModeCard {
-  final String keyId;
-  final String title;
-  final IconData icon;
-  final bool disabled;
-  final String? badge;
-  final String? note;
-  _ModeCard({
-    required this.keyId,
-    required this.title,
-    required this.icon,
-    this.disabled = false,
-    this.badge,
-    this.note,
-  });
-}
-
-class _ModeTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool disabled;
-  final bool selected;
-  final String? badge;
-  final VoidCallback? onTap;
-
-  const _ModeTile({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.disabled = false,
-    this.selected = false,
-    this.badge,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final baseColor = disabled
-        ? t.colorScheme.onSurface.withOpacity(.12)
-        : (selected
-            ? t.colorScheme.primary.withOpacity(.12)
-            : t.cardColor);
-
-    return Material(
-      color: baseColor,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: disabled ? null : onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: disabled
-                    ? t.colorScheme.onSurface.withOpacity(.4)
-                    : t.colorScheme.onSurface,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                              color: disabled
-                                  ? t.colorScheme.onSurface.withOpacity(.5)
-                                  : t.colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (badge != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3CD4A0),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              badge!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        if (selected) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.check_circle,
-                            size: 20,
-                            color: t.colorScheme.primary,
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: t.colorScheme.onSurface.withOpacity(.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _OtpItinerariesPanel extends StatelessWidget {
