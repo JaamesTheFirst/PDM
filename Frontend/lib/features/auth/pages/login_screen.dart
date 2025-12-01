@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/auth_controller.dart';
-import '../../../screens/home_screen.dart';
 import 'signup_screen.dart';
 
 /// === ECO THEME (igual ao teu) ===
@@ -86,7 +85,8 @@ class _LoginScreenState extends State<LoginScreen> {
         );
     if (!context.mounted) return;
     if (ok) {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+      // Navigate to AppShell (main app with map)
+      Navigator.of(context).pushReplacementNamed('/home');
     } else {
       setState(() => _error = 'Credenciais inválidas ou servidor indisponível.');
     }

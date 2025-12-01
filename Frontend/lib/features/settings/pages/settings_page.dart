@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app/state/theme_controller.dart';
+import '../../auth/state/auth_controller.dart';
+import '../../../app/app_router.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -60,6 +62,21 @@ class SettingsPage extends StatelessWidget {
                 subtitle: const Text('Feedback tátil ao tocar'),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _SectionCard(
+          title: 'Conta',
+          child: ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Terminar sessão', style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              final auth = context.read<AuthController>();
+              await auth.logout();
+              if (!context.mounted) return;
+              // Navigate to login and clear navigation stack
+              Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+            },
           ),
         ),
       ],

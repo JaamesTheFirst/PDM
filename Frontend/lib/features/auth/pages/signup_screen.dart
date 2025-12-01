@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/auth_controller.dart';
-import '../../../screens/home_screen.dart';
 
 /// === ECO THEME (igual ao do login) ===
 class EcoTheme {
@@ -92,10 +91,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
     if (!context.mounted) return;
     if (ok) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (_) => false,
-      );
+      // Navigate to AppShell (main app with map) and clear navigation stack
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
     } else {
       setState(() => _error = 'Não foi possível criar a conta agora.');
     }
