@@ -11,24 +11,25 @@ const String _envBase = String.fromEnvironment('BASE_URL', defaultValue: '');
 
 String _computeDefaultBase() {
   // Web/desktop/iOS simulador => localhost
-  if (kIsWeb) return 'http://localhost:3001';
+  if (kIsWeb) return 'http://localhost:3000';
   try {
     if (Platform.isAndroid) {
       // For Android emulator, use 10.0.2.2 which maps to localhost on your machine
       // For physical Android device, use your machine's IP address
       // You can override by setting BASE_URL environment variable:
-      // flutter run --dart-define=BASE_URL=http://YOUR_IP:3001
+      // flutter run --dart-define=BASE_URL=http://YOUR_IP:3000
       const String customUrl = String.fromEnvironment('BASE_URL');
       if (customUrl.isNotEmpty) return customUrl;
       
       // Default: use 10.0.2.2 for emulator
       // For physical device, each dev should set their IP via --dart-define or update this line
-      return 'http://10.0.2.2:3001';
+      // Note: For physical devices, you'll need to use your Windows IP (e.g., 172.29.251.201)
+      return 'http://10.0.2.2:3000';
     }
   } catch (_) {
     // Platform não existe no web; ignorar
   }
-  return 'http://localhost:3001';
+  return 'http://localhost:3000';
 }
 
 final String kBaseUrl = _envBase.isNotEmpty ? _envBase : _computeDefaultBase();

@@ -6,6 +6,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'features/auth/state/auth_controller.dart';
 import 'app/state/theme_controller.dart';
 import 'app/app_shell.dart';
+import 'app/app_router.dart';
 import 'mapbox_config.dart';
 import 'features/map/state/otp_routes_controller.dart';
 import 'services/routes_service.dart';
@@ -41,7 +42,8 @@ class EcoApp extends StatelessWidget {
       darkTheme: theme.darkTheme,
       themeMode: theme.themeMode, // DARK por defeito
       debugShowCheckedModeBanner: false,
-      home: const AppShell(),
+      onGenerateRoute: AppRouter.onGenerateRoute,
+      initialRoute: '/',
     );
   }
 }
