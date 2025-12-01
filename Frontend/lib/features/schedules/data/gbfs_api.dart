@@ -194,7 +194,7 @@ class GbfsApiClient {
   final String baseUrl;
 
   const GbfsApiClient({
-    this.baseUrl = 'http://172.22.101.208:3000',
+    this.baseUrl = 'http://192.168.1.244:3000',
   });
 
   Uri _uri(String path, [Map<String, dynamic>? query]) {
