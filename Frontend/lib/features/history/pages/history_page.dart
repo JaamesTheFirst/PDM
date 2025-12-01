@@ -12,8 +12,6 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  static const _ecoMint = Color(0xFF3CD4A0);
-  
   final _historyService = HistoryService.instance;
   List<RouteHistoryItem> _history = [];
   bool _isLoading = true;
@@ -104,89 +102,32 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _repeatSearch(RouteHistoryItem item) async {
-    // Switch to MapPage (index 0) using AppShell's navigation notifier
+    // Mudar para o tab do mapa
     AppShell.navigateToTab.value = 0;
 
-    // Wait a bit for the map to initialize
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Pequeno delay para dar tempo ao MapPage montar
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    // Create SearchboxPlace objects from history item
-    final fromPlace = SearchboxPlace(
-      id: 'history_${item.id}_from',
-      name: item.originName,
-      placeName: item.originName,
-      longitude: item.originLongitude,
-      latitude: item.originLatitude,
+    // Enviar os dados para o MapPage via ValueNotifier
+    MapPage.pendingRouteSearch.value = {
+      'fromId': 'history_${item.id}_from',
+      'fromName': item.originName,
+      'fromLat': item.originLatitude,
+      'fromLon': item.originLongitude,
+      'toId': 'history_${item.id}_to',
+      'toName': item.destinationName,
+      'toLat': item.destinationLatitude,
+      'toLon': item.destinationLongitude,
+    };
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('A carregar rota...'),
+        duration: Duration(seconds: 2),
+      ),
     );
-
-    final toPlace = SearchboxPlace(
-      id: 'history_${item.id}_to',
-      name: item.destinationName,
-      placeName: item.destinationName,
-      longitude: item.destinationLongitude,
-      latitude: item.destinationLatitude,
-    );
-
-    // We need to get the mapboxMap from MapPage, but since we can't access it directly,
-    // we'll use a different approach: set pending args and let MapPage handle it
-    // For now, we'll need to access the MapPage through a GlobalKey or similar
-    // Actually, let's use a simpler approach: create a controller or use the existing pattern
-    
-    // Since we can't easily get mapboxMap here, we'll need to modify the approach
-    // Let's create the args with a placeholder and let MapPage replace it
-    // Actually, better: use a callback pattern through AppShell
-    
-    // For now, let's use a workaround: navigate and then set pending args
-    // But we need mapboxMap... Let me check if we can get it from context
-    
-    // Actually, the simplest is to store the places and let MapPage fetch them
-    // But that requires more changes. Let's use a static method in MapPage instead.
-    
-    // For now, let's just show a message that this feature needs the map to be ready
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A carregar rota...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-
-    // Set pending route args - MapPage will handle when map is ready
-    // But we need mapboxMap... Let's create a helper that MapPage can call
-    // Actually, let's modify MapPage to accept route args without mapboxMap initially
-    // and set it when the map is ready
-    
-    // For now, let's use a simpler approach: create a route args setter in MapPage
-    // that can be called from anywhere. We'll use a static method or ValueNotifier.
-    
-    // Actually, the best approach is to create the RouteOptionsArgs when we have the map
-    // So let's store the history item and let MapPage create the args when ready
-    // But that requires more state management...
-    
-    // Let's use the simplest approach: create a global notifier for route search
-    // that MapPage listens to
-    _triggerRouteSearch(fromPlace, toPlace);
-  }
-
-  void _triggerRouteSearch(SearchboxPlace from, SearchboxPlace to) {
-    // We'll need to get mapboxMap from MapPage
-    // For now, let's use a workaround: store the places and let MapPage pick them up
-    // Actually, let's create a helper service or use the existing pattern
-    
-    // The issue is we need mapboxMap to create RouteOptionsArgs
-    // Let's modify RouteOptionsArgs to be nullable for mapboxMap, or create a factory
-    // Actually, let's just store the places in a static variable and let MapPage create the args
-    
-    // For now, let's use a simpler approach: navigate to map and show a message
-    // The user can manually search. This is not ideal but works for now.
-    
-    // Actually, let me check if we can access MapPage's mapboxMap through a GlobalKey
-    // or through the widget tree. But that's complex.
-    
-    // Best solution: Create a RouteSearchController that both pages can use
-    // For now, let's just navigate and the user can search manually
-    // We'll improve this later with proper state management
   }
 
   @override
@@ -241,16 +182,26 @@ class _HistoryPageState extends State<HistoryPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.history, size: 48, color: t.colorScheme.onSurface.withOpacity(.6)),
+              Icon(
+                Icons.history,
+                size: 48,
+                color: t.colorScheme.onSurface.withOpacity(.6),
+              ),
               const SizedBox(height: 12),
               Text(
                 'O teu histórico vai aparecer aqui',
-                style: TextStyle(fontSize: 16, color: t.colorScheme.onSurface),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: t.colorScheme.onSurface,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Planeia um trajeto para começares a registar.',
-                style: TextStyle(fontSize: 14, color: t.colorScheme.onSurface.withOpacity(.7)),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: t.colorScheme.onSurface.withOpacity(.7),
+                ),
               ),
             ],
           ),
@@ -282,7 +233,6 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 }
-
 
 class _HistoryCard extends StatelessWidget {
   static const _ecoMint = Color(0xFF3CD4A0);
@@ -359,14 +309,16 @@ class _HistoryCard extends StatelessWidget {
                           Icon(
                             Icons.arrow_forward,
                             size: 14,
-                            color: t.colorScheme.onSurface.withOpacity(0.6),
+                            color:
+                                t.colorScheme.onSurface.withOpacity(0.6),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               item.destinationName,
                               style: t.textTheme.bodySmall?.copyWith(
-                                color: t.colorScheme.onSurface.withOpacity(0.7),
+                                color: t.colorScheme.onSurface
+                                    .withOpacity(0.7),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -381,7 +333,8 @@ class _HistoryCard extends StatelessWidget {
                   formatDate(item.createdAt),
                   style: TextStyle(
                     fontSize: 12,
-                    color: t.colorScheme.onSurface.withOpacity(0.5),
+                    color:
+                        t.colorScheme.onSurface.withOpacity(0.5),
                     fontFamily: 'Inter',
                   ),
                 ),
