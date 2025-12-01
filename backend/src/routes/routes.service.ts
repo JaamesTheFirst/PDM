@@ -304,7 +304,8 @@ export class RoutesService {
 
         return this.prisma.routeHistory.findMany({
             where,
-            orderBy: { startedAt: 'desc' },
+            orderBy: { createdAt: 'desc' },
+            take: query.limit ?? 20,
         });
     }
 
