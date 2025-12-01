@@ -8,13 +8,14 @@ import '../../../services/mapbox_searchbox_service.dart';
 
 // screens + bottom-sheet route + tipos
 import '../nav/bottom_sheet_route.dart';
-import '../screens/route_search_screen.dart';   // RouteSearchScreen + RouteSearchScreenArgs
+import '../screens/route_search_screen.dart'; // RouteSearchScreen + RouteSearchScreenArgs
 // import '../screens/route_options_screen.dart';  // <- DEIXA DE SER USADO
 import '../widgets/route_options_overlay.dart'; // RouteOptionsArgs (tipo)
 
 class MapPage extends StatefulWidget {
   static final ValueNotifier<bool> fullscreenNotifier = ValueNotifier(false);
-  static final ValueNotifier<Map<String, dynamic>?> pendingRouteSearch = ValueNotifier<Map<String, dynamic>?>(null);
+  static final ValueNotifier<Map<String, dynamic>?> pendingRouteSearch =
+      ValueNotifier<Map<String, dynamic>?>(null);
 
   const MapPage({super.key});
 
@@ -35,21 +36,15 @@ class _MapPageState extends State<MapPage> {
   static const _ecoMint = Color(0xFF3CD4A0);
   bool _isMapAlive = false;
 
-  // ⬇️ novos: para mostrar a RouteOptionsOverlay dentro do MapPage
+  // novos: para mostrar a RouteOptionsOverlay dentro do MapPage
   RouteOptionsArgs? _routeOptionsArgs;
 
   @override
   void initState() {
     super.initState();
     _init();
-    // Listen for pending route search from HistoryPage
+    // listen for pending route search from HistoryPage
     MapPage.pendingRouteSearch.addListener(_handlePendingRouteSearch);
-  }
-
-  @override
-  void dispose() {
-    MapPage.pendingRouteSearch.removeListener(_handlePendingRouteSearch);
-    super.dispose();
   }
 
   void _handlePendingRouteSearch() {
@@ -57,7 +52,7 @@ class _MapPageState extends State<MapPage> {
     if (data != null && mapboxMap != null && _isMapAlive) {
       // Clear the pending search
       MapPage.pendingRouteSearch.value = null;
-      
+
       // Create SearchboxPlace objects from the data
       final fromPlace = SearchboxPlace(
         id: data['fromId'] as String,
@@ -294,7 +289,7 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
 
-        // --- Botão "Para onde?" (esconde quando fullscreenNotifier = true) ---
+        // Botão "Para onde?" (esconde quando fullscreenNotifier = true)
         Positioned(
           left: 16,
           right: 16,
@@ -340,7 +335,7 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
 
-        // --- FAB "minha localização" ---
+        // FAB "minha localização"
         Positioned(
           right: 16,
           bottom: 16 + safeBottom,
@@ -354,7 +349,7 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
 
-        // --- OVERLAY DE OPÇÕES (meia altura) ---
+        // OVERLAY DE OPÇÕES (meia altura)
         if (_routeOptionsArgs != null)
           Align(
             alignment: Alignment.bottomCenter,
@@ -375,6 +370,10 @@ class _MapPageState extends State<MapPage> {
 
   @override
   void dispose() {
+    // remover listener do ValueNotifier
+    MapPage.pendingRouteSearch.removeListener(_handlePendingRouteSearch);
+
+    // limpar mapa / streams
     _isMapAlive = false;
     _posSub?.cancel();
     _posSub = null;
@@ -383,6 +382,7 @@ class _MapPageState extends State<MapPage> {
     _userCircle = null;
     _userHalo = null;
     mapboxMap = null;
+
     super.dispose();
   }
 }
