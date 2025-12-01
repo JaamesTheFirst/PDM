@@ -47,20 +47,43 @@ class _MapPageState extends State<MapPage> {
     MapPage.pendingRouteSearch.addListener(_handlePendingRouteSearch);
   }
 
-  void _handlePendingRouteSearch() {
+  void _handlePendingRouteSearch() async {
     final data = MapPage.pendingRouteSearch.value;
     if (data != null && mapboxMap != null && _isMapAlive) {
       // Clear the pending search
       MapPage.pendingRouteSearch.value = null;
 
-      // Create SearchboxPlace objects from the data
-      final fromPlace = SearchboxPlace(
-        id: data['fromId'] as String,
-        name: data['fromName'] as String,
-        placeName: data['fromName'] as String,
-        longitude: data['fromLon'] as double,
-        latitude: data['fromLat'] as double,
-      );
+      // Get origin - use provided from or current location
+      SearchboxPlace fromPlace;
+      if (data.containsKey('fromId') && data.containsKey('fromLat') && data.containsKey('fromLon')) {
+        fromPlace = SearchboxPlace(
+          id: data['fromId'] as String,
+          name: data['fromName'] as String? ?? 'Origem',
+          placeName: data['fromName'] as String? ?? 'Origem',
+          longitude: data['fromLon'] as double,
+          latitude: data['fromLat'] as double,
+        );
+      } else {
+        // Use current location as origin
+        if (_currentLocation == null) {
+          // Try to get current location
+          final pos = await LocationService.instance.getCurrentLocation();
+          if (pos == null) {
+            print('[MapPage] Cannot handle pending route search: no current location');
+            return;
+          }
+          _currentLocation = mbx.Point(
+            coordinates: mbx.Position(pos.longitude, pos.latitude),
+          );
+        }
+        fromPlace = SearchboxPlace(
+          id: 'current_location',
+          name: 'Localização atual',
+          placeName: 'Localização atual',
+          longitude: _currentLocation!.coordinates.lng.toDouble(),
+          latitude: _currentLocation!.coordinates.lat.toDouble(),
+        );
+      }
 
       final toPlace = SearchboxPlace(
         id: data['toId'] as String,

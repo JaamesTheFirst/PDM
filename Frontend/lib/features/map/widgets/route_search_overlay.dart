@@ -6,6 +6,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 import '../../../../services/mapbox_geocoding_service.dart';
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
+import '../../../../services/search_history_service.dart';
 import './route_options_overlay.dart'; // RouteOptionsArgs
 
 class RouteSearchOverlay extends StatefulWidget {
@@ -392,6 +393,13 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         _toController.text = _formatToField(place);
         _sbSuggestions.clear();
       });
+      // Save to search history when destination is selected
+      await SearchHistoryService.instance.addDestination(
+        address: place.placeName,
+        name: place.name.isNotEmpty ? place.name : place.placeName,
+        latitude: place.latitude,
+        longitude: place.longitude,
+      );
       await _setDestination(place);
     }
   }
