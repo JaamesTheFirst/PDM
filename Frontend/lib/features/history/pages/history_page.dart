@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/history_service.dart';
 import '../../../app/app_shell.dart';
 import '../../map/pages/map_page.dart';
+import '../../../app/app_router.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -37,7 +38,15 @@ class _HistoryPageState extends State<HistoryPage> {
       });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        // Provide user-friendly error messages
+        if (e.toString().contains('Not authenticated') || 
+            e.toString().contains('not authenticated')) {
+          _error = 'Por favor, inicia sessão para veres o teu histórico';
+        } else if (e.toString().contains('Failed to fetch')) {
+          _error = 'Erro ao conectar ao servidor. Verifica a tua ligação à internet.';
+        } else {
+          _error = e.toString();
+        }
         _isLoading = false;
       });
     }
@@ -144,6 +153,9 @@ class _HistoryPageState extends State<HistoryPage> {
     }
 
     if (_error != null) {
+      final isAuthError = _error!.toLowerCase().contains('not authenticated') || 
+                          _error!.toLowerCase().contains('autenticado');
+      
       return Container(
         color: t.scaffoldBackgroundColor,
         padding: const EdgeInsets.all(16),
@@ -151,10 +163,14 @@ class _HistoryPageState extends State<HistoryPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 48, color: t.colorScheme.error),
+              Icon(
+                isAuthError ? Icons.login : Icons.error_outline, 
+                size: 48, 
+                color: isAuthError ? t.colorScheme.primary : t.colorScheme.error,
+              ),
               const SizedBox(height: 12),
               Text(
-                'Erro ao carregar histórico',
+                isAuthError ? 'Sessão não iniciada' : 'Erro ao carregar histórico',
                 style: t.textTheme.titleMedium,
               ),
               const SizedBox(height: 4),
@@ -164,10 +180,20 @@ class _HistoryPageState extends State<HistoryPage> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadHistory,
-                child: const Text('Tentar novamente'),
-              ),
+              if (isAuthError)
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // Navigate to login screen
+                    Navigator.of(context).pushNamed('/login');
+                  },
+                  icon: const Icon(Icons.login),
+                  label: const Text('Iniciar sessão'),
+                )
+              else
+                ElevatedButton(
+                  onPressed: _loadHistory,
+                  child: const Text('Tentar novamente'),
+                ),
             ],
           ),
         ),
