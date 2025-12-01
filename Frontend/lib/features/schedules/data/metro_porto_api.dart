@@ -49,7 +49,7 @@ class MetroPortoDepartureRow {
 class MetroPortoApiClient {
   // ATENÇÃO: garante que isto bate certo com o resto da app
   static const String _defaultBaseUrl =
-      kIsWeb ? 'http://localhost:3000' : 'http://172.22.101.208:3000';
+      kIsWeb ? 'http://localhost:3000' : 'http://192.168.1.244:3000';
 
   final String baseUrl;
   final http.Client _client;
