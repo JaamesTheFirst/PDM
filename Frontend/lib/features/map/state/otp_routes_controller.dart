@@ -34,6 +34,16 @@ class OtpRoutesController extends ChangeNotifier {
         );
       }
 
+      // For walking-only requests, ensure maxWalkDistanceMeters is only applied if explicitly set
+      // This allows long walking routes when user doesn't set a constraint
+      if (primaryFilters.modes != null && 
+          primaryFilters.modes!.length == 1 && 
+          primaryFilters.modes!.contains('WALK') &&
+          primaryFilters.maxWalkDistanceMeters == null) {
+        // User selected WALK only with no distance constraint - allow unlimited walking
+        print('[OtpRoutesController] WALK-only selected with no maxWalkDistanceMeters - allowing unlimited distance');
+      }
+
       _result = await _service.plan(
         fromLat: fromLat,
         fromLon: fromLon,
