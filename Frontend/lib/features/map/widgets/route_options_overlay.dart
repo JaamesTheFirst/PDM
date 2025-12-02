@@ -406,9 +406,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _OtpItinerariesPanel(
-                          onSelectMode: _selectMode,
-                        ),
+                        child: const _OtpItinerariesPanel(),
                       ),
                     ),
 
@@ -467,12 +465,37 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 }
 
 class _OtpItinerariesPanel extends StatelessWidget {
-  final Function(String mode, {bool draw})? onSelectMode;
-  
-  const _OtpItinerariesPanel({this.onSelectMode});
+  const _OtpItinerariesPanel();
 
   String _formatTime(DateTime dt) =>
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+  /// Get icon for primary transport mode
+  IconData _getIconForMode(OtpItinerary itinerary) {
+    // Find the primary (non-walking) mode
+    for (final leg in itinerary.legs) {
+      final mode = leg.mode.toUpperCase();
+      if (mode != 'WALK' && mode != 'WALKING') {
+        if (mode == 'CAR' || mode.contains('CAR')) {
+          return Icons.directions_car;
+        } else if (mode == 'BICYCLE' || mode == 'BIKE' || mode.contains('BIKE')) {
+          return Icons.directions_bike;
+        } else if (mode.contains('RAIL') || mode.contains('TRAIN') || mode == 'R' || mode == 'IC') {
+          return Icons.train;
+        } else if (mode.contains('BUS') || mode == 'COACH' || mode == 'FLIXBUS') {
+          return Icons.directions_bus;
+        } else if (mode.contains('METRO') || mode.contains('SUBWAY')) {
+          return Icons.subway;
+        } else if (mode.contains('TRAM')) {
+          return Icons.tram;
+        } else if (mode == 'TRANSIT') {
+          return Icons.directions_transit;
+        }
+      }
+    }
+    // Default to walking if all legs are walking
+    return Icons.directions_walk;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -553,95 +576,11 @@ class _OtpItinerariesPanel extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Rotas de transporte público',
-                    style: t.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                if (onSelectMode != null)
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert),
-                    tooltip: 'Modos de transporte',
-                    onSelected: (mode) => onSelectMode!(mode, draw: true),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'walking',
-                        child: Row(
-                          children: [
-                            Icon(Icons.directions_walk, size: 20),
-                            SizedBox(width: 12),
-                            Text('Caminhar'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'cycling',
-                        child: Row(
-                          children: [
-                            Icon(Icons.directions_bike, size: 20),
-                            SizedBox(width: 12),
-                            Text('Bicicleta'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'scooter',
-                        child: Row(
-                          children: [
-                            Icon(Icons.electric_scooter, size: 20),
-                            SizedBox(width: 12),
-                            Text('Scooter'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'bike_share',
-                        child: Row(
-                          children: [
-                            Icon(Icons.pedal_bike, size: 20),
-                            SizedBox(width: 12),
-                            Text('Bicicleta (partilha)'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'scooter_share',
-                        child: Row(
-                          children: [
-                            Icon(Icons.two_wheeler, size: 20),
-                            SizedBox(width: 12),
-                            Text('Scooter (partilha)'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'taxi',
-                        child: Row(
-                          children: [
-                            Icon(Icons.local_taxi, size: 20),
-                            SizedBox(width: 12),
-                            Text('Táxi'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'driving',
-                        child: Row(
-                          children: [
-                            Icon(Icons.directions_car, size: 20),
-                            SizedBox(width: 12),
-                            Text('Carro'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+            Text(
+              'Rotas de transporte público',
+              style: t.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -656,119 +595,12 @@ class _OtpItinerariesPanel extends StatelessWidget {
                 itemCount: itineraries.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (_, index) {
-                final itinerary = itineraries[index];
-                final selected = controller.selectedIndex == index;
-                final durationMin = (itinerary.duration / 60).round();
-                final legsSummary = itinerary.legs
-                    .map((leg) => leg.routeName ?? leg.mode)
-                    .join(' • ');
-                final walkKm = itinerary.walkDistance / 1000.0;
-                
-                // Calculate Eco Score
-                final ecoScore = EcoScoreService.instance.calculateScore(itinerary);
-                final scoreColor = Color(EcoScoreService.instance.getScoreColor(ecoScore.score));
-
-                return GestureDetector(
-                  onTap: () => controller.selectItinerary(index),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? _RouteOptionsOverlayState._ecoMint.withOpacity(0.15)
-                          : t.cardColor,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: selected
-                            ? _RouteOptionsOverlayState._ecoMint
-                            : t.colorScheme.onSurface.withOpacity(.1),
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.directions_transit, size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '${_formatTime(itinerary.startTime)} – ${_formatTime(itinerary.endTime)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text('$durationMin min'),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          legsSummary,
-                          style: t.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            // Eco Score badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: scoreColor.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: scoreColor.withOpacity(0.3)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    ecoScore.hasPhysicalActivity 
-                                        ? Icons.fitness_center 
-                                        : Icons.eco,
-                                    size: 14,
-                                    color: scoreColor,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Eco: ${ecoScore.score}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: scoreColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // CO2 badge - only per km for easy comparison
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: t.colorScheme.surfaceVariant.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                EcoScoreService.instance.formatCo2PerKm(ecoScore.co2PerKm),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: t.colorScheme.onSurface.withOpacity(0.9),
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            // Walking distance
-                            Text(
-                              '${walkKm.toStringAsFixed(1)} km a pé',
-                              style: t.textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                return _ExpandableRouteCard(
+                  itinerary: itineraries[index],
+                  index: index,
+                  controller: controller,
+                  getIconForMode: _getIconForMode,
+                  formatTime: _formatTime,
                 );
               },
             ),
@@ -777,6 +609,222 @@ class _OtpItinerariesPanel extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _ExpandableRouteCard extends StatefulWidget {
+  final OtpItinerary itinerary;
+  final int index;
+  final OtpRoutesController controller;
+  final IconData Function(OtpItinerary) getIconForMode;
+  final String Function(DateTime) formatTime;
+
+  const _ExpandableRouteCard({
+    required this.itinerary,
+    required this.index,
+    required this.controller,
+    required this.getIconForMode,
+    required this.formatTime,
+  });
+
+  @override
+  State<_ExpandableRouteCard> createState() => _ExpandableRouteCardState();
+}
+
+class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final itinerary = widget.itinerary;
+    final selected = widget.controller.selectedIndex == widget.index;
+    final durationMin = (itinerary.duration / 60).round();
+    final legsSummary = itinerary.legs
+        .map((leg) => leg.routeName ?? leg.mode)
+        .join(' • ');
+    final walkKm = itinerary.walkDistance / 1000.0;
+    
+    // Calculate Eco Score
+    final ecoScore = EcoScoreService.instance.calculateScore(itinerary);
+    final scoreColor = Color(EcoScoreService.instance.getScoreColor(ecoScore.score));
+
+    return GestureDetector(
+      onTap: () => widget.controller.selectItinerary(widget.index),
+      child: Container(
+        decoration: BoxDecoration(
+          color: selected
+              ? _RouteOptionsOverlayState._ecoMint.withOpacity(0.15)
+              : t.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? _RouteOptionsOverlayState._ecoMint
+                : t.colorScheme.onSurface.withOpacity(.1),
+          ),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(widget.getIconForMode(itinerary), size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${widget.formatTime(itinerary.startTime)} – ${widget.formatTime(itinerary.endTime)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('$durationMin min'),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isExpanded = !_isExpanded;
+                    });
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              legsSummary,
+              style: t.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                // Eco Score badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: scoreColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: scoreColor.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        ecoScore.hasPhysicalActivity 
+                            ? Icons.fitness_center 
+                            : Icons.eco,
+                        size: 14,
+                        color: scoreColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Eco: ${ecoScore.score}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: scoreColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // CO2 badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: t.colorScheme.surfaceVariant.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    EcoScoreService.instance.formatCo2PerKm(ecoScore.co2PerKm),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: t.colorScheme.onSurface.withOpacity(0.9),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                // Walking distance
+                Text(
+                  '${walkKm.toStringAsFixed(1)} km a pé',
+                  style: t.textTheme.bodySmall,
+                ),
+              ],
+            ),
+            // Expanded details
+            if (_isExpanded) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              ...itinerary.legs.map((leg) {
+                final legDurationMin = (leg.duration / 60).round();
+                final legDistanceKm = leg.distance / 1000.0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        _getLegIcon(leg.mode),
+                        size: 16,
+                        color: t.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              leg.routeName ?? leg.mode,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              '${leg.fromName} → ${leg.toName}',
+                              style: t.textTheme.bodySmall,
+                            ),
+                            Text(
+                              '$legDurationMin min • ${legDistanceKm.toStringAsFixed(1)} km',
+                              style: t.textTheme.bodySmall?.copyWith(
+                                color: t.colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getLegIcon(String mode) {
+    final m = mode.toUpperCase();
+    if (m == 'WALK' || m == 'WALKING') return Icons.directions_walk;
+    if (m == 'CAR' || m.contains('CAR')) return Icons.directions_car;
+    if (m == 'BICYCLE' || m == 'BIKE' || m.contains('BIKE')) return Icons.directions_bike;
+    if (m.contains('RAIL') || m.contains('TRAIN') || m == 'R' || m == 'IC') return Icons.train;
+    if (m.contains('BUS') || m == 'COACH' || m == 'FLIXBUS') return Icons.directions_bus;
+    if (m.contains('METRO') || m.contains('SUBWAY')) return Icons.subway;
+    if (m.contains('TRAM')) return Icons.tram;
+    return Icons.directions_transit;
   }
 }
 

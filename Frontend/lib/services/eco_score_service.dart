@@ -187,6 +187,22 @@ class EcoScoreService {
     
     print('[EcoScore] isOnlyZeroEmission=$isOnlyZeroEmission, co2PerKm=${(co2PerKm * 1000).toStringAsFixed(3)}g/km');
 
+    // Check if route is car-only (least efficient)
+    bool isCarOnly = true;
+    for (final leg in itinerary.legs) {
+      final mode = leg.mode.toUpperCase();
+      if (mode != 'WALK' && mode != 'WALKING' && mode != 'CAR' && !mode.contains('CAR')) {
+        isCarOnly = false;
+        break;
+      }
+    }
+    // If all non-walking legs are car, it's car-only
+    if (isCarOnly && itinerary.legs.any((leg) => leg.mode.toUpperCase() == 'CAR' || leg.mode.toUpperCase().contains('CAR'))) {
+      isCarOnly = true;
+    } else {
+      isCarOnly = false;
+    }
+
     // Calculate score (0-100)
     // Lower CO2 per km = higher score
     // Use a more granular scale that differentiates low-emission routes
@@ -195,6 +211,18 @@ class EcoScoreService {
     if (isOnlyZeroEmission && co2PerKm <= 0.0001) {
       // ONLY zero-emission modes (walking, cycling, scooter) - strict requirement
       baseScore = 100.0;
+    } else if (isCarOnly) {
+      // Car-only routes get the lowest scores (strict penalty)
+      // Car emits ~120 g/km, so it should score very low
+      final co2PerKmGram = co2PerKm * 1000; // Convert to g/km
+      // For car-only: 80-120 g/km -> 0-20 score (very strict)
+      if (co2PerKmGram >= 120) {
+        baseScore = 0.0;
+      } else if (co2PerKmGram >= 80) {
+        baseScore = 20 - ((co2PerKmGram - 80) / 40) * 20; // 80g/km = 20, 120g/km = 0
+      } else {
+        baseScore = 20.0; // Cap at 20 for car-only
+      }
     } else if (co2PerKm >= _maxCo2PerKm) {
       // Very high emissions
       baseScore = 0.0;

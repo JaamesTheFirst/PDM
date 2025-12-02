@@ -557,7 +557,26 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   }
 
   Future<void> _showFilterDialog(BuildContext context) async {
-    String? selectedFilterMode = _activeFilters?.filterMode;
+    // Available OTP transport modes
+    final availableModes = [
+      {'value': 'WALK', 'label': 'Caminhar', 'icon': Icons.directions_walk},
+      {'value': 'BICYCLE', 'label': 'Bicicleta', 'icon': Icons.directions_bike},
+      {'value': 'TRANSIT', 'label': 'Transporte público', 'icon': Icons.directions_transit},
+      {'value': 'CAR', 'label': 'Carro', 'icon': Icons.directions_car},
+    ];
+    
+    // Granular transit types (shown when TRANSIT is selected)
+    final transitTypes = [
+      {'value': 'BUS', 'label': 'Autocarro', 'icon': Icons.directions_bus},
+      {'value': 'RAIL', 'label': 'Comboio', 'icon': Icons.train},
+      {'value': 'METRO', 'label': 'Metro', 'icon': Icons.subway},
+      {'value': 'TRAM', 'label': 'Elétrico', 'icon': Icons.tram},
+      {'value': 'BICYCLE_SHARE', 'label': 'Bicicleta partilhada (Gira)', 'icon': Icons.pedal_bike},
+      {'value': 'SCOOTER_SHARE', 'label': 'Scooter partilhado', 'icon': Icons.electric_scooter},
+    ];
+    
+    Set<String> selectedModes = Set.from(_activeFilters?.modes ?? []);
+    Set<String> selectedTransitTypes = Set.from(_activeFilters?.transitTypes ?? []);
     int? maxWalk = _activeFilters?.maxWalkDistanceMeters;
     final TextEditingController walkController = TextEditingController(
       text: maxWalk != null ? (maxWalk / 1000).toStringAsFixed(1) : '',
@@ -568,6 +587,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // Calculate inside StatefulBuilder so it updates reactively
+            final isTransitSelected = selectedModes.contains('TRANSIT');
+            
             return AlertDialog(
               title: const Text('Filtros de rota'),
               content: SingleChildScrollView(
@@ -576,34 +598,99 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Tipo de transporte:',
+                      'Seleciona os modos de transporte:',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 8),
-                    RadioListTile<String?>(
-                      title: const Text('Qualquer (sem filtro)'),
-                      value: null,
-                      groupValue: selectedFilterMode,
-                      onChanged: (value) {
-                        setDialogState(() {
-                          selectedFilterMode = value;
-                        });
-                      },
-                      dense: true,
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Podes selecionar múltiplos modos',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
-                    ...['WALK_ONLY', 'BUS_ONLY', 'RAIL_ONLY', 'METRO_ONLY', 'BICYCLE_ONLY', 'CAR_ONLY']
-                        .map((mode) => RadioListTile<String>(
-                              title: Text(_getFilterModeLabel(mode)),
-                              value: mode,
-                              groupValue: selectedFilterMode,
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  selectedFilterMode = value;
-                                });
-                              },
-                              dense: true,
-                            ))
-                        .toList(),
+                    const SizedBox(height: 8),
+                    ...availableModes.map((mode) {
+                      final isSelected = selectedModes.contains(mode['value'] as String);
+                      return CheckboxListTile(
+                        title: Row(
+                          children: [
+                            Icon(
+                              mode['icon'] as IconData,
+                              size: 20,
+                              color: isSelected ? _ecoMint : null,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(mode['label'] as String),
+                          ],
+                        ),
+                        value: isSelected,
+                        onChanged: (checked) {
+                          setDialogState(() {
+                            if (checked == true) {
+                              selectedModes.add(mode['value'] as String);
+                            } else {
+                              selectedModes.remove(mode['value'] as String);
+                              // If TRANSIT is deselected, clear transit types
+                              if (mode['value'] == 'TRANSIT') {
+                                selectedTransitTypes.clear();
+                              }
+                            }
+                          });
+                        },
+                        dense: true,
+                        activeColor: _ecoMint,
+                      );
+                    }).toList(),
+                    // Show granular transit types when TRANSIT is selected
+                    if (isTransitSelected) ...[
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Tipos de transporte público:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Seleciona tipos específicos (deixa vazio para todos)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+                      ...transitTypes.map((type) {
+                        final isSelected = selectedTransitTypes.contains(type['value'] as String);
+                        return CheckboxListTile(
+                          title: Row(
+                            children: [
+                              Icon(
+                                type['icon'] as IconData,
+                                size: 18,
+                                color: isSelected ? _ecoMint : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  type['label'] as String,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          value: isSelected,
+                          onChanged: (checked) {
+                            setDialogState(() {
+                              if (checked == true) {
+                                selectedTransitTypes.add(type['value'] as String);
+                              } else {
+                                selectedTransitTypes.remove(type['value'] as String);
+                              }
+                            });
+                          },
+                          dense: true,
+                          activeColor: _ecoMint,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                        );
+                      }).toList(),
+                    ],
                     const SizedBox(height: 16),
                     const Text(
                       'Distância máxima a pé (km):',
@@ -623,27 +710,20 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(
-                    RouteFilters(
-                      filterMode: null,
-                      maxWalkDistanceMeters: null,
-                    ),
-                  ),
+                  onPressed: () => Navigator.of(context).pop(null),
                   child: const Text('Limpar'),
                 ),
                 TextButton(
                   onPressed: () {
                     final filters = RouteFilters(
-                      filterMode: selectedFilterMode,
+                      modes: selectedModes.isEmpty ? null : selectedModes.toList(),
+                      transitTypes: selectedTransitTypes.isEmpty ? null : selectedTransitTypes.toList(),
                       maxWalkDistanceMeters: walkController.text.isNotEmpty
                           ? (double.tryParse(walkController.text) ?? 0.0).toInt() * 1000
                           : null,
                     );
-                    // Only return filters if something is actually set
                     Navigator.of(context).pop(
-                      (selectedFilterMode != null || filters.maxWalkDistanceMeters != null)
-                          ? filters
-                          : null,
+                      filters.hasActiveFilters ? filters : null,
                     );
                   },
                   child: const Text('Aplicar'),
@@ -659,25 +739,11 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       setState(() {
         _activeFilters = result;
       });
-    }
-  }
-
-  String _getFilterModeLabel(String mode) {
-    switch (mode) {
-      case 'WALK_ONLY':
-        return 'Só a pé';
-      case 'BUS_ONLY':
-        return 'Só autocarro';
-      case 'RAIL_ONLY':
-        return 'Só comboio';
-      case 'METRO_ONLY':
-        return 'Só metro';
-      case 'BICYCLE_ONLY':
-        return 'Só bicicleta';
-      case 'CAR_ONLY':
-        return 'Só carro';
-      default:
-        return mode;
+    } else if (result == null && _activeFilters != null) {
+      // User clicked "Limpar" - clear filters
+      setState(() {
+        _activeFilters = null;
+      });
     }
   }
 
@@ -818,32 +884,34 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _activeFilters != null ? 'Filtros ativos' : 'Filtros',
+                          _activeFilters != null && _activeFilters!.hasActiveFilters
+                              ? 'Filtros ativos'
+                              : 'Filtros',
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: _activeFilters != null
+                            fontWeight: _activeFilters != null && _activeFilters!.hasActiveFilters
                                 ? FontWeight.w600
                                 : FontWeight.normal,
-                            color: _activeFilters != null
+                            color: _activeFilters != null && _activeFilters!.hasActiveFilters
                                 ? _ecoMint
                                 : t.colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       ],
                     ),
-                    selected: _activeFilters != null,
+                    selected: _activeFilters != null && _activeFilters!.hasActiveFilters,
                     onSelected: (_) => _showFilterDialog(context),
-                    backgroundColor: _activeFilters != null
+                    backgroundColor: _activeFilters != null && _activeFilters!.hasActiveFilters
                         ? _ecoMint.withOpacity(0.1)
                         : t.colorScheme.surfaceVariant.withOpacity(0.5),
                     selectedColor: _ecoMint.withOpacity(0.15),
                     side: BorderSide(
-                      color: _activeFilters != null
+                      color: _activeFilters != null && _activeFilters!.hasActiveFilters
                           ? _ecoMint
                           : t.colorScheme.onSurface.withOpacity(0.2),
                     ),
                   ),
-                  if (_activeFilters != null) ...[
+                  if (_activeFilters != null && _activeFilters!.hasActiveFilters) ...[
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () {
