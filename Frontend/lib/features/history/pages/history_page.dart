@@ -78,6 +78,7 @@ class _HistoryPageState extends State<HistoryPage> {
     MapPage.pendingRouteSearch.value = {
       'toId': 'history_${destination.timestamp.millisecondsSinceEpoch}_to',
       'toName': destination.name,
+      'toAddress': destination.address, // Include full address for placeName
       'toLat': destination.latitude,
       'toLon': destination.longitude,
     };
