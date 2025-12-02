@@ -7,6 +7,7 @@ import '../../../../services/mapbox_geocoding_service.dart';
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
 import '../../../../services/search_history_service.dart';
+import '../../../../services/routes_service.dart';
 import './route_options_overlay.dart'; // RouteOptionsArgs
 
 class RouteSearchOverlay extends StatefulWidget {
@@ -56,6 +57,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   String? _emptyMsg;
   Timer? _debounce;
   int _nearbyGen = 0;
+  
+  // Filter state
+  RouteFilters? _activeFilters;
 
   mbx.CircleAnnotationManager? _circleMgr;
   mbx.PolylineAnnotationManager? _lineMgr;
@@ -552,6 +556,197 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     return mbx.Position(_selectedFrom!.longitude, _selectedFrom!.latitude);
   }
 
+  Future<void> _showFilterDialog(BuildContext context) async {
+    // Available OTP transport modes
+    final availableModes = [
+      {'value': 'WALK', 'label': 'Caminhar', 'icon': Icons.directions_walk},
+      {'value': 'BICYCLE', 'label': 'Bicicleta', 'icon': Icons.directions_bike},
+      {'value': 'TRANSIT', 'label': 'Transporte público', 'icon': Icons.directions_transit},
+      {'value': 'CAR', 'label': 'Carro', 'icon': Icons.directions_car},
+    ];
+    
+    // Granular transit types (shown when TRANSIT is selected)
+    final transitTypes = [
+      {'value': 'BUS', 'label': 'Autocarro', 'icon': Icons.directions_bus},
+      {'value': 'RAIL', 'label': 'Comboio', 'icon': Icons.train},
+      {'value': 'METRO', 'label': 'Metro', 'icon': Icons.subway},
+      {'value': 'TRAM', 'label': 'Elétrico', 'icon': Icons.tram},
+      {'value': 'BICYCLE_SHARE', 'label': 'Bicicleta partilhada (Gira)', 'icon': Icons.pedal_bike},
+      {'value': 'SCOOTER_SHARE', 'label': 'Scooter partilhado', 'icon': Icons.electric_scooter},
+    ];
+    
+    Set<String> selectedModes = Set.from(_activeFilters?.modes ?? []);
+    Set<String> selectedTransitTypes = Set.from(_activeFilters?.transitTypes ?? []);
+    int? maxWalk = _activeFilters?.maxWalkDistanceMeters;
+    final TextEditingController walkController = TextEditingController(
+      text: maxWalk != null ? (maxWalk / 1000).toStringAsFixed(1) : '',
+    );
+
+    final result = await showDialog<RouteFilters?>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // Calculate inside StatefulBuilder so it updates reactively
+            final isTransitSelected = selectedModes.contains('TRANSIT');
+            
+            return AlertDialog(
+              title: const Text('Filtros de rota'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Seleciona os modos de transporte:',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Podes selecionar múltiplos modos',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 8),
+                    ...availableModes.map((mode) {
+                      final isSelected = selectedModes.contains(mode['value'] as String);
+                      return CheckboxListTile(
+                        title: Row(
+                          children: [
+                            Icon(
+                              mode['icon'] as IconData,
+                              size: 20,
+                              color: isSelected ? _ecoMint : null,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(mode['label'] as String),
+                          ],
+                        ),
+                        value: isSelected,
+                        onChanged: (checked) {
+                          setDialogState(() {
+                            if (checked == true) {
+                              selectedModes.add(mode['value'] as String);
+                            } else {
+                              selectedModes.remove(mode['value'] as String);
+                              // If TRANSIT is deselected, clear transit types
+                              if (mode['value'] == 'TRANSIT') {
+                                selectedTransitTypes.clear();
+                              }
+                            }
+                          });
+                        },
+                        dense: true,
+                        activeColor: _ecoMint,
+                      );
+                    }).toList(),
+                    // Show granular transit types when TRANSIT is selected
+                    if (isTransitSelected) ...[
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Tipos de transporte público:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Seleciona tipos específicos (deixa vazio para todos)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+                      ...transitTypes.map((type) {
+                        final isSelected = selectedTransitTypes.contains(type['value'] as String);
+                        return CheckboxListTile(
+                          title: Row(
+                            children: [
+                              Icon(
+                                type['icon'] as IconData,
+                                size: 18,
+                                color: isSelected ? _ecoMint : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  type['label'] as String,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          value: isSelected,
+                          onChanged: (checked) {
+                            setDialogState(() {
+                              if (checked == true) {
+                                selectedTransitTypes.add(type['value'] as String);
+                              } else {
+                                selectedTransitTypes.remove(type['value'] as String);
+                              }
+                            });
+                          },
+                          dense: true,
+                          activeColor: _ecoMint,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                        );
+                      }).toList(),
+                    ],
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Distância máxima a pé (km):',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: walkController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        hintText: 'Ex: 2.5 (deixar vazio para sem limite)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null),
+                  child: const Text('Limpar'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final filters = RouteFilters(
+                      modes: selectedModes.isEmpty ? null : selectedModes.toList(),
+                      transitTypes: selectedTransitTypes.isEmpty ? null : selectedTransitTypes.toList(),
+                      maxWalkDistanceMeters: walkController.text.isNotEmpty
+                          ? (double.tryParse(walkController.text) ?? 0.0).toInt() * 1000
+                          : null,
+                    );
+                    Navigator.of(context).pop(
+                      filters.hasActiveFilters ? filters : null,
+                    );
+                  },
+                  child: const Text('Aplicar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        _activeFilters = result;
+      });
+    } else if (result == null && _activeFilters != null) {
+      // User clicked "Limpar" - clear filters
+      setState(() {
+        _activeFilters = null;
+      });
+    }
+  }
+
   void _onConfirm() async {
     if (_selectedTo == null) return;
 
@@ -583,6 +778,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         mapboxMap: widget.mapboxMap,
         from: fromPlace,
         to: _selectedTo!,
+        filters: _activeFilters,
       ),
     );
   }
@@ -667,6 +863,77 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Filter chip
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  FilterChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.tune,
+                          size: 16,
+                          color: _activeFilters != null
+                              ? _ecoMint
+                              : t.colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _activeFilters != null && _activeFilters!.hasActiveFilters
+                              ? 'Filtros ativos'
+                              : 'Filtros',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: _activeFilters != null && _activeFilters!.hasActiveFilters
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: _activeFilters != null && _activeFilters!.hasActiveFilters
+                                ? _ecoMint
+                                : t.colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                    selected: _activeFilters != null && _activeFilters!.hasActiveFilters,
+                    onSelected: (_) => _showFilterDialog(context),
+                    backgroundColor: _activeFilters != null && _activeFilters!.hasActiveFilters
+                        ? _ecoMint.withOpacity(0.1)
+                        : t.colorScheme.surfaceVariant.withOpacity(0.5),
+                    selectedColor: _ecoMint.withOpacity(0.15),
+                    side: BorderSide(
+                      color: _activeFilters != null && _activeFilters!.hasActiveFilters
+                          ? _ecoMint
+                          : t.colorScheme.onSurface.withOpacity(0.2),
+                    ),
+                  ),
+                  if (_activeFilters != null && _activeFilters!.hasActiveFilters) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _activeFilters = null;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: t.colorScheme.error.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: t.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             const SizedBox(height: 16),

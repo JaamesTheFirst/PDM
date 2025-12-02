@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart' show Position;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 
+import 'package:provider/provider.dart';
+
 import '../../../services/location_service.dart';
 import '../../../services/mapbox_searchbox_service.dart';
 
@@ -11,6 +13,7 @@ import '../nav/bottom_sheet_route.dart';
 import '../screens/route_search_screen.dart'; // RouteSearchScreen + RouteSearchScreenArgs
 // import '../screens/route_options_screen.dart';  // <- DEIXA DE SER USADO
 import '../widgets/route_options_overlay.dart'; // RouteOptionsArgs (tipo)
+import '../state/otp_routes_controller.dart';
 
 class MapPage extends StatefulWidget {
   static final ValueNotifier<bool> fullscreenNotifier = ValueNotifier(false);
@@ -311,6 +314,10 @@ class _MapPageState extends State<MapPage> {
       }
 
       // 2) OPTIONS como overlay dentro do MapPage (meia altura)
+      // Clear previous routes before showing new ones
+      final otpController = context.read<OtpRoutesController>();
+      otpController.clear();
+      
       setState(() {
         _routeOptionsArgs = args;
       });
@@ -414,17 +421,15 @@ class _MapPageState extends State<MapPage> {
 
         // OVERLAY DE OPÇÕES (meia altura)
         if (_routeOptionsArgs != null)
+          // Remove FractionallySizedBox constraint to allow full-screen expansion
           Align(
             alignment: Alignment.bottomCenter,
-            child: FractionallySizedBox(
-              heightFactor: 0.5,
-              widthFactor: 1,
-              child: RouteOptionsOverlay(
-                mapboxMap: _routeOptionsArgs!.mapboxMap,
-                from: _routeOptionsArgs!.from,
-                to: _routeOptionsArgs!.to,
-                onClose: _closeOptionsOverlay,
-              ),
+            child: RouteOptionsOverlay(
+              mapboxMap: _routeOptionsArgs!.mapboxMap,
+              from: _routeOptionsArgs!.from,
+              to: _routeOptionsArgs!.to,
+              onClose: _closeOptionsOverlay,
+              filters: _routeOptionsArgs!.filters,
             ),
           ),
       ],

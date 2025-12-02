@@ -108,7 +108,7 @@ class HistoryService {
 
     try {
       final response = await _client.get(
-        uri,
+        uri,git 
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

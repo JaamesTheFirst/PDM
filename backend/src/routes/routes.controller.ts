@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { RoutesService, PlannedRoutesResponse } from './routes.service';
 import { PlanItineraryDto } from './dto/plan-itinerary.dto';
+import { PlanGranularDto } from './dto/plan-granular.dto';
 import { SaveRouteDto } from './dto/save-route.dto';
 import { ListHistoryQueryDto } from './dto/list-history.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -25,7 +26,13 @@ export class RoutesController {
     return this.routesService.planAndFilter(dto);
   }
 
-  // 2) Guardar itinerary escolhido no histórico
+  // 2) Planeamento granular com seleção específica de tipos de transporte
+  @Post('plan-granular')
+  planGranular(@Body() dto: PlanGranularDto): Promise<PlannedRoutesResponse> {
+    return this.routesService.planGranular(dto);
+  }
+
+  // 3) Guardar itinerary escolhido no histórico
   @UseGuards(JwtAuthGuard)
   @Post('history')
   saveRoute(
@@ -35,7 +42,7 @@ export class RoutesController {
     return this.routesService.saveItineraryForUser(user.sub, dto);
   }
 
-  // 3) Listar histórico
+  // 4) Listar histórico
   @UseGuards(JwtAuthGuard)
   @Get('history')
   listHistory(
@@ -45,7 +52,7 @@ export class RoutesController {
     return this.routesService.listHistoryForUser(user.sub, query);
   }
 
-  // 4) Detalhe de uma rota
+  // 5) Detalhe de uma rota
   @UseGuards(JwtAuthGuard)
   @Get('history/:id')
   getHistoryItem(
