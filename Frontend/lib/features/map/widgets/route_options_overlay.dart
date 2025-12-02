@@ -729,33 +729,20 @@ class _OtpItinerariesPanel extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // CO2 badge with total and per km
+                            // CO2 badge - only per km for easy comparison
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: t.colorScheme.surfaceVariant.withOpacity(0.5),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    EcoScoreService.instance.formatCo2(ecoScore.co2Kg),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: t.colorScheme.onSurface.withOpacity(0.9),
-                                    ),
-                                  ),
-                                  Text(
-                                    EcoScoreService.instance.formatCo2PerKm(ecoScore.co2PerKm),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: t.colorScheme.onSurface.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ],
+                              child: Text(
+                                EcoScoreService.instance.formatCo2PerKm(ecoScore.co2PerKm),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: t.colorScheme.onSurface.withOpacity(0.9),
+                                ),
                               ),
                             ),
                             const Spacer(),
