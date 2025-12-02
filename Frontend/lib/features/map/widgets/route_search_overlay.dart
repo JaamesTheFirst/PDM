@@ -6,6 +6,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 import '../../../../services/mapbox_geocoding_service.dart';
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
+import '../../../../services/search_history_service.dart';
 import './route_options_overlay.dart'; // RouteOptionsArgs
 
 class RouteSearchOverlay extends StatefulWidget {
@@ -135,12 +136,20 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   void initState() {
     super.initState();
     _resetSession();
+    
+    // Validate userLocation before using it
+    final p = widget.userLocation.coordinates;
+    print('[RouteSearchOverlay] Initializing with userLocation: lat=${p.lat}, lng=${p.lng}');
+    
+    if (p.lat == 0.0 && p.lng == 0.0) {
+      print('[RouteSearchOverlay] WARNING: userLocation appears to be invalid (0,0)');
+    }
+    
     _initFromAddress();
     _fromFocus.addListener(_onFocusChange);
     _toFocus.addListener(_onFocusChange);
     _active = _ActiveField.to;
 
-    final p = widget.userLocation.coordinates;
     MapboxSearchBoxService.instance.debugCheck(
       lon: p.lng.toDouble(),
       lat: p.lat.toDouble(),
@@ -184,19 +193,31 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   }
 
   Future<void> _initFromAddress() async {
-    final pos = widget.userLocation.coordinates;
-    final place = await MapboxGeocodingService.instance.reverseGeocode(
-      pos.lng.toDouble(),
-      pos.lat.toDouble(),
-    );
-    if (!mounted) return;
-    setState(() {
-      _fromController.text = place?.placeName.isNotEmpty == true
-          ? place!.placeName
-          : 'Localização atual';
-      _fromIsCurrent = true;
-      _selectedFrom = null;
-    });
+    try {
+      final pos = widget.userLocation.coordinates;
+      print('[RouteSearchOverlay] Initializing from address. Location: lat=${pos.lat}, lng=${pos.lng}');
+      
+      final place = await MapboxGeocodingService.instance.reverseGeocode(
+        pos.lng.toDouble(),
+        pos.lat.toDouble(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _fromController.text = place?.placeName.isNotEmpty == true
+            ? place!.placeName
+            : 'Localização atual';
+        _fromIsCurrent = true;
+        _selectedFrom = null;
+      });
+    } catch (e) {
+      print('[RouteSearchOverlay] Error initializing from address: $e');
+      if (!mounted) return;
+      setState(() {
+        _fromController.text = 'Localização atual';
+        _fromIsCurrent = true;
+        _selectedFrom = null;
+      });
+    }
   }
 
   Future<void> _loadNearbyForActive() async {
@@ -215,6 +236,8 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
           ? mbx.Position(_selectedFrom!.longitude, _selectedFrom!.latitude)
           : widget.userLocation.coordinates;
 
+      print('[RouteSearchOverlay] Loading nearby places. Base location: lat=${base.lat}, lng=${base.lng}');
+
       final iso = _countryIsoFor(base);
 
       final sb = await MapboxSearchBoxService.instance.nearbyMixedWithFallback(
@@ -225,12 +248,15 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         total: 12,
       );
 
+      print('[RouteSearchOverlay] Found ${sb.length} nearby places');
+
       if (!mounted || myGen != _nearbyGen) return;
       setState(() {
         _nearby.addAll(sb);
         if (_nearby.isEmpty) _emptyMsg = 'Não encontrei POIs/ruas por perto 😕';
       });
-    } catch (_) {
+    } catch (e) {
+      print('[RouteSearchOverlay] Error loading nearby places: $e');
       if (!mounted || myGen != _nearbyGen) return;
       setState(
         () => _emptyMsg = 'Não foi possível carregar sugestões perto de ti.',
@@ -257,40 +283,53 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     final oLon = ctx.lng.toDouble(), oLat = ctx.lat.toDouble();
     final iso = _countryIsoFor(ctx);
 
+    print('[RouteSearchOverlay] Searching for "$value" with GPS context: lat=$oLat, lng=$oLon, country=$iso');
+
     _debounce = Timer(const Duration(milliseconds: 250), () async {
       setState(() {
         _isSearching = true;
         _sbSuggestions.clear();
       });
 
-      final results = await MapboxSearchBoxService.instance.suggest(
-        value,
-        sessionToken: _sessionToken,
-        proximityLon: oLon,
-        proximityLat: oLat,
-        originLon: oLon,
-        originLat: oLat,
-        limit: 10,
-        countryIso2: iso,
-        types: const ['poi', 'address', 'street', 'place'],
-      );
+      try {
+        final results = await MapboxSearchBoxService.instance.suggest(
+          value,
+          sessionToken: _sessionToken,
+          proximityLon: oLon,
+          proximityLat: oLat,
+          originLon: oLon,
+          originLat: oLat,
+          limit: 10,
+          countryIso2: iso,
+          types: const ['poi', 'address', 'street', 'place'],
+        );
 
-      if (!mounted) return;
+        print('[RouteSearchOverlay] Search returned ${results.length} results');
 
-      if (results.isEmpty) {
+        if (!mounted) return;
+
+        if (results.isEmpty) {
+          setState(() {
+            _isSearching = false;
+            _emptyMsg = 'Sem resultados por perto para "$value".';
+          });
+          return;
+        }
+
         setState(() {
           _isSearching = false;
-          _emptyMsg = 'Sem resultados por perto para “$value”.';
+          _sbSuggestions.addAll(results);
         });
-        return;
+
+        _enrichDistances(results, oLon, oLat);
+      } catch (e) {
+        print('[RouteSearchOverlay] Error during search: $e');
+        if (!mounted) return;
+        setState(() {
+          _isSearching = false;
+          _emptyMsg = 'Erro ao pesquisar. Tenta novamente.';
+        });
       }
-
-      setState(() {
-        _isSearching = false;
-        _sbSuggestions.addAll(results);
-      });
-
-      _enrichDistances(results, oLon, oLat);
     });
   }
 
@@ -392,6 +431,13 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         _toController.text = _formatToField(place);
         _sbSuggestions.clear();
       });
+      // Save to search history when destination is selected
+      await SearchHistoryService.instance.addDestination(
+        address: place.placeName,
+        name: place.name.isNotEmpty ? place.name : place.placeName,
+        latitude: place.latitude,
+        longitude: place.longitude,
+      );
       await _setDestination(place);
     }
   }
