@@ -68,14 +68,18 @@ class _MapPageState extends State<MapPage> {
         if (_currentLocation == null) {
           // Try to get current location
           final pos = await LocationService.instance.getCurrentLocation();
+          if (!mounted) return; // Check mounted after async call
           if (pos == null) {
             print('[MapPage] Cannot handle pending route search: no current location');
             return;
           }
-          _currentLocation = mbx.Point(
-            coordinates: mbx.Position(pos.longitude, pos.latitude),
-          );
+          setState(() {
+            _currentLocation = mbx.Point(
+              coordinates: mbx.Position(pos.longitude, pos.latitude),
+            );
+          });
         }
+        if (!mounted) return; // Check mounted before using _currentLocation
         fromPlace = SearchboxPlace(
           id: 'current_location',
           name: 'Localização atual',
@@ -85,10 +89,12 @@ class _MapPageState extends State<MapPage> {
         );
       }
 
+      if (!mounted) return; // Check mounted before creating RouteOptionsArgs
+
       final toPlace = SearchboxPlace(
         id: data['toId'] as String,
         name: data['toName'] as String,
-        placeName: data['toName'] as String,
+        placeName: data['toAddress'] as String? ?? data['toName'] as String, // Use address if available
         longitude: data['toLon'] as double,
         latitude: data['toLat'] as double,
       );
