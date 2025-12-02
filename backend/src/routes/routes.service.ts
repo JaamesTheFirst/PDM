@@ -6,7 +6,8 @@ import {
     TransportMode as PrismaTransportMode,
 } from '@prisma/client';
 import { OtpService, OtpItinerary, OtpLeg } from './otp.service';
-import { PlanItineraryDto, FilterMode } from './dto/plan-itinerary.dto';
+import { PlanItineraryDto, FilterMode, TransportMode } from './dto/plan-itinerary.dto';
+import { PlanGranularDto } from './dto/plan-granular.dto';
 import { SaveRouteDto } from './dto/save-route.dto';
 import { ListHistoryQueryDto } from './dto/list-history.dto';
 
@@ -200,6 +201,125 @@ export class RoutesService {
             filterApplied: {
                 filterMode,
                 maxWalkDistanceMeters: maxWalk,
+            },
+            itineraries: filtered,
+        };
+    }
+
+    // ========== Planeamento granular com tipos específicos de transporte ==========
+
+    async planGranular(dto: PlanGranularDto): Promise<PlannedRoutesResponse> {
+        // Convert to PlanItineraryDto for OTP call
+        const baseModes = dto.baseModes && dto.baseModes.length > 0
+            ? dto.baseModes.map(m => m as TransportMode)
+            : [TransportMode.WALK, TransportMode.TRANSIT];
+
+        const planDto: PlanItineraryDto = {
+            fromLat: dto.fromLat,
+            fromLon: dto.fromLon,
+            toLat: dto.toLat,
+            toLon: dto.toLon,
+            dateTime: dto.dateTime,
+            date: dto.date,
+            time: dto.time,
+            numItineraries: dto.numItineraries ?? 5,
+            modes: baseModes,
+            maxWalkDistanceMeters: dto.maxWalkDistanceMeters,
+        };
+
+        // Get routes from OTP
+        const otpPlan = await this.otp.plan(planDto);
+        const original = otpPlan.itineraries || [];
+        const enriched = original.map((it) => this.enrichItinerary(it));
+
+        // Filter by granular transit types if provided
+        let filtered = enriched;
+        if (dto.transitTypes && dto.transitTypes.length > 0) {
+            filtered = enriched.filter((it) => {
+                // Check if itinerary uses any of the selected transit types
+                const nonWalkModes = new Set(
+                    it.legs.filter((l) => l.mode !== 'WALK').map((l) => l.mode),
+                );
+
+                // Map OTP modes to transit types
+                const transitTypesInItinerary = new Set<string>();
+                for (const leg of it.legs) {
+                    const mode = leg.mode.toUpperCase();
+                    if (mode === 'WALK' || mode === 'WALKING') continue;
+                    
+                    if (mode === 'BUS' || mode.includes('BUS')) {
+                        transitTypesInItinerary.add('BUS');
+                    } else if (mode === 'RAIL' || mode === 'TRAIN' || mode === 'R' || mode === 'IC') {
+                        transitTypesInItinerary.add('RAIL');
+                    } else if (mode === 'METRO' || mode === 'SUBWAY') {
+                        transitTypesInItinerary.add('METRO');
+                    } else if (mode === 'TRAM') {
+                        transitTypesInItinerary.add('TRAM');
+                    } else if (mode === 'BICYCLE' || mode === 'BIKE' || mode.includes('BIKE')) {
+                        // Check if it's bike share by looking at route name or mode
+                        const isBikeShare = mode.includes('SHARE') || 
+                            leg.route?.longName?.toUpperCase().includes('GIRA') ||
+                            leg.route?.longName?.toUpperCase().includes('BIKE SHARE') ||
+                            leg.route?.shortName?.toUpperCase().includes('GIRA');
+                        
+                        if (isBikeShare) {
+                            transitTypesInItinerary.add('BICYCLE_SHARE');
+                        } else {
+                            // Regular bicycle - this is handled by baseModes (BICYCLE), not transit types
+                            // So we don't add it to transitTypesInItinerary
+                        }
+                    } else if (mode === 'SCOOTER' || mode.includes('SCOOTER')) {
+                        // Check if it's scooter share
+                        const isScooterShare = mode.includes('SHARE') || 
+                            leg.route?.longName?.toUpperCase().includes('SCOOTER SHARE');
+                        
+                        if (isScooterShare) {
+                            transitTypesInItinerary.add('SCOOTER_SHARE');
+                        }
+                    }
+                }
+
+                // If no transit types in itinerary (e.g., walking only, or only base modes like BICYCLE/CAR)
+                if (transitTypesInItinerary.size === 0) {
+                    // Allow if it's a base mode (WALK, BICYCLE, CAR) that was selected
+                    const hasWalk = nonWalkModes.size === 0 && baseModes.includes(TransportMode.WALK);
+                    const hasBicycle = nonWalkModes.has('BICYCLE') && baseModes.includes(TransportMode.BICYCLE);
+                    const hasCar = nonWalkModes.has('CAR') && baseModes.includes(TransportMode.CAR);
+                    return hasWalk || hasBicycle || hasCar;
+                }
+
+                // STRICT FILTERING: Route must use ONLY the selected transit types (plus walking for ingress/egress)
+                // If route uses BUS+METRO but user only selected BUS, exclude it.
+                // If route uses BUS+METRO and user selected BUS+METRO, include it.
+                const selectedTypes = new Set(dto.transitTypes.map(t => t.toUpperCase()));
+                
+                // Check if ALL transit types in the route are in the user's selection
+                // If the route has any transit type NOT in the selection, exclude it
+                for (const type of transitTypesInItinerary) {
+                    if (!selectedTypes.has(type)) {
+                        // Route uses a transit type that wasn't selected - exclude it
+                        return false;
+                    }
+                }
+                
+                // All transit types in the route are in the user's selection - include it
+                return true;
+            });
+        }
+
+        // Apply max walk distance filter if provided
+        if (typeof dto.maxWalkDistanceMeters === 'number') {
+            filtered = filtered.filter((it) => {
+                return it.totalWalkDistanceMeters <= dto.maxWalkDistanceMeters!;
+            });
+        }
+
+        return {
+            originalItineraryCount: original.length,
+            filteredItineraryCount: filtered.length,
+            filterApplied: {
+                filterMode: FilterMode.ANY, // Not using FilterMode for granular
+                maxWalkDistanceMeters: dto.maxWalkDistanceMeters,
             },
             itineraries: filtered,
         };

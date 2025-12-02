@@ -136,23 +136,37 @@ class PlannedRoutesResult {
 
 /// Filter preferences for route planning
 class RouteFilters {
-  final String? filterMode; // 'ANY', 'WALK_ONLY', 'BUS_ONLY', 'RAIL_ONLY', etc.
+  final String? filterMode; // 'ANY', 'WALK_ONLY', 'BUS_ONLY', 'RAIL_ONLY', etc. (for backend filtering)
   final int? maxWalkDistanceMeters;
-  final List<String>? modes; // ['WALK', 'TRANSIT'], ['WALK', 'CAR'], etc.
+  final List<String>? modes; // ['WALK', 'TRANSIT'], ['WALK', 'CAR'], etc. (for OTP mode selection)
+  final List<String>? transitTypes; // ['BUS', 'RAIL', 'METRO', 'TRAM', 'BICYCLE_SHARE', 'SCOOTER_SHARE'] (granular transit selection)
 
   const RouteFilters({
     this.filterMode,
     this.maxWalkDistanceMeters,
     this.modes,
+    this.transitTypes,
   });
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{};
     if (filterMode != null) map['filterMode'] = filterMode;
     if (maxWalkDistanceMeters != null) map['maxWalkDistanceMeters'] = maxWalkDistanceMeters;
-    if (modes != null) map['modes'] = modes;
+    // Only include modes if they are provided (this tells OTP what modes to use)
+    if (modes != null && modes!.isNotEmpty) map['modes'] = modes;
+    if (transitTypes != null && transitTypes!.isNotEmpty) map['transitTypes'] = transitTypes;
     return map;
   }
+  
+  bool get hasActiveFilters => 
+      (modes != null && modes!.isNotEmpty) || 
+      (transitTypes != null && transitTypes!.isNotEmpty) ||
+      filterMode != null || 
+      maxWalkDistanceMeters != null;
+  
+  /// Check if this filter requires granular endpoint
+  bool get requiresGranularEndpoint => 
+      transitTypes != null && transitTypes!.isNotEmpty;
 }
 
 class RoutesService {
@@ -167,7 +181,10 @@ class RoutesService {
     required double toLon,
     RouteFilters? filters,
   }) async {
-    final uri = Uri.parse('$kRoutesBaseUrl/routes/plan');
+    // Use granular endpoint if transit types are specified
+    final useGranular = filters?.requiresGranularEndpoint ?? false;
+    final endpoint = useGranular ? 'plan-granular' : 'plan';
+    final uri = Uri.parse('$kRoutesBaseUrl/routes/$endpoint');
     print('[RoutesService] Calling $uri');
     print('[RoutesService] Body: fromLat=$fromLat, fromLon=$fromLon, toLat=$toLat, toLon=$toLon');
     
@@ -181,7 +198,21 @@ class RoutesService {
     };
     
     if (filters != null) {
-      body.addAll(filters.toJson());
+      if (useGranular) {
+        // For granular endpoint, use baseModes and transitTypes
+        body['baseModes'] = filters.modes ?? ['WALK', 'TRANSIT'];
+        if (filters.transitTypes != null && filters.transitTypes!.isNotEmpty) {
+          body['transitTypes'] = filters.transitTypes;
+        }
+        if (filters.maxWalkDistanceMeters != null) {
+          body['maxWalkDistanceMeters'] = filters.maxWalkDistanceMeters;
+        }
+      } else {
+        // For regular endpoint, use standard filters
+        body.addAll(filters.toJson());
+        // Remove transitTypes from regular endpoint (not supported)
+        body.remove('transitTypes');
+      }
     }
     
     try {
