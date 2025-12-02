@@ -203,9 +203,19 @@ class EcoScoreService {
       isCarOnly = false;
     }
 
+    // Check if route uses fossil fuel buses (diesel buses should score lower)
+    bool hasFossilBus = false;
+    for (final leg in itinerary.legs) {
+      final mode = leg.mode.toUpperCase();
+      if (mode.contains('BUS') && !mode.contains('ELECTRIC') && !mode.contains('HYBRID')) {
+        hasFossilBus = true;
+        break;
+      }
+    }
+
     // Calculate score (0-100)
     // Lower CO2 per km = higher score
-    // Use a more granular scale that differentiates low-emission routes
+    // Use a stricter scale that properly penalizes fossil fuels
     double baseScore = 0.0;
     
     if (isOnlyZeroEmission && co2PerKm <= 0.0001) {
@@ -227,25 +237,35 @@ class EcoScoreService {
       // Very high emissions
       baseScore = 0.0;
     } else {
-      // Use a piecewise function for better differentiation
-      // 0-10 g/km -> 80-95
-      // 10-50 g/km -> 60-80
-      // 50-200 g/km -> 0-60
+      // Use a stricter piecewise function that properly differentiates fossil fuels
       final co2PerKmGram = co2PerKm * 1000; // Convert to g/km
 
-      if (co2PerKmGram <= 1) {
-        // From 0.1 to 1 g/km, score goes from 95 to 85
-        // Very low emissions (electric trains) still get high scores but not 100
-        baseScore = 95 - (co2PerKmGram / 1) * 10;
-      } else if (co2PerKmGram <= 10) {
-        // From 1 to 10 g/km, score goes from 85 to 70
-        baseScore = 85 - ((co2PerKmGram - 1) / 9) * 15;
+      if (co2PerKmGram <= 0.1) {
+        // 0-0.1 g/km: Electric trains, very efficient transit (90-95)
+        baseScore = 95 - (co2PerKmGram / 0.1) * 5;
+      } else if (co2PerKmGram <= 1) {
+        // 0.1-1 g/km: Efficient electric transit (80-90)
+        baseScore = 90 - ((co2PerKmGram - 0.1) / 0.9) * 10;
+      } else if (co2PerKmGram <= 5) {
+        // 1-5 g/km: Mixed transit, some fossil fuels (60-80)
+        // Diesel buses typically fall here (~4.45 g/km) -> score ~65
+        baseScore = 80 - ((co2PerKmGram - 1) / 4) * 20;
+      } else if (co2PerKmGram <= 20) {
+        // 5-20 g/km: Higher emission transit (40-60)
+        baseScore = 60 - ((co2PerKmGram - 5) / 15) * 20;
       } else if (co2PerKmGram <= 50) {
-        // From 10 to 50 g/km, score goes from 70 to 50
-        baseScore = 70 - ((co2PerKmGram - 10) / 40) * 20;
+        // 20-50 g/km: High emissions (20-40)
+        baseScore = 40 - ((co2PerKmGram - 20) / 30) * 20;
       } else {
-        // From 50 to 200 g/km, score goes from 50 to 0
-        baseScore = 50 - ((co2PerKmGram - 50) / 150) * 50;
+        // 50-200 g/km: Very high emissions (0-20)
+        baseScore = 20 - ((co2PerKmGram - 50) / 150) * 20;
+      }
+      
+      // Additional penalty for fossil fuel buses (diesel buses)
+      if (hasFossilBus) {
+        // Reduce score by 15-20 points for fossil fuel buses
+        baseScore = (baseScore - 18).clamp(0.0, 100.0);
+        print('[EcoScore] Applied fossil bus penalty: score reduced by 18 points');
       }
     }
 

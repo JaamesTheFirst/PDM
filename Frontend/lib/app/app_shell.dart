@@ -71,21 +71,12 @@ class _AppShellState extends State<AppShell> {
     final t = Theme.of(context);
     final isDark = t.brightness == Brightness.dark;
 
-    final baseOverlay =
-        isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
-
-    final normalOverlay = baseOverlay.copyWith(
-      statusBarColor: t.scaffoldBackgroundColor,
+    // Black status bar overlay - automatically handles notches/camera holes
+    // Status bar icons will be light (white) so they're visible on black
+    final blackStatusBarOverlay = SystemUiOverlayStyle(
+      statusBarColor: Colors.black, // Black status bar area
+      statusBarIconBrightness: Brightness.light, // White icons (visible on black)
       systemNavigationBarColor: t.scaffoldBackgroundColor,
-      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-      systemNavigationBarIconBrightness:
-          isDark ? Brightness.light : Brightness.dark,
-    );
-
-    final transparentOverlay = baseOverlay.copyWith(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       systemNavigationBarIconBrightness:
           isDark ? Brightness.light : Brightness.dark,
     );
@@ -93,15 +84,13 @@ class _AppShellState extends State<AppShell> {
     return ValueListenableBuilder<bool>(
       valueListenable: MapPage.fullscreenNotifier,
       builder: (context, fullscreen, _) {
-        final overlay = fullscreen ? transparentOverlay : normalOverlay;
-
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        SystemChrome.setSystemUIOverlayStyle(overlay);
+        SystemChrome.setSystemUIOverlayStyle(blackStatusBarOverlay);
 
         final isMap = _index == 0;
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: overlay,
+          value: blackStatusBarOverlay,
           child: Scaffold(
             backgroundColor: t.scaffoldBackgroundColor,
             extendBody: true,
@@ -109,7 +98,7 @@ class _AppShellState extends State<AppShell> {
             appBar: isMap && fullscreen
                 ? null
                 : AppBar(
-                    systemOverlayStyle: normalOverlay,
+                    systemOverlayStyle: blackStatusBarOverlay,
                     backgroundColor: t.scaffoldBackgroundColor,
                     elevation: 0,
                     centerTitle: true,
@@ -124,7 +113,7 @@ class _AppShellState extends State<AppShell> {
                     ),
                   ),
             body: SafeArea(
-              top: !(isMap && fullscreen),
+              top: true, // Always use SafeArea top to handle notches/camera holes
               bottom: true,
               child: _pages[_index],
             ),

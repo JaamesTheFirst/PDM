@@ -55,7 +55,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
   // desenho no mapa
   mbx.PolylineAnnotationManager? _lineMgr;
-  mbx.PolylineAnnotation? _routeLine;
+  mbx.PolylineAnnotation? _routeLine; // Selected route (thicker, more prominent)
+  List<mbx.PolylineAnnotation> _allRouteLines = []; // All route options
   mbx.CircleAnnotationManager? _poiMgr;
   mbx.CircleAnnotation? _fromDot;
   mbx.CircleAnnotation? _toDot;
@@ -69,12 +70,11 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   late final OtpRoutesController _otpController;
   int? _lastDrawnOtpIndex;
 
-  /// quanto o painel está "colapsado".
-  /// 0 = expandido ao máximo; valor maior = painel mais baixo (mais mapa visível em cima).
-  double _collapse = 0.0;
-
-  /// Percentagem do colapso a partir da qual fazemos snap para o modo compacto
-  static const double _snapThresholdRatio = 0.55;
+  // ==== PANEL SNAPPING STATE ====
+  double _panelHeight = 0;
+  late double _snapFull;
+  late double _snapExpanded;
+  late double _snapDocked;
 
   @override
   void initState() {
@@ -83,9 +83,54 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     _otpController.addListener(_handleOtpSelectionChange);
     _ensureDots();
     _selectMode('walking', draw: true);
+    // Clear any previous routes and reset state
+    _clearPreviousRoutes();
+    
+    // Responsive snap positions set after layout
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final media = MediaQuery.of(context);
+      // Use the actual screen height, not constraints (which might be limited by parent)
+      final screenHeight = media.size.height;
+
+      // Full screen should use the entire screen height
+      _snapFull = screenHeight;            // 100% screen
+      _snapExpanded = screenHeight * 0.60; // 60% screen
+      _snapDocked = screenHeight * 0.25;   // 25% screen
+
+      setState(() {
+        _panelHeight = _snapExpanded; // Default state
+      });
+    });
+    
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchOtp());
   }
   bool _requestedOtp = false;
+  
+  Future<void> _clearPreviousRoutes() async {
+    // Clear all drawn polylines
+    if (_lineMgr != null) {
+      try {
+        // Clear selected route
+        if (_routeLine != null) {
+          await _lineMgr!.delete(_routeLine!);
+          _routeLine = null;
+        }
+        // Clear all route options
+        for (final line in _allRouteLines) {
+          try {
+            await _lineMgr!.delete(line);
+          } catch (e) {
+            print('[RouteOptionsOverlay] Error deleting route line: $e');
+          }
+        }
+        _allRouteLines.clear();
+      } catch (e) {
+        print('[RouteOptionsOverlay] Error clearing previous routes: $e');
+      }
+    }
+    _lastDrawnOtpIndex = null;
+    _requestedOtp = false;
+  }
 
   Future<void> _fetchOtp() async {
     if (_requestedOtp) {
@@ -103,14 +148,17 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       toLon: widget.to.longitude,
       filters: widget.filters,
     );
-    print('[RouteOptionsOverlay] _fetchOtp: Fetch complete, drawing itinerary');
+    print('[RouteOptionsOverlay] _fetchOtp: Fetch complete, drawing all routes');
+    await _drawAllOtpItineraries();
     await _drawSelectedOtpItinerary();
   }
 
   @override
   void dispose() {
     _otpController.removeListener(_handleOtpSelectionChange);
-    // Don't call clear() here - it triggers notifyListeners during dispose
+    // Clear all drawn routes when disposing
+    _clearPreviousRoutes();
+    // Don't call controller.clear() here - it triggers notifyListeners during dispose
     // The controller will be reused for the next route search
     super.dispose();
   }
@@ -121,11 +169,108 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     _drawSelectedOtpItinerary();
   }
 
+  /// Draw all route options with different colors
+  Future<void> _drawAllOtpItineraries() async {
+    final itineraries = _otpController.itineraries;
+    if (itineraries.isEmpty) return;
+
+    _lineMgr ??= await widget.mapboxMap.annotations.createPolylineAnnotationManager();
+    
+    // Clear previous route lines
+    for (final line in _allRouteLines) {
+      try {
+        await _lineMgr!.delete(line);
+      } catch (e) {
+        print('[RouteOptionsOverlay] Error deleting route line: $e');
+      }
+    }
+    _allRouteLines.clear();
+
+    // Color palette for different routes - vibrant and saturated
+    final routeColors = [
+      0xFF00D4FF, // vibrant cyan
+      0xFF0066FF, // bright blue
+      0xFF8B00FF, // vibrant purple
+      0xFFFF6600, // bright orange
+      0xFFFF0066, // vibrant pink/magenta
+    ];
+
+    // Draw all routes with different colors
+    for (var i = 0; i < itineraries.length; i++) {
+      final itinerary = itineraries[i];
+      final coords = <List<num>>[];
+
+      for (var legIdx = 0; legIdx < itinerary.legs.length; legIdx++) {
+        final leg = itinerary.legs[legIdx];
+        if (leg.polyline == null || leg.polyline!.isEmpty) continue;
+        final decoded = decodePolyline(leg.polyline!);
+        for (var pt = 0; pt < decoded.length; pt++) {
+          if (pt == 0 && coords.isNotEmpty) continue;
+          final lat = decoded[pt][0];
+          final lon = decoded[pt][1];
+          coords.add([lon, lat]);
+        }
+      }
+
+      if (coords.isEmpty) continue;
+
+      final color = routeColors[i % routeColors.length];
+      
+      try {
+        final routeLine = await _lineMgr!.create(
+          mbx.PolylineAnnotationOptions(
+            geometry: mbx.LineString(
+              coordinates: coords
+                  .map((c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()))
+                  .toList(),
+            ),
+            lineColor: color,
+            lineWidth: 4.0, // Thinner for non-selected routes
+            lineOpacity: 0.7, // Slightly transparent
+          ),
+        );
+        _allRouteLines.add(routeLine);
+      } catch (e) {
+        print('[RouteOptionsOverlay] Error drawing route $i: $e');
+      }
+    }
+
+    // Fit camera to show all routes
+    if (_allRouteLines.isNotEmpty) {
+      final allCoords = <List<num>>[];
+      for (final itinerary in itineraries) {
+        for (final leg in itinerary.legs) {
+          if (leg.polyline == null || leg.polyline!.isEmpty) continue;
+          final decoded = decodePolyline(leg.polyline!);
+          for (var pt = 0; pt < decoded.length; pt++) {
+            final lat = decoded[pt][0];
+            final lon = decoded[pt][1];
+            allCoords.add([lon, lat]);
+          }
+        }
+      }
+      if (allCoords.isNotEmpty) {
+        await _fitRouteGeometry(allCoords);
+      }
+    }
+  }
+
+  /// Draw the selected route with a thicker, more prominent line
   Future<void> _drawSelectedOtpItinerary() async {
     final index = _otpController.selectedIndex;
     if (index == null) return;
     final itineraries = _otpController.itineraries;
     if (index < 0 || index >= itineraries.length) return;
+
+    // Remove previous selected route
+    if (_routeLine != null) {
+      try {
+        await _lineMgr!.delete(_routeLine!);
+      } catch (e) {
+        print('[RouteOptionsOverlay] Error deleting selected route: $e');
+      }
+      _routeLine = null;
+    }
 
     final itinerary = itineraries[index];
     final coords = <List<num>>[];
@@ -144,17 +289,27 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
     if (coords.isEmpty) return;
 
-    final totalDistance =
-        itinerary.legs.fold<double>(0, (sum, leg) => sum + leg.distance);
+    _lineMgr ??= await widget.mapboxMap.annotations.createPolylineAnnotationManager();
 
-    await _drawRoute(
-      _RouteData(
-        geometry: coords,
-        distance: totalDistance,
-        duration: itinerary.duration.toDouble(),
-      ),
-    );
-    await _fitRouteGeometry(coords);
+    // Draw selected route with thicker, more prominent line
+    // Use white or bright yellow for selected route to stand out from all other colors
+    try {
+      _routeLine = await _lineMgr!.create(
+        mbx.PolylineAnnotationOptions(
+          geometry: mbx.LineString(
+            coordinates: coords
+                .map((c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()))
+                .toList(),
+          ),
+          lineColor: 0xFFFFFFFF, // White for selected route - stands out from all colors
+          lineWidth: 7.0, // Thicker for selected route
+          lineOpacity: 1.0, // Fully opaque
+        ),
+      );
+    } catch (e) {
+      print('[RouteOptionsOverlay] Error drawing selected route: $e');
+    }
+
     _lastDrawnOtpIndex = index;
   }
 
@@ -267,20 +422,41 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
   Future<void> _drawRoute(_RouteData route) async {
     _lineMgr ??= await widget.mapboxMap.annotations.createPolylineAnnotationManager();
+    
+    // Clear all OTP routes when drawing Mapbox directions
     try {
-      if (_routeLine != null) await _lineMgr!.delete(_routeLine!);
-    } catch (_) {}
-    _routeLine = await _lineMgr!.create(
-      mbx.PolylineAnnotationOptions(
-        geometry: mbx.LineString(
-          coordinates: route.geometry
-              .map((c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()))
-              .toList(),
+      if (_routeLine != null) {
+        await _lineMgr!.delete(_routeLine!);
+        _routeLine = null;
+      }
+      for (final line in _allRouteLines) {
+        try {
+          await _lineMgr!.delete(line);
+        } catch (e) {
+          print('[RouteOptionsOverlay] Error deleting OTP route line: $e');
+        }
+      }
+      _allRouteLines.clear();
+    } catch (e) {
+      print('[RouteOptionsOverlay] Error clearing OTP routes: $e');
+    }
+    
+    // Draw Mapbox direction route
+    try {
+      _routeLine = await _lineMgr!.create(
+        mbx.PolylineAnnotationOptions(
+          geometry: mbx.LineString(
+            coordinates: route.geometry
+                .map((c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()))
+                .toList(),
+          ),
+            lineColor: 0xFF00D4FF, // Use vibrant cyan for Mapbox directions too
+            lineWidth: 5.0,
         ),
-        lineColor: _ecoMint.value,
-        lineWidth: 5.0,
-      ),
-    );
+      );
+    } catch (e) {
+      print('[RouteOptionsOverlay] Error drawing Mapbox route: $e');
+    }
   }
 
   String _fmt(double meters) =>
@@ -293,47 +469,34 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     final media = MediaQuery.of(context);
     final bottomInset = media.padding.bottom;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxH = constraints.maxHeight;
-
-        // altura mínima do painel (header + 1 modo + botões)
-        const double minPanelHeight = 230.0;
-
-        // altura máxima (painel quase cheio)
-        final double maxPanelHeight = maxH;
-
-        // quanto é que o painel pode "colapsar" no máximo
-        final double maxCollapse = (maxPanelHeight - minPanelHeight).clamp(0.0, maxH);
-
-        // aplica clamp ao _collapse
-        final double effectiveCollapse = _collapse.clamp(0.0, maxCollapse);
-
-        final double panelHeight = maxPanelHeight - effectiveCollapse;
-
-        // limiar real em px para snap + "modo compacto"
-        final double snapThreshold = maxCollapse * _snapThresholdRatio;
-
-        return Container(
-          color: Colors.transparent,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              height: panelHeight,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: t.colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 24,
-                    offset: Offset(0, -4),
-                    color: Color(0x26000000),
-                  ),
-                ],
-              ),
+    // Use MediaQuery to get actual screen height, ignoring parent constraints
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    return SizedBox(
+      // Only take up the space needed for the panel, not blocking touches above
+      height: _panelHeight == 0 ? 1 : _panelHeight.clamp(0.0, screenHeight),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          height: _panelHeight == 0 ? 1 : _panelHeight.clamp(0.0, screenHeight),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: t.colorScheme.surface,
+            borderRadius: _panelHeight >= _snapFull * 0.95 
+                ? BorderRadius.zero // No border radius when full screen
+                : const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: _panelHeight >= _snapFull * 0.95
+                ? [] // No shadow when full screen
+                : const [
+                    BoxShadow(
+                      blurRadius: 24,
+                      offset: Offset(0, -4),
+                      color: Color(0x26000000),
+                    ),
+                  ],
+          ),
               child: Padding(
                 padding: EdgeInsets.only(bottom: bottomInset + 12),
                 child: Column(
@@ -341,23 +504,20 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                     // handle + drag
                     GestureDetector(
                       behavior: HitTestBehavior.translucent,
-                      onVerticalDragUpdate: (d) {
+                      onVerticalDragUpdate: (details) {
                         setState(() {
-                          _collapse += d.delta.dy;
-                          if (_collapse < 0) _collapse = 0;
-                          if (_collapse > maxCollapse) _collapse = maxCollapse;
+                          _panelHeight -= details.delta.dy; // drag up → taller
+                          _panelHeight = _panelHeight.clamp(_snapDocked, _snapFull);
                         });
                       },
                       onVerticalDragEnd: (_) {
-                        // SNAP: decide se fica expandido ou compacto
-                        if (maxCollapse <= 0) return;
-                        setState(() {
-                          if (_collapse < snapThreshold) {
-                            _collapse = 0; // expandido, mostra lista inteira
-                          } else {
-                            _collapse = maxCollapse; // compacto, só 1 item
-                          }
-                        });
+                        final targets = [_snapDocked, _snapExpanded, _snapFull];
+
+                        final nearest = targets.reduce(
+                          (a, b) => (_panelHeight - a).abs() < (_panelHeight - b).abs() ? a : b,
+                        );
+
+                        setState(() => _panelHeight = nearest);
                       },
                       child: SizedBox(
                         height: 40,
@@ -458,8 +618,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
             ),
           ),
         );
-      },
-    );
   }
 
 }
