@@ -47,25 +47,54 @@ class _MapPageState extends State<MapPage> {
     MapPage.pendingRouteSearch.addListener(_handlePendingRouteSearch);
   }
 
-  void _handlePendingRouteSearch() {
+  void _handlePendingRouteSearch() async {
     final data = MapPage.pendingRouteSearch.value;
     if (data != null && mapboxMap != null && _isMapAlive) {
       // Clear the pending search
       MapPage.pendingRouteSearch.value = null;
 
-      // Create SearchboxPlace objects from the data
-      final fromPlace = SearchboxPlace(
-        id: data['fromId'] as String,
-        name: data['fromName'] as String,
-        placeName: data['fromName'] as String,
-        longitude: data['fromLon'] as double,
-        latitude: data['fromLat'] as double,
-      );
+      // Get origin - use provided from or current location
+      SearchboxPlace fromPlace;
+      if (data.containsKey('fromId') && data.containsKey('fromLat') && data.containsKey('fromLon')) {
+        fromPlace = SearchboxPlace(
+          id: data['fromId'] as String,
+          name: data['fromName'] as String? ?? 'Origem',
+          placeName: data['fromName'] as String? ?? 'Origem',
+          longitude: data['fromLon'] as double,
+          latitude: data['fromLat'] as double,
+        );
+      } else {
+        // Use current location as origin
+        if (_currentLocation == null) {
+          // Try to get current location
+          final pos = await LocationService.instance.getCurrentLocation();
+          if (!mounted) return; // Check mounted after async call
+          if (pos == null) {
+            print('[MapPage] Cannot handle pending route search: no current location');
+            return;
+          }
+          setState(() {
+            _currentLocation = mbx.Point(
+              coordinates: mbx.Position(pos.longitude, pos.latitude),
+            );
+          });
+        }
+        if (!mounted) return; // Check mounted before using _currentLocation
+        fromPlace = SearchboxPlace(
+          id: 'current_location',
+          name: 'Localização atual',
+          placeName: 'Localização atual',
+          longitude: _currentLocation!.coordinates.lng.toDouble(),
+          latitude: _currentLocation!.coordinates.lat.toDouble(),
+        );
+      }
+
+      if (!mounted) return; // Check mounted before creating RouteOptionsArgs
 
       final toPlace = SearchboxPlace(
         id: data['toId'] as String,
         name: data['toName'] as String,
-        placeName: data['toName'] as String,
+        placeName: data['toAddress'] as String? ?? data['toName'] as String, // Use address if available
         longitude: data['toLon'] as double,
         latitude: data['toLat'] as double,
       );
@@ -222,7 +251,41 @@ class _MapPageState extends State<MapPage> {
 
   // === flow: Search (FULL) -> Options (overlay 50%) ===
   Future<void> _openSearchAsScreens() async {
-    if (!_isMapAlive || mapboxMap == null || _currentLocation == null) return;
+    if (!_isMapAlive || mapboxMap == null) {
+      print('[MapPage] Cannot open search: map not ready');
+      return;
+    }
+    
+    if (_currentLocation == null) {
+      print('[MapPage] Cannot open search: current location is null');
+      // Try to get location again
+      final pos = await LocationService.instance.getCurrentLocation();
+      if (pos == null) {
+        print('[MapPage] Failed to get current location');
+        // Show error to user
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível obter a tua localização. Verifica as permissões de GPS.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      setState(() {
+        _currentLocation = mbx.Point(
+          coordinates: mbx.Position(pos.longitude, pos.latitude),
+        );
+      });
+    }
+
+    final coords = _currentLocation!.coordinates;
+    print('[MapPage] Opening search screen with location: lat=${coords.lat}, lng=${coords.lng}');
+    
+    if (coords.lat == 0.0 && coords.lng == 0.0) {
+      print('[MapPage] WARNING: Location appears to be invalid (0,0)');
+    }
 
     // enquanto o fluxo de rotas está ativo, escondemos o botão "Para onde?"
     MapPage.fullscreenNotifier.value = true;
