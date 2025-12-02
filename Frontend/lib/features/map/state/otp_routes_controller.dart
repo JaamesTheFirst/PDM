@@ -18,6 +18,7 @@ class OtpRoutesController extends ChangeNotifier {
     required double fromLon,
     required double toLat,
     required double toLon,
+    RouteFilters? filters,
   }) async {
     try {
       print('[OtpRoutesController] fetch called: fromLat=$fromLat, fromLon=$fromLon, toLat=$toLat, toLon=$toLon');
@@ -25,13 +26,53 @@ class OtpRoutesController extends ChangeNotifier {
       error = null;
       notifyListeners();
 
+      // First try: public transport (TRANSIT + WALK) if no filters specified
+      RouteFilters? primaryFilters = filters;
+      if (primaryFilters == null) {
+        primaryFilters = const RouteFilters(
+          modes: ['WALK', 'TRANSIT'],
+        );
+      }
+
       _result = await _service.plan(
         fromLat: fromLat,
         fromLon: fromLon,
         toLat: toLat,
         toLon: toLon,
+        filters: primaryFilters,
       );
-      print('[OtpRoutesController] Got result: ${_result?.itineraries.length ?? 0} itineraries');
+      
+      print('[OtpRoutesController] Primary result: ${_result?.itineraries.length ?? 0} itineraries');
+      
+      // Fallback: if no public transport routes, try walk/bike/car
+      if ((_result?.itineraries.isEmpty ?? true) && filters == null) {
+        print('[OtpRoutesController] No public transport routes, trying fallback modes...');
+        final fallbackFilters = const RouteFilters(
+          modes: ['WALK', 'BICYCLE', 'CAR'],
+        );
+        
+        try {
+          final fallbackResult = await _service.plan(
+            fromLat: fromLat,
+            fromLon: fromLon,
+            toLat: toLat,
+            toLon: toLon,
+            filters: fallbackFilters,
+          );
+          
+          if (fallbackResult.itineraries.isNotEmpty) {
+            print('[OtpRoutesController] Fallback result: ${fallbackResult.itineraries.length} itineraries');
+            _result = fallbackResult;
+          } else {
+            print('[OtpRoutesController] Fallback also returned no routes');
+          }
+        } catch (e) {
+          print('[OtpRoutesController] Fallback request failed: $e');
+          // Keep the original (empty) result
+        }
+      }
+      
+      print('[OtpRoutesController] Final result: ${_result?.itineraries.length ?? 0} itineraries');
       selectedIndex = itineraries.isNotEmpty ? 0 : null;
       print('[OtpRoutesController] Selected index: $selectedIndex');
     } catch (e, stackTrace) {

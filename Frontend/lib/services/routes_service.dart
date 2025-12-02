@@ -134,6 +134,27 @@ class PlannedRoutesResult {
   final List<OtpItinerary> itineraries;
 }
 
+/// Filter preferences for route planning
+class RouteFilters {
+  final String? filterMode; // 'ANY', 'WALK_ONLY', 'BUS_ONLY', 'RAIL_ONLY', etc.
+  final int? maxWalkDistanceMeters;
+  final List<String>? modes; // ['WALK', 'TRANSIT'], ['WALK', 'CAR'], etc.
+
+  const RouteFilters({
+    this.filterMode,
+    this.maxWalkDistanceMeters,
+    this.modes,
+  });
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{};
+    if (filterMode != null) map['filterMode'] = filterMode;
+    if (maxWalkDistanceMeters != null) map['maxWalkDistanceMeters'] = maxWalkDistanceMeters;
+    if (modes != null) map['modes'] = modes;
+    return map;
+  }
+}
+
 class RoutesService {
   RoutesService({http.Client? client}) : _client = client ?? http.Client();
 
@@ -144,23 +165,31 @@ class RoutesService {
     required double fromLon,
     required double toLat,
     required double toLon,
+    RouteFilters? filters,
   }) async {
     final uri = Uri.parse('$kRoutesBaseUrl/routes/plan');
     print('[RoutesService] Calling $uri');
     print('[RoutesService] Body: fromLat=$fromLat, fromLon=$fromLon, toLat=$toLat, toLon=$toLon');
+    
+    // Build request body with filters
+    final body = <String, dynamic>{
+      'fromLat': fromLat,
+      'fromLon': fromLon,
+      'toLat': toLat,
+      'toLon': toLon,
+      'numItineraries': 5,
+    };
+    
+    if (filters != null) {
+      body.addAll(filters.toJson());
+    }
     
     try {
       final response = await _client
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'fromLat': fromLat,
-              'fromLon': fromLon,
-              'toLat': toLat,
-              'toLon': toLon,
-              'numItineraries': 5,
-            }),
+            body: jsonEncode(body),
           )
           .timeout(
             const Duration(seconds: 30),

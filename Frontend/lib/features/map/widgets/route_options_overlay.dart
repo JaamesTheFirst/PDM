@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
 import '../../../../services/eco_score_service.dart';
+import '../../../../services/routes_service.dart';
 import 'package:sustainable_transport_app/utils/polyline_decoder.dart';
 import '../state/otp_routes_controller.dart';
 
@@ -13,10 +14,12 @@ class RouteOptionsArgs {
   final mbx.MapboxMap mapboxMap;
   final SearchboxPlace from;
   final SearchboxPlace to;
+  final RouteFilters? filters;
   RouteOptionsArgs({
     required this.mapboxMap,
     required this.from,
     required this.to,
+    this.filters,
   });
 }
 
@@ -25,6 +28,7 @@ class RouteOptionsOverlay extends StatefulWidget {
   final SearchboxPlace from;
   final SearchboxPlace to;
   final VoidCallback onClose;
+  final RouteFilters? filters;
 
   const RouteOptionsOverlay({
     super.key,
@@ -32,6 +36,7 @@ class RouteOptionsOverlay extends StatefulWidget {
     required this.from,
     required this.to,
     required this.onClose,
+    this.filters,
   });
 
   @override
@@ -96,6 +101,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       fromLon: widget.from.longitude,
       toLat: widget.to.latitude,
       toLon: widget.to.longitude,
+      filters: widget.filters,
     );
     print('[RouteOptionsOverlay] _fetchOtp: Fetch complete, drawing itinerary');
     await _drawSelectedOtpItinerary();
@@ -507,7 +513,14 @@ class _OtpItinerariesPanel extends StatelessWidget {
           );
         }
 
-        final itineraries = controller.itineraries;
+        // Sort itineraries by eco-score (highest to lowest)
+        final itineraries = List<OtpItinerary>.from(controller.itineraries);
+        itineraries.sort((a, b) {
+          final scoreA = EcoScoreService.instance.calculateScore(a).score;
+          final scoreB = EcoScoreService.instance.calculateScore(b).score;
+          return scoreB.compareTo(scoreA); // Descending order (highest first)
+        });
+        
         if (itineraries.isEmpty) {
           return _TransitCardBase(
             child: Column(

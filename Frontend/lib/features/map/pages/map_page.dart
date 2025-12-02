@@ -424,6 +424,7 @@ class _MapPageState extends State<MapPage> {
                 from: _routeOptionsArgs!.from,
                 to: _routeOptionsArgs!.to,
                 onClose: _closeOptionsOverlay,
+                filters: _routeOptionsArgs!.filters,
               ),
             ),
           ),

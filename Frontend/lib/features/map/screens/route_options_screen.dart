@@ -18,6 +18,7 @@ class RouteOptionsScreen extends StatelessWidget {
             from: args.from,
             to: args.to,
             onClose: () => Navigator.of(context).pop(),
+            filters: args.filters,
           ),
         ),
       ),

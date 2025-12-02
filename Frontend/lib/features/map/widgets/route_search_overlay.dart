@@ -7,6 +7,7 @@ import '../../../../services/mapbox_geocoding_service.dart';
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
 import '../../../../services/search_history_service.dart';
+import '../../../../services/routes_service.dart';
 import './route_options_overlay.dart'; // RouteOptionsArgs
 
 class RouteSearchOverlay extends StatefulWidget {
@@ -56,6 +57,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   String? _emptyMsg;
   Timer? _debounce;
   int _nearbyGen = 0;
+  
+  // Filter state
+  RouteFilters? _activeFilters;
 
   mbx.CircleAnnotationManager? _circleMgr;
   mbx.PolylineAnnotationManager? _lineMgr;
@@ -552,6 +556,131 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     return mbx.Position(_selectedFrom!.longitude, _selectedFrom!.latitude);
   }
 
+  Future<void> _showFilterDialog(BuildContext context) async {
+    String? selectedFilterMode = _activeFilters?.filterMode;
+    int? maxWalk = _activeFilters?.maxWalkDistanceMeters;
+    final TextEditingController walkController = TextEditingController(
+      text: maxWalk != null ? (maxWalk / 1000).toStringAsFixed(1) : '',
+    );
+
+    final result = await showDialog<RouteFilters?>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Filtros de rota'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tipo de transporte:',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    RadioListTile<String?>(
+                      title: const Text('Qualquer (sem filtro)'),
+                      value: null,
+                      groupValue: selectedFilterMode,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedFilterMode = value;
+                        });
+                      },
+                      dense: true,
+                    ),
+                    ...['WALK_ONLY', 'BUS_ONLY', 'RAIL_ONLY', 'METRO_ONLY', 'BICYCLE_ONLY', 'CAR_ONLY']
+                        .map((mode) => RadioListTile<String>(
+                              title: Text(_getFilterModeLabel(mode)),
+                              value: mode,
+                              groupValue: selectedFilterMode,
+                              onChanged: (value) {
+                                setDialogState(() {
+                                  selectedFilterMode = value;
+                                });
+                              },
+                              dense: true,
+                            ))
+                        .toList(),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Distância máxima a pé (km):',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: walkController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        hintText: 'Ex: 2.5 (deixar vazio para sem limite)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(
+                    RouteFilters(
+                      filterMode: null,
+                      maxWalkDistanceMeters: null,
+                    ),
+                  ),
+                  child: const Text('Limpar'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final filters = RouteFilters(
+                      filterMode: selectedFilterMode,
+                      maxWalkDistanceMeters: walkController.text.isNotEmpty
+                          ? (double.tryParse(walkController.text) ?? 0.0).toInt() * 1000
+                          : null,
+                    );
+                    // Only return filters if something is actually set
+                    Navigator.of(context).pop(
+                      (selectedFilterMode != null || filters.maxWalkDistanceMeters != null)
+                          ? filters
+                          : null,
+                    );
+                  },
+                  child: const Text('Aplicar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        _activeFilters = result;
+      });
+    }
+  }
+
+  String _getFilterModeLabel(String mode) {
+    switch (mode) {
+      case 'WALK_ONLY':
+        return 'Só a pé';
+      case 'BUS_ONLY':
+        return 'Só autocarro';
+      case 'RAIL_ONLY':
+        return 'Só comboio';
+      case 'METRO_ONLY':
+        return 'Só metro';
+      case 'BICYCLE_ONLY':
+        return 'Só bicicleta';
+      case 'CAR_ONLY':
+        return 'Só carro';
+      default:
+        return mode;
+    }
+  }
+
   void _onConfirm() async {
     if (_selectedTo == null) return;
 
@@ -583,6 +712,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         mapboxMap: widget.mapboxMap,
         from: fromPlace,
         to: _selectedTo!,
+        filters: _activeFilters,
       ),
     );
   }
@@ -667,6 +797,75 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Filter chip
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  FilterChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.tune,
+                          size: 16,
+                          color: _activeFilters != null
+                              ? _ecoMint
+                              : t.colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _activeFilters != null ? 'Filtros ativos' : 'Filtros',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: _activeFilters != null
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: _activeFilters != null
+                                ? _ecoMint
+                                : t.colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                    selected: _activeFilters != null,
+                    onSelected: (_) => _showFilterDialog(context),
+                    backgroundColor: _activeFilters != null
+                        ? _ecoMint.withOpacity(0.1)
+                        : t.colorScheme.surfaceVariant.withOpacity(0.5),
+                    selectedColor: _ecoMint.withOpacity(0.15),
+                    side: BorderSide(
+                      color: _activeFilters != null
+                          ? _ecoMint
+                          : t.colorScheme.onSurface.withOpacity(0.2),
+                    ),
+                  ),
+                  if (_activeFilters != null) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _activeFilters = null;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: t.colorScheme.error.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: t.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             const SizedBox(height: 16),
