@@ -1,39 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+
 import '../widgets/departure_card.dart';
+import '../data/carris_api.dart';
 
 class CarrisSchedulesPage extends StatefulWidget {
   const CarrisSchedulesPage({super.key});
 
   @override
-  State<CarrisSchedulesPage> createState() =>
-      _CarrisSchedulesPageState();
+  State<CarrisSchedulesPage> createState() => _CarrisSchedulesPageState();
 }
 
-class _CarrisSchedulesPageState
-    extends State<CarrisSchedulesPage> {
+class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
   static const _carrisYellow = Color(0xFFFFD600);
 
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  final CarrisApiClient _api = CarrisApiClient();
 
-  final List<Departure> _allDepartures = const [
-    Departure(
-      time: '19:10',
-      destination: 'Cais do Sodré',
-      line: '15E',
-      platform: 'Paragem 3',
-      operator: 'Carris',
-    ),
-    Departure(
-      time: '19:18',
-      destination: 'Belém',
-      line: '728',
-      platform: 'Paragem 1',
-      operator: 'Carris',
-    ),
-  ];
+  String _searchQuery = '';
+  bool _loadingSearch = false;
+  bool _loadingDepartures = false;
+  String? _error;
 
-  String _query = '';
+  CarrisStopSearchResult? _selectedStop;
+  List<CarrisStopSearchResult> _searchResults = [];
+  List<CarrisUpcomingDeparture> _departures = [];
 
   @override
   void dispose() {
@@ -41,13 +32,97 @@ class _CarrisSchedulesPageState
     super.dispose();
   }
 
-  List<Departure> get _filtered {
-    if (_query.trim().isEmpty) return _allDepartures;
-    final q = _query.toLowerCase();
-    return _allDepartures.where((d) {
-      return d.destination.toLowerCase().contains(q) ||
-          d.line.toLowerCase().contains(q);
-    }).toList();
+  // ==================== SEARCH STOPS ====================
+
+  Future<void> _performSearch() async {
+    final q = _searchController.text.trim();
+    debugPrint('[CARRIS PAGE] _performSearch("$q")');
+
+    if (q.length < 2) {
+      setState(() {
+        _searchQuery = q;
+        _searchResults = [];
+      });
+      debugPrint('[CARRIS PAGE] query muito curta, a sair.');
+      return;
+    }
+
+    setState(() {
+      _searchQuery = q;
+      _loadingSearch = true;
+      _error = null;
+    });
+
+    try {
+      final results = await _api.searchStops(q);
+      setState(() {
+        _searchResults = results;
+      });
+      debugPrint(
+        '[CARRIS PAGE] _performSearch -> ${results.length} paragens encontradas.',
+      );
+    } catch (e) {
+      debugPrint('[CARRIS PAGE] _performSearch ERROR: $e');
+      setState(() {
+        _error = e.toString();
+        _searchResults = [];
+      });
+    } finally {
+      setState(() {
+        _loadingSearch = false;
+      });
+    }
+  }
+
+  void _onSelectStop(CarrisStopSearchResult stop) {
+    debugPrint('[CARRIS PAGE] _onSelectStop -> ${stop.name} (${stop.gtfsId})');
+    setState(() {
+      _selectedStop = stop;
+      _searchResults = [];
+      _searchController.text = stop.name;
+    });
+    _loadDepartures();
+  }
+
+  // ===================== LOAD DEPARTURES =====================
+
+  Future<void> _loadDepartures() async {
+    if (_selectedStop == null) {
+      debugPrint('[CARRIS PAGE] _loadDepartures sem paragem selecionada');
+      return;
+    }
+
+    debugPrint(
+      '[CARRIS PAGE] _loadDepartures -> stop=${_selectedStop!.gtfsId}',
+    );
+
+    setState(() {
+      _loadingDepartures = true;
+      _error = null;
+    });
+
+    try {
+      final deps = await _api.getUpcomingDepartures(
+        stopGtfsId: _selectedStop!.gtfsId,
+        limit: 40,
+      );
+      setState(() {
+        _departures = deps;
+      });
+      debugPrint(
+        '[CARRIS PAGE] _loadDepartures -> ${deps.length} partidas carregadas.',
+      );
+    } catch (e) {
+      debugPrint('[CARRIS PAGE] _loadDepartures ERROR: $e');
+      setState(() {
+        _error = e.toString();
+        _departures = [];
+      });
+    } finally {
+      setState(() {
+        _loadingDepartures = false;
+      });
+    }
   }
 
   @override
@@ -60,51 +135,215 @@ class _CarrisSchedulesPageState
         foregroundColor: Colors.black,
         title: const Text('Horários Carris'),
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 12),
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() => _query = value);
-              },
-              decoration: InputDecoration(
-                hintText: 'Filtrar por destino ou linha...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor:
-                    t.colorScheme.surfaceVariant.withOpacity(0.25),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 12),
+
+                    // ==== SEARCH POR PARAGEM ====
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: TextField(
+                        controller: _searchController,
+                        onSubmitted: (_) => _performSearch(),
+                        decoration: InputDecoration(
+                          hintText: 'Procurar paragem Carris...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _loadingSearch
+                              ? Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor:
+                                          const AlwaysStoppedAnimation<Color>(
+                                              Colors.black),
+                                    ),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: const Icon(Icons.arrow_forward),
+                                  onPressed: _performSearch,
+                                ),
+                          filled: true,
+                          fillColor:
+                              t.colorScheme.surfaceVariant.withOpacity(0.25),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // ==== RESULTADOS DA PESQUISA DE PARAGENS ====
+                    if (_searchResults.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: t.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _searchResults.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final stop = _searchResults[index];
+                              return ListTile(
+                                dense: true,
+                                title: Text(stop.name),
+                                subtitle: (stop.lat != null && stop.lon != null)
+                                    ? Text(
+                                        '(${stop.lat!.toStringAsFixed(4)}, ${stop.lon!.toStringAsFixed(4)})',
+                                        style: t.textTheme.bodySmall?.copyWith(
+                                          color: t.hintColor,
+                                        ),
+                                      )
+                                    : null,
+                                onTap: () => _onSelectStop(stop),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    // ==== LISTA DE PARTIDAS ====
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 0),
+                      child: _buildDeparturesSection(context),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeparturesSection(BuildContext context) {
+    final t = Theme.of(context);
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          child: Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: t.textTheme.bodyMedium?.copyWith(
+              color: Colors.redAccent,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_selectedStop == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+          child: Text(
+            'Procura uma paragem Carris e seleciona-a para veres as próximas partidas.',
+            textAlign: TextAlign.center,
+            style: t.textTheme.bodyMedium,
+          ),
+        ),
+      );
+    }
+
+    if (_loadingDepartures && _departures.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 24),
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(_carrisYellow),
+          ),
+        ),
+      );
+    }
+
+    if (_departures.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+          child: Text(
+            'Não foram encontradas partidas próximas para esta paragem.',
+            textAlign: TextAlign.center,
+            style: t.textTheme.bodyMedium,
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          itemCount: _departures.length,
+          itemBuilder: (context, index) {
+            final row = _departures[index];
+
+            final departure = Departure(
+              time: row.timeLabel,
+              destination: row.destinationLabel,
+              line: row.lineLabel,
+              platform: '—',
+              operator: 'Carris',
+            );
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: DepartureCard(
+                departure: departure,
+                accentColor: _carrisYellow,
+              ),
+            );
+          },
+        ),
+
+        if (_loadingDepartures)
+          const Positioned(
+            right: 16,
+            top: 0,
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(_carrisYellow),
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                  16, 8, 16, 24),
-              itemCount: _filtered.length,
-              itemBuilder: (context, index) {
-                final d = _filtered[index];
-                return Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: 10),
-                  child: DepartureCard(
-                    departure: d,
-                    accentColor: _carrisYellow,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
