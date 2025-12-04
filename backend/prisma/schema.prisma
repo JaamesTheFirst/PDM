@@ -427,7 +427,8 @@ model EcoStatsAggregate {
   totalDurationSeconds Int   @default(0)
   totalCo2Kg           Float @default(0)
   co2SavedVsCarKg      Float @default(0)
-
+  totalEcoScore        Float @default(0)
+  tripsCount           Int   @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
