@@ -57,7 +57,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   String? _emptyMsg;
   Timer? _debounce;
   int _nearbyGen = 0;
-  
+
   // Filter state
   RouteFilters? _activeFilters;
 
@@ -140,15 +140,19 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   void initState() {
     super.initState();
     _resetSession();
-    
+
     // Validate userLocation before using it
     final p = widget.userLocation.coordinates;
-    print('[RouteSearchOverlay] Initializing with userLocation: lat=${p.lat}, lng=${p.lng}');
-    
+    print(
+      '[RouteSearchOverlay] Initializing with userLocation: lat=${p.lat}, lng=${p.lng}',
+    );
+
     if (p.lat == 0.0 && p.lng == 0.0) {
-      print('[RouteSearchOverlay] WARNING: userLocation appears to be invalid (0,0)');
+      print(
+        '[RouteSearchOverlay] WARNING: userLocation appears to be invalid (0,0)',
+      );
     }
-    
+
     _initFromAddress();
     _fromFocus.addListener(_onFocusChange);
     _toFocus.addListener(_onFocusChange);
@@ -199,8 +203,10 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   Future<void> _initFromAddress() async {
     try {
       final pos = widget.userLocation.coordinates;
-      print('[RouteSearchOverlay] Initializing from address. Location: lat=${pos.lat}, lng=${pos.lng}');
-      
+      print(
+        '[RouteSearchOverlay] Initializing from address. Location: lat=${pos.lat}, lng=${pos.lng}',
+      );
+
       final place = await MapboxGeocodingService.instance.reverseGeocode(
         pos.lng.toDouble(),
         pos.lat.toDouble(),
@@ -240,7 +246,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
           ? mbx.Position(_selectedFrom!.longitude, _selectedFrom!.latitude)
           : widget.userLocation.coordinates;
 
-      print('[RouteSearchOverlay] Loading nearby places. Base location: lat=${base.lat}, lng=${base.lng}');
+      print(
+        '[RouteSearchOverlay] Loading nearby places. Base location: lat=${base.lat}, lng=${base.lng}',
+      );
 
       final iso = _countryIsoFor(base);
 
@@ -287,7 +295,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     final oLon = ctx.lng.toDouble(), oLat = ctx.lat.toDouble();
     final iso = _countryIsoFor(ctx);
 
-    print('[RouteSearchOverlay] Searching for "$value" with GPS context: lat=$oLat, lng=$oLon, country=$iso');
+    print(
+      '[RouteSearchOverlay] Searching for "$value" with GPS context: lat=$oLat, lng=$oLon, country=$iso',
+    );
 
     _debounce = Timer(const Duration(milliseconds: 250), () async {
       setState(() {
@@ -447,14 +457,23 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   }
 
   Future<void> _setDestination(SearchboxPlace place) async {
+    if (!mounted) return;
+
     _selectedTo = place;
     final destPoint = mbx.Point(
       coordinates: mbx.Position(place.longitude, place.latitude),
     );
 
+    // círculos
     _circleMgr ??= await widget.mapboxMap.annotations
         .createCircleAnnotationManager();
-    if (_destCircle != null) await _circleMgr!.delete(_destCircle!);
+    if (!mounted) return;
+
+    if (_destCircle != null) {
+      await _circleMgr!.delete(_destCircle!);
+      if (!mounted) return;
+    }
+
     _destCircle = await _circleMgr!.create(
       mbx.CircleAnnotationOptions(
         geometry: destPoint,
@@ -464,8 +483,12 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         circleStrokeWidth: 2.5,
       ),
     );
+    if (!mounted) return;
 
-    final fromPos = _effectiveFromPosition()!;
+    final fromPos = _effectiveFromPosition();
+    if (fromPos == null) return;
+
+    // rota preview (Mapbox Directions)
     final route = await MapboxDirectionsService.instance.getRoute(
       fromLon: fromPos.lng.toDouble(),
       fromLat: fromPos.lat.toDouble(),
@@ -473,11 +496,17 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       toLat: place.latitude,
       profile: _mode == 'scooter' ? 'cycling' : _mode,
     );
-    if (route == null) return;
+    if (!mounted || route == null) return;
 
     _lineMgr ??= await widget.mapboxMap.annotations
         .createPolylineAnnotationManager();
-    if (_routeLine != null) await _lineMgr!.delete(_routeLine!);
+    if (!mounted) return;
+
+    if (_routeLine != null) {
+      await _lineMgr!.delete(_routeLine!);
+      if (!mounted) return;
+    }
+
     _routeLine = await _lineMgr!.create(
       mbx.PolylineAnnotationOptions(
         geometry: mbx.LineString(
@@ -489,12 +518,15 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         lineWidth: 5.0,
       ),
     );
+    if (!mounted) return;
 
     setState(() {
       _distance = route.distance.toDouble();
       _duration = route.duration.toDouble();
     });
 
+    // aqui já não mexe no estado, só na câmara → é seguro mesmo depois do dispose,
+    // mas se quiseres ser ultra-safe podes meter outro `if (!mounted) return;` antes.
     await _fitFromTo(fromPos, mbx.Position(place.longitude, place.latitude));
   }
 
@@ -561,22 +593,36 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     final availableModes = [
       {'value': 'WALK', 'label': 'Caminhar', 'icon': Icons.directions_walk},
       {'value': 'BICYCLE', 'label': 'Bicicleta', 'icon': Icons.directions_bike},
-      {'value': 'TRANSIT', 'label': 'Transporte público', 'icon': Icons.directions_transit},
+      {
+        'value': 'TRANSIT',
+        'label': 'Transporte público',
+        'icon': Icons.directions_transit,
+      },
       {'value': 'CAR', 'label': 'Carro', 'icon': Icons.directions_car},
     ];
-    
+
     // Granular transit types (shown when TRANSIT is selected)
     final transitTypes = [
       {'value': 'BUS', 'label': 'Autocarro', 'icon': Icons.directions_bus},
       {'value': 'RAIL', 'label': 'Comboio', 'icon': Icons.train},
       {'value': 'METRO', 'label': 'Metro', 'icon': Icons.subway},
       {'value': 'TRAM', 'label': 'Elétrico', 'icon': Icons.tram},
-      {'value': 'BICYCLE_SHARE', 'label': 'Bicicleta partilhada (Gira)', 'icon': Icons.pedal_bike},
-      {'value': 'SCOOTER_SHARE', 'label': 'Scooter partilhado', 'icon': Icons.electric_scooter},
+      {
+        'value': 'BICYCLE_SHARE',
+        'label': 'Bicicleta partilhada (Gira)',
+        'icon': Icons.pedal_bike,
+      },
+      {
+        'value': 'SCOOTER_SHARE',
+        'label': 'Scooter partilhado',
+        'icon': Icons.electric_scooter,
+      },
     ];
-    
+
     Set<String> selectedModes = Set.from(_activeFilters?.modes ?? []);
-    Set<String> selectedTransitTypes = Set.from(_activeFilters?.transitTypes ?? []);
+    Set<String> selectedTransitTypes = Set.from(
+      _activeFilters?.transitTypes ?? [],
+    );
     int? maxWalk = _activeFilters?.maxWalkDistanceMeters;
     final TextEditingController walkController = TextEditingController(
       text: maxWalk != null ? (maxWalk / 1000).toStringAsFixed(1) : '',
@@ -589,7 +635,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
           builder: (context, setDialogState) {
             // Calculate inside StatefulBuilder so it updates reactively
             final isTransitSelected = selectedModes.contains('TRANSIT');
-            
+
             return AlertDialog(
               title: const Text('Filtros de rota'),
               content: SingleChildScrollView(
@@ -608,7 +654,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                     ),
                     const SizedBox(height: 8),
                     ...availableModes.map((mode) {
-                      final isSelected = selectedModes.contains(mode['value'] as String);
+                      final isSelected = selectedModes.contains(
+                        mode['value'] as String,
+                      );
                       return CheckboxListTile(
                         title: Row(
                           children: [
@@ -655,7 +703,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                       ),
                       const SizedBox(height: 8),
                       ...transitTypes.map((type) {
-                        final isSelected = selectedTransitTypes.contains(type['value'] as String);
+                        final isSelected = selectedTransitTypes.contains(
+                          type['value'] as String,
+                        );
                         return CheckboxListTile(
                           title: Row(
                             children: [
@@ -668,9 +718,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                               Expanded(
                                 child: Text(
                                   type['label'] as String,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                  ),
+                                  style: TextStyle(fontSize: 13),
                                 ),
                               ),
                             ],
@@ -679,15 +727,21 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                           onChanged: (checked) {
                             setDialogState(() {
                               if (checked == true) {
-                                selectedTransitTypes.add(type['value'] as String);
+                                selectedTransitTypes.add(
+                                  type['value'] as String,
+                                );
                               } else {
-                                selectedTransitTypes.remove(type['value'] as String);
+                                selectedTransitTypes.remove(
+                                  type['value'] as String,
+                                );
                               }
                             });
                           },
                           dense: true,
                           activeColor: _ecoMint,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
                         );
                       }).toList(),
                     ],
@@ -699,7 +753,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: walkController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         hintText: 'Ex: 2.5 (deixar vazio para sem limite)',
                         border: OutlineInputBorder(),
@@ -716,15 +772,21 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                 TextButton(
                   onPressed: () {
                     final filters = RouteFilters(
-                      modes: selectedModes.isEmpty ? null : selectedModes.toList(),
-                      transitTypes: selectedTransitTypes.isEmpty ? null : selectedTransitTypes.toList(),
+                      modes: selectedModes.isEmpty
+                          ? null
+                          : selectedModes.toList(),
+                      transitTypes: selectedTransitTypes.isEmpty
+                          ? null
+                          : selectedTransitTypes.toList(),
                       maxWalkDistanceMeters: walkController.text.isNotEmpty
-                          ? (double.tryParse(walkController.text) ?? 0.0).toInt() * 1000
+                          ? (double.tryParse(walkController.text) ?? 0.0)
+                                    .toInt() *
+                                1000
                           : null,
                     );
-                    Navigator.of(context).pop(
-                      filters.hasActiveFilters ? filters : null,
-                    );
+                    Navigator.of(
+                      context,
+                    ).pop(filters.hasActiveFilters ? filters : null);
                   },
                   child: const Text('Aplicar'),
                 ),
@@ -884,34 +946,46 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _activeFilters != null && _activeFilters!.hasActiveFilters
+                          _activeFilters != null &&
+                                  _activeFilters!.hasActiveFilters
                               ? 'Filtros ativos'
                               : 'Filtros',
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: _activeFilters != null && _activeFilters!.hasActiveFilters
+                            fontWeight:
+                                _activeFilters != null &&
+                                    _activeFilters!.hasActiveFilters
                                 ? FontWeight.w600
                                 : FontWeight.normal,
-                            color: _activeFilters != null && _activeFilters!.hasActiveFilters
+                            color:
+                                _activeFilters != null &&
+                                    _activeFilters!.hasActiveFilters
                                 ? _ecoMint
                                 : t.colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       ],
                     ),
-                    selected: _activeFilters != null && _activeFilters!.hasActiveFilters,
+                    selected:
+                        _activeFilters != null &&
+                        _activeFilters!.hasActiveFilters,
                     onSelected: (_) => _showFilterDialog(context),
-                    backgroundColor: _activeFilters != null && _activeFilters!.hasActiveFilters
+                    backgroundColor:
+                        _activeFilters != null &&
+                            _activeFilters!.hasActiveFilters
                         ? _ecoMint.withOpacity(0.1)
                         : t.colorScheme.surfaceVariant.withOpacity(0.5),
                     selectedColor: _ecoMint.withOpacity(0.15),
                     side: BorderSide(
-                      color: _activeFilters != null && _activeFilters!.hasActiveFilters
+                      color:
+                          _activeFilters != null &&
+                              _activeFilters!.hasActiveFilters
                           ? _ecoMint
                           : t.colorScheme.onSurface.withOpacity(0.2),
                     ),
                   ),
-                  if (_activeFilters != null && _activeFilters!.hasActiveFilters) ...[
+                  if (_activeFilters != null &&
+                      _activeFilters!.hasActiveFilters) ...[
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () {
