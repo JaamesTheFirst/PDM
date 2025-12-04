@@ -27,9 +27,7 @@ class SchedulesPage extends StatelessWidget {
       children: [
         Text(
           'Horários & disponibilidade',
-          style: t.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 4),
         Text(
@@ -48,11 +46,9 @@ class SchedulesPage extends StatelessWidget {
           color: _cpBlue,
           chipLabel: 'Comboios',
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const CpSchedulesPage(),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const CpSchedulesPage()));
           },
         ),
         const SizedBox(height: 12),
@@ -60,17 +56,14 @@ class SchedulesPage extends StatelessWidget {
         // FlixBus
         _OperatorCard(
           title: 'FlixBus Portugal',
-          subtitle:
-              'Horários de autocarros de longo curso (GTFS FlixBus).',
+          subtitle: 'Horários de autocarros de longo curso (GTFS FlixBus).',
           icon: Icons.directions_bus_filled,
           color: _flixbusGreen,
           chipLabel: 'Longo curso',
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => FlixbusSchedulesPage(),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => FlixbusSchedulesPage()));
           },
         ),
         const SizedBox(height: 12),
@@ -98,32 +91,28 @@ class SchedulesPage extends StatelessWidget {
           subtitle: 'Linhas urbanas a partir do grafo OTP (GTFS Carris).',
           icon: Icons.directions_bus,
           color: _carrisYellow,
-          darkText: true,
+          // darkText: true,  // remove ou mete false
           chipLabel: 'Autocarros',
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const CarrisSchedulesPage(),
-              ),
+              MaterialPageRoute(builder: (_) => const CarrisSchedulesPage()),
             );
           },
         ),
+
         const SizedBox(height: 12),
 
         // GIRA – Lisboa
         _OperatorCard(
           title: 'GIRA – Lisboa bike-share',
-          subtitle:
-              'Estações e capacidade histórica (dataset GIRA na BD).',
+          subtitle: 'Estações e capacidade histórica (dataset GIRA na BD).',
           icon: Icons.pedal_bike,
           color: _giraGreen,
           chipLabel: 'GIRA',
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const GiraStationsPage(),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const GiraStationsPage()));
           },
         ),
         const SizedBox(height: 12),
@@ -138,9 +127,7 @@ class SchedulesPage extends StatelessWidget {
           chipLabel: 'GBFS',
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const GbfsAvailabilityPage(),
-              ),
+              MaterialPageRoute(builder: (_) => const GbfsAvailabilityPage()),
             );
           },
         ),
@@ -182,10 +169,7 @@ class _OperatorCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           gradient: LinearGradient(
-            colors: [
-              color,
-              Color.lerp(color, Colors.black, 0.35)!,
-            ],
+            colors: [color, Color.lerp(color, Colors.black, 0.35)!],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -274,10 +258,7 @@ class _OperatorCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Icon(
-                      Icons.chevron_right,
-                      color: Colors.white,
-                    ),
+                    const Icon(Icons.chevron_right, color: Colors.white),
                   ],
                 ),
               ),
