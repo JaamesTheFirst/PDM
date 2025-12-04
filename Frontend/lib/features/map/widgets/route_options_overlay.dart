@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';
 import '../../../../services/eco_score_service.dart';
-import '../../../../services/routes_service.dart';
+import '../../../../services/history_service.dart';
+import '../../../../services/routes_service.dart'; // OtpItinerary + RouteFilters
 import 'package:sustainable_transport_app/utils/polyline_decoder.dart';
 import '../state/otp_routes_controller.dart';
 
@@ -15,6 +16,7 @@ class RouteOptionsArgs {
   final SearchboxPlace from;
   final SearchboxPlace to;
   final RouteFilters? filters;
+
   RouteOptionsArgs({
     required this.mapboxMap,
     required this.from,
@@ -47,7 +49,11 @@ class _RouteData {
   final List<List<num>> geometry;
   final double distance; // m
   final double duration; // s
-  _RouteData({required this.geometry, required this.distance, required this.duration});
+  _RouteData({
+    required this.geometry,
+    required this.distance,
+    required this.duration,
+  });
 }
 
 class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
@@ -55,17 +61,21 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
   // desenho no mapa
   mbx.PolylineAnnotationManager? _lineMgr;
-  mbx.PolylineAnnotation? _routeLine; // Selected route (thicker, more prominent)
+  mbx.PolylineAnnotation?
+  _routeLine; // Selected route (thicker, more prominent)
   List<mbx.PolylineAnnotation> _allRouteLines = []; // All route options
   mbx.CircleAnnotationManager? _poiMgr;
   mbx.CircleAnnotation? _fromDot;
   mbx.CircleAnnotation? _toDot;
 
-  // estado de modo
+  // estado de modo (Mapbox directions)
   String _selected = 'walking';
   bool _loading = false;
 
-  // cache de rotas por modo
+  // guardar rota no backend / histórico
+  bool _saving = false;
+
+  // cache de rotas por modo (Mapbox Directions)
   final Map<String, _RouteData> _cache = {};
   late final OtpRoutesController _otpController;
   int? _lastDrawnOtpIndex;
@@ -76,6 +86,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   late double _snapExpanded;
   late double _snapDocked;
 
+  bool _requestedOtp = false;
+
   @override
   void initState() {
     super.initState();
@@ -83,39 +95,39 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     _otpController.addListener(_handleOtpSelectionChange);
     _ensureDots();
     _selectMode('walking', draw: true);
-    // Clear any previous routes and reset state
     _clearPreviousRoutes();
-    
-    // Responsive snap positions set after layout
+
+    // calcular alturas do painel depois do layout
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final media = MediaQuery.of(context);
-      // Use the actual screen height, not constraints (which might be limited by parent)
       final screenHeight = media.size.height;
 
-      // Full screen should use the entire screen height
-      _snapFull = screenHeight;            // 100% screen
-      _snapExpanded = screenHeight * 0.60; // 60% screen
-      _snapDocked = screenHeight * 0.25;   // 25% screen
+      _snapFull = screenHeight; // 100% ecrã
+      _snapExpanded = screenHeight * 0.60;
+      _snapDocked = screenHeight * 0.25;
 
       setState(() {
-        _panelHeight = _snapExpanded; // Default state
+        _panelHeight = _snapExpanded;
       });
     });
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchOtp());
   }
-  bool _requestedOtp = false;
-  
+
+  @override
+  void dispose() {
+    _otpController.removeListener(_handleOtpSelectionChange);
+    _clearPreviousRoutes();
+    super.dispose();
+  }
+
   Future<void> _clearPreviousRoutes() async {
-    // Clear all drawn polylines
     if (_lineMgr != null) {
       try {
-        // Clear selected route
         if (_routeLine != null) {
           await _lineMgr!.delete(_routeLine!);
           _routeLine = null;
         }
-        // Clear all route options
         for (final line in _allRouteLines) {
           try {
             await _lineMgr!.delete(line);
@@ -138,8 +150,12 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       return;
     }
     print('[RouteOptionsOverlay] _fetchOtp: Starting fetch');
-    print('[RouteOptionsOverlay] From: ${widget.from.latitude}, ${widget.from.longitude}');
-    print('[RouteOptionsOverlay] To: ${widget.to.latitude}, ${widget.to.longitude}');
+    print(
+      '[RouteOptionsOverlay] From: ${widget.from.latitude}, ${widget.from.longitude}',
+    );
+    print(
+      '[RouteOptionsOverlay] To: ${widget.to.latitude}, ${widget.to.longitude}',
+    );
     _requestedOtp = true;
     await _otpController.fetch(
       fromLat: widget.from.latitude,
@@ -148,19 +164,11 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       toLon: widget.to.longitude,
       filters: widget.filters,
     );
-    print('[RouteOptionsOverlay] _fetchOtp: Fetch complete, drawing all routes');
+    print(
+      '[RouteOptionsOverlay] _fetchOtp: Fetch complete, drawing all routes',
+    );
     await _drawAllOtpItineraries();
     await _drawSelectedOtpItinerary();
-  }
-
-  @override
-  void dispose() {
-    _otpController.removeListener(_handleOtpSelectionChange);
-    // Clear all drawn routes when disposing
-    _clearPreviousRoutes();
-    // Don't call controller.clear() here - it triggers notifyListeners during dispose
-    // The controller will be reused for the next route search
-    super.dispose();
   }
 
   void _handleOtpSelectionChange() {
@@ -169,14 +177,14 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     _drawSelectedOtpItinerary();
   }
 
-  /// Draw all route options with different colors
+  /// Desenhar todas as rotas OTP com cores diferentes
   Future<void> _drawAllOtpItineraries() async {
     final itineraries = _otpController.itineraries;
     if (itineraries.isEmpty) return;
 
-    _lineMgr ??= await widget.mapboxMap.annotations.createPolylineAnnotationManager();
-    
-    // Clear previous route lines
+    _lineMgr ??= await widget.mapboxMap.annotations
+        .createPolylineAnnotationManager();
+
     for (final line in _allRouteLines) {
       try {
         await _lineMgr!.delete(line);
@@ -186,16 +194,14 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     }
     _allRouteLines.clear();
 
-    // Color palette for different routes - vibrant and saturated
     final routeColors = [
-      0xFF00D4FF, // vibrant cyan
-      0xFF0066FF, // bright blue
-      0xFF8B00FF, // vibrant purple
-      0xFFFF6600, // bright orange
-      0xFFFF0066, // vibrant pink/magenta
+      0xFF00D4FF,
+      0xFF0066FF,
+      0xFF8B00FF,
+      0xFFFF6600,
+      0xFFFF0066,
     ];
 
-    // Draw all routes with different colors
     for (var i = 0; i < itineraries.length; i++) {
       final itinerary = itineraries[i];
       final coords = <List<num>>[];
@@ -215,18 +221,20 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       if (coords.isEmpty) continue;
 
       final color = routeColors[i % routeColors.length];
-      
+
       try {
         final routeLine = await _lineMgr!.create(
           mbx.PolylineAnnotationOptions(
             geometry: mbx.LineString(
               coordinates: coords
-                  .map((c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()))
+                  .map(
+                    (c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()),
+                  )
                   .toList(),
             ),
             lineColor: color,
-            lineWidth: 4.0, // Thinner for non-selected routes
-            lineOpacity: 0.7, // Slightly transparent
+            lineWidth: 4.0,
+            lineOpacity: 0.7,
           ),
         );
         _allRouteLines.add(routeLine);
@@ -235,7 +243,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       }
     }
 
-    // Fit camera to show all routes
     if (_allRouteLines.isNotEmpty) {
       final allCoords = <List<num>>[];
       for (final itinerary in itineraries) {
@@ -255,14 +262,13 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     }
   }
 
-  /// Draw the selected route with a thicker, more prominent line
+  /// Desenhar rota selecionada com linha mais grossa
   Future<void> _drawSelectedOtpItinerary() async {
     final index = _otpController.selectedIndex;
     if (index == null) return;
     final itineraries = _otpController.itineraries;
     if (index < 0 || index >= itineraries.length) return;
 
-    // Remove previous selected route
     if (_routeLine != null) {
       try {
         await _lineMgr!.delete(_routeLine!);
@@ -289,10 +295,9 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
     if (coords.isEmpty) return;
 
-    _lineMgr ??= await widget.mapboxMap.annotations.createPolylineAnnotationManager();
+    _lineMgr ??= await widget.mapboxMap.annotations
+        .createPolylineAnnotationManager();
 
-    // Draw selected route with thicker, more prominent line
-    // Use white or bright yellow for selected route to stand out from all other colors
     try {
       _routeLine = await _lineMgr!.create(
         mbx.PolylineAnnotationOptions(
@@ -301,9 +306,9 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                 .map((c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()))
                 .toList(),
           ),
-          lineColor: 0xFFFFFFFF, // White for selected route - stands out from all colors
-          lineWidth: 7.0, // Thicker for selected route
-          lineOpacity: 1.0, // Fully opaque
+          lineColor: 0xFFFFFFFF,
+          lineWidth: 7.0,
+          lineOpacity: 1.0,
         ),
       );
     } catch (e) {
@@ -314,14 +319,19 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   }
 
   Future<void> _ensureDots() async {
-    _poiMgr ??= await widget.mapboxMap.annotations.createCircleAnnotationManager();
+    _poiMgr ??= await widget.mapboxMap.annotations
+        .createCircleAnnotationManager();
     try {
       await _poiMgr!.deleteAll();
     } catch (_) {}
+
     _fromDot = await _poiMgr!.create(
       mbx.CircleAnnotationOptions(
         geometry: mbx.Point(
-          coordinates: mbx.Position(widget.from.longitude, widget.from.latitude),
+          coordinates: mbx.Position(
+            widget.from.longitude,
+            widget.from.latitude,
+          ),
         ),
         circleRadius: 7,
         circleColor: 0xFF1C1C1C,
@@ -342,27 +352,18 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     );
   }
 
-  /// Ajusta a câmara para encaixar a geometria da rota (mostra De + Para).
   Future<void> _fitRouteGeometry(List<List<num>> geometry) async {
     if (geometry.isEmpty) return;
 
     final points = geometry
         .map(
           (c) => mbx.Point(
-            coordinates: mbx.Position(
-              (c[0]).toDouble(),
-              (c[1]).toDouble(),
-            ),
+            coordinates: mbx.Position((c[0]).toDouble(), (c[1]).toDouble()),
           ),
         )
         .toList();
 
-    final padding = mbx.MbxEdgeInsets(
-      top: 40,
-      left: 40,
-      right: 40,
-      bottom: 40,
-    );
+    final padding = mbx.MbxEdgeInsets(top: 40, left: 40, right: 40, bottom: 40);
 
     try {
       final cam = await widget.mapboxMap.cameraForCoordinates(
@@ -371,10 +372,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         0,
         0,
       );
-      await widget.mapboxMap.flyTo(
-        cam,
-        mbx.MapAnimationOptions(duration: 900),
-      );
+      await widget.mapboxMap.flyTo(cam, mbx.MapAnimationOptions(duration: 900));
     } catch (_) {}
   }
 
@@ -388,7 +386,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     if (_cache.containsKey(mode)) {
       data = _cache[mode]!;
     } else {
-      final profile = (mode == 'scooter' || mode == 'bike_share' || mode == 'scooter_share')
+      final profile =
+          (mode == 'scooter' || mode == 'bike_share' || mode == 'scooter_share')
           ? 'cycling'
           : (mode == 'taxi' ? 'driving' : mode);
       final r = await MapboxDirectionsService.instance.getRoute(
@@ -421,9 +420,9 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   }
 
   Future<void> _drawRoute(_RouteData route) async {
-    _lineMgr ??= await widget.mapboxMap.annotations.createPolylineAnnotationManager();
-    
-    // Clear all OTP routes when drawing Mapbox directions
+    _lineMgr ??= await widget.mapboxMap.annotations
+        .createPolylineAnnotationManager();
+
     try {
       if (_routeLine != null) {
         await _lineMgr!.delete(_routeLine!);
@@ -440,8 +439,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     } catch (e) {
       print('[RouteOptionsOverlay] Error clearing OTP routes: $e');
     }
-    
-    // Draw Mapbox direction route
+
     try {
       _routeLine = await _lineMgr!.create(
         mbx.PolylineAnnotationOptions(
@@ -450,8 +448,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                 .map((c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()))
                 .toList(),
           ),
-            lineColor: 0xFF00D4FF, // Use vibrant cyan for Mapbox directions too
-            lineWidth: 5.0,
+          lineColor: 0xFF00D4FF,
+          lineWidth: 5.0,
         ),
       );
     } catch (e) {
@@ -459,21 +457,110 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     }
   }
 
-  String _fmt(double meters) =>
-      meters < 1000 ? '${meters.round()} m' : '${(meters / 1000).toStringAsFixed(1)} km';
+  String _fmt(double meters) => meters < 1000
+      ? '${meters.round()} m'
+      : '${(meters / 1000).toStringAsFixed(1)} km';
   String _fmtDur(double seconds) => '${(seconds / 60).round()} min';
+
+  /// ====== BOTÃO "APLICAR & FECHAR" ======
+  Future<void> _onApplyAndSave(BuildContext context) async {
+    final controller = context.read<OtpRoutesController>();
+    final itineraries = controller.itineraries;
+
+    if (itineraries.isEmpty) {
+      widget.onClose();
+      return;
+    }
+
+    var index = controller.selectedIndex ?? 0;
+    if (index < 0 || index >= itineraries.length) index = 0;
+
+    final itinerary = itineraries[index];
+
+    // Construir JSON manualmente para bater certo com o backend (SaveRouteDto)
+    final legsJson = itinerary.legs.map((leg) {
+      double? fromLat;
+      double? fromLon;
+      double? toLat;
+      double? toLon;
+
+      if (leg.polyline != null && leg.polyline!.isNotEmpty) {
+        final decoded = decodePolyline(leg.polyline!);
+        if (decoded.isNotEmpty) {
+          fromLat = (decoded.first[0]).toDouble();
+          fromLon = (decoded.first[1]).toDouble();
+          toLat = (decoded.last[0]).toDouble();
+          toLon = (decoded.last[1]).toDouble();
+        }
+      }
+
+      return {
+        'mode': leg.mode,
+        'duration': leg.duration,
+        'distance': leg.distance,
+        'startTime': leg.startTime.toIso8601String(),
+        'endTime': leg.endTime.toIso8601String(),
+        'from': {'name': leg.fromName, 'lat': fromLat, 'lon': fromLon},
+        'to': {'name': leg.toName, 'lat': toLat, 'lon': toLon},
+        // route pode ser null; o backend faz leg.route ?? null
+        'route': null,
+        'legGeometry': {'points': leg.polyline},
+      };
+    }).toList();
+
+    final itineraryJson = {
+      'duration': itinerary.duration,
+      'startTime': itinerary.startTime.toIso8601String(),
+      'endTime': itinerary.endTime.toIso8601String(),
+      'walkDistance': itinerary.walkDistance,
+      'legs': legsJson,
+    };
+
+    // <<< NOVO: labels bonitos para origem / destino >>>
+    final originLabel = widget.from.name.isNotEmpty
+        ? widget.from.name
+        : widget.from.placeName;
+    final destinationLabel = widget.to.name.isNotEmpty
+        ? widget.to.name
+        : widget.to.placeName;
+
+    // <<< NOVO: enviar origem / destino no payload >>>
+    final payload = {
+      'itinerary': itineraryJson,
+      'originName': originLabel,
+      'originLatitude': widget.from.latitude,
+      'originLongitude': widget.from.longitude,
+      'destinationName': destinationLabel,
+      'destinationLatitude': widget.to.latitude,
+      'destinationLongitude': widget.to.longitude,
+    };
+
+    setState(() => _saving = true);
+    try {
+      await HistoryService.instance.saveRouteFromItinerary(payload);
+    } catch (e) {
+      print('[RouteOptionsOverlay] Error saving itinerary: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível guardar esta rota.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+      widget.onClose();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final media = MediaQuery.of(context);
     final bottomInset = media.padding.bottom;
+    final screenHeight = media.size.height;
 
-    // Use MediaQuery to get actual screen height, ignoring parent constraints
-    final screenHeight = MediaQuery.of(context).size.height;
-    
     return SizedBox(
-      // Only take up the space needed for the panel, not blocking touches above
       height: _panelHeight == 0 ? 1 : _panelHeight.clamp(0.0, screenHeight),
       child: Align(
         alignment: Alignment.bottomCenter,
@@ -484,11 +571,11 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
           width: double.infinity,
           decoration: BoxDecoration(
             color: t.colorScheme.surface,
-            borderRadius: _panelHeight >= _snapFull * 0.95 
-                ? BorderRadius.zero // No border radius when full screen
+            borderRadius: _panelHeight >= _snapFull * 0.95
+                ? BorderRadius.zero
                 : const BorderRadius.vertical(top: Radius.circular(24)),
             boxShadow: _panelHeight >= _snapFull * 0.95
-                ? [] // No shadow when full screen
+                ? []
                 : const [
                     BoxShadow(
                       blurRadius: 24,
@@ -497,129 +584,142 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                     ),
                   ],
           ),
-              child: Padding(
-                padding: EdgeInsets.only(bottom: bottomInset + 12),
-                child: Column(
-                  children: [
-                    // handle + drag
-                    GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onVerticalDragUpdate: (details) {
-                        setState(() {
-                          _panelHeight -= details.delta.dy; // drag up → taller
-                          _panelHeight = _panelHeight.clamp(_snapDocked, _snapFull);
-                        });
-                      },
-                      onVerticalDragEnd: (_) {
-                        final targets = [_snapDocked, _snapExpanded, _snapFull];
-
-                        final nearest = targets.reduce(
-                          (a, b) => (_panelHeight - a).abs() < (_panelHeight - b).abs() ? a : b,
-                        );
-
-                        setState(() => _panelHeight = nearest);
-                      },
-                      child: SizedBox(
-                        height: 40,
-                        child: Center(
-                          child: Container(
-                            width: 48,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: t.colorScheme.onSurface.withOpacity(.25),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                          ),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: bottomInset + 12),
+            child: Column(
+              children: [
+                // handle + drag
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragUpdate: (details) {
+                    setState(() {
+                      _panelHeight -= details.delta.dy;
+                      _panelHeight = _panelHeight.clamp(_snapDocked, _snapFull);
+                    });
+                  },
+                  onVerticalDragEnd: (_) {
+                    final targets = [_snapDocked, _snapExpanded, _snapFull];
+                    final nearest = targets.reduce(
+                      (a, b) =>
+                          (_panelHeight - a).abs() < (_panelHeight - b).abs()
+                          ? a
+                          : b,
+                    );
+                    setState(() => _panelHeight = nearest);
+                  },
+                  child: SizedBox(
+                    height: 40,
+                    child: Center(
+                      child: Container(
+                        width: 48,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: t.colorScheme.onSurface.withOpacity(.25),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                       ),
                     ),
-
-                    // header + fechar
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.route, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${widget.from.name} → ${widget.to.name}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: widget.onClose,
-                            icon: const Icon(Icons.close),
-                            tooltip: 'Fechar',
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: const _OtpItinerariesPanel(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ações no fundo
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: widget.onClose,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: t.colorScheme.onSurface,
-                                side: BorderSide(
-                                  color: t.colorScheme.onSurface.withOpacity(.2),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(26),
-                                ),
-                              ),
-                              child: const Text('Fechar'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: widget.onClose,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _ecoMint,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(26),
-                                ),
-                              ),
-                              child: const Text(
-                                'Aplicar & fechar',
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+
+                // header + fechar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.route, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${widget.from.name} → ${widget.to.name}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _saving ? null : widget.onClose,
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Fechar',
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: const _OtpItinerariesPanel(),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // ações no fundo
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _saving ? null : widget.onClose,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: t.colorScheme.onSurface,
+                            side: BorderSide(
+                              color: t.colorScheme.onSurface.withOpacity(.2),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(26),
+                            ),
+                          ),
+                          child: const Text('Fechar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _saving
+                              ? null
+                              : () => _onApplyAndSave(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _ecoMint,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(26),
+                            ),
+                          ),
+                          child: _saving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Aplicar & fechar',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-        );
+        ),
+      ),
+    );
   }
-
 }
 
 class _OtpItinerariesPanel extends StatelessWidget {
@@ -628,19 +728,24 @@ class _OtpItinerariesPanel extends StatelessWidget {
   String _formatTime(DateTime dt) =>
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
-  /// Get icon for primary transport mode
   IconData _getIconForMode(OtpItinerary itinerary) {
-    // Find the primary (non-walking) mode
     for (final leg in itinerary.legs) {
       final mode = leg.mode.toUpperCase();
       if (mode != 'WALK' && mode != 'WALKING') {
         if (mode == 'CAR' || mode.contains('CAR')) {
           return Icons.directions_car;
-        } else if (mode == 'BICYCLE' || mode == 'BIKE' || mode.contains('BIKE')) {
+        } else if (mode == 'BICYCLE' ||
+            mode == 'BIKE' ||
+            mode.contains('BIKE')) {
           return Icons.directions_bike;
-        } else if (mode.contains('RAIL') || mode.contains('TRAIN') || mode == 'R' || mode == 'IC') {
+        } else if (mode.contains('RAIL') ||
+            mode.contains('TRAIN') ||
+            mode == 'R' ||
+            mode == 'IC') {
           return Icons.train;
-        } else if (mode.contains('BUS') || mode == 'COACH' || mode == 'FLIXBUS') {
+        } else if (mode.contains('BUS') ||
+            mode == 'COACH' ||
+            mode == 'FLIXBUS') {
           return Icons.directions_bus;
         } else if (mode.contains('METRO') || mode.contains('SUBWAY')) {
           return Icons.subway;
@@ -651,7 +756,6 @@ class _OtpItinerariesPanel extends StatelessWidget {
         }
       }
     }
-    // Default to walking if all legs are walking
     return Icons.directions_walk;
   }
 
@@ -660,8 +764,7 @@ class _OtpItinerariesPanel extends StatelessWidget {
     final t = Theme.of(context);
     return Consumer<OtpRoutesController>(
       builder: (_, controller, __) {
-          
-          if (controller.isLoading) {
+        if (controller.isLoading) {
           return _TransitCardBase(
             child: Row(
               children: const [
@@ -694,14 +797,13 @@ class _OtpItinerariesPanel extends StatelessWidget {
           );
         }
 
-        // Sort itineraries by eco-score (highest to lowest)
         final itineraries = List<OtpItinerary>.from(controller.itineraries);
-        itineraries.sort((a, b) {
+        itineraries.sort((OtpItinerary a, OtpItinerary b) {
           final scoreA = EcoScoreService.instance.calculateScore(a).score;
           final scoreB = EcoScoreService.instance.calculateScore(b).score;
-          return scoreB.compareTo(scoreA); // Descending order (highest first)
+          return scoreB.compareTo(scoreA);
         });
-        
+
         if (itineraries.isEmpty) {
           return _TransitCardBase(
             child: Column(
@@ -721,7 +823,8 @@ class _OtpItinerariesPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'OTP não encontrou rotas de transporte público para esta ligação. Tenta outro destino ou verifica se há cobertura de transportes nesta área.',
+                  'OTP não encontrou rotas de transporte público para esta ligação. '
+                  'Tenta outro destino ou verifica se há cobertura de transportes nesta área.',
                   style: t.textTheme.bodySmall?.copyWith(
                     color: t.colorScheme.onSurface.withOpacity(0.7),
                   ),
@@ -751,17 +854,17 @@ class _OtpItinerariesPanel extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 itemCount: itineraries.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, index) {
-                return _ExpandableRouteCard(
-                  itinerary: itineraries[index],
-                  index: index,
-                  controller: controller,
-                  getIconForMode: _getIconForMode,
-                  formatTime: _formatTime,
-                );
-              },
-            ),
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (_, index) {
+                  return _ExpandableRouteCard(
+                    itinerary: itineraries[index],
+                    index: index,
+                    controller: controller,
+                    getIconForMode: _getIconForMode,
+                    formatTime: _formatTime,
+                  );
+                },
+              ),
             ),
           ],
         );
@@ -802,10 +905,11 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
         .map((leg) => leg.routeName ?? leg.mode)
         .join(' • ');
     final walkKm = itinerary.walkDistance / 1000.0;
-    
-    // Calculate Eco Score
+
     final ecoScore = EcoScoreService.instance.calculateScore(itinerary);
-    final scoreColor = Color(EcoScoreService.instance.getScoreColor(ecoScore.score));
+    final scoreColor = Color(
+      EcoScoreService.instance.getScoreColor(ecoScore.score),
+    );
 
     return GestureDetector(
       onTap: () => widget.controller.selectItinerary(widget.index),
@@ -857,16 +961,16 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
               ],
             ),
             const SizedBox(height: 6),
-            Text(
-              legsSummary,
-              style: t.textTheme.bodyMedium,
-            ),
+            Text(legsSummary, style: t.textTheme.bodyMedium),
             const SizedBox(height: 6),
             Row(
               children: [
                 // Eco Score badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: scoreColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -876,8 +980,8 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        ecoScore.hasPhysicalActivity 
-                            ? Icons.fitness_center 
+                        ecoScore.hasPhysicalActivity
+                            ? Icons.fitness_center
                             : Icons.eco,
                         size: 14,
                         color: scoreColor,
@@ -897,7 +1001,10 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                 const SizedBox(width: 8),
                 // CO2 badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: t.colorScheme.surfaceVariant.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(8),
@@ -912,14 +1019,12 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                   ),
                 ),
                 const Spacer(),
-                // Walking distance
                 Text(
                   '${walkKm.toStringAsFixed(1)} km a pé',
                   style: t.textTheme.bodySmall,
                 ),
               ],
             ),
-            // Expanded details
             if (_isExpanded) ...[
               const SizedBox(height: 12),
               const Divider(),
@@ -977,9 +1082,15 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
     final m = mode.toUpperCase();
     if (m == 'WALK' || m == 'WALKING') return Icons.directions_walk;
     if (m == 'CAR' || m.contains('CAR')) return Icons.directions_car;
-    if (m == 'BICYCLE' || m == 'BIKE' || m.contains('BIKE')) return Icons.directions_bike;
-    if (m.contains('RAIL') || m.contains('TRAIN') || m == 'R' || m == 'IC') return Icons.train;
-    if (m.contains('BUS') || m == 'COACH' || m == 'FLIXBUS') return Icons.directions_bus;
+    if (m == 'BICYCLE' || m == 'BIKE' || m.contains('BIKE')) {
+      return Icons.directions_bike;
+    }
+    if (m.contains('RAIL') || m.contains('TRAIN') || m == 'R' || m == 'IC') {
+      return Icons.train;
+    }
+    if (m.contains('BUS') || m == 'COACH' || m == 'FLIXBUS') {
+      return Icons.directions_bus;
+    }
     if (m.contains('METRO') || m.contains('SUBWAY')) return Icons.subway;
     if (m.contains('TRAM')) return Icons.tram;
     return Icons.directions_transit;
