@@ -12,6 +12,8 @@ import { CpModule } from './cp/cp.module';
 import { HealthController } from './health/health.controller';
 import { GbfsModule } from './gbfs/gbfs.module';
 import {FlixbusModule} from './flixbus/flixbus.module';
+import { CarrisModule } from './carris/carris.module';
+import { ImpactModule } from './impact/impact.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import {FlixbusModule} from './flixbus/flixbus.module';
     CpModule,
     GbfsModule,
     FlixbusModule,
+    CarrisModule,
+    ImpactModule,
   ],
   controllers: [HealthController],
 })
