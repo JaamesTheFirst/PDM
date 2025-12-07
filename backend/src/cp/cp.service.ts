@@ -21,10 +21,16 @@ import {
   CpStopBoardRowDto,
 } from './dto';
 
+/**
+ * Erro simples do GraphQL GTFS (OTP).
+ */
 interface GtfsGraphQlError {
   message: string;
 }
 
+/**
+ * Estrutura de resposta para query de rotas GTFS.
+ */
 interface GtfsRoutesResponse {
   data?: {
     routes: Array<{
@@ -41,6 +47,9 @@ interface GtfsRoutesResponse {
   errors?: GtfsGraphQlError[];
 }
 
+/**
+ * Estrutura de resposta para detalhe de uma rota GTFS.
+ */
 interface GtfsRouteDetailResponse {
   data?: {
     route: {
@@ -65,6 +74,9 @@ interface GtfsRouteDetailResponse {
   errors?: GtfsGraphQlError[];
 }
 
+/**
+ * Estrutura de resposta para pesquisa de stops GTFS.
+ */
 interface GtfsStopsSearchResponse {
   data?: {
     stops: Array<{
@@ -77,6 +89,9 @@ interface GtfsStopsSearchResponse {
   errors?: GtfsGraphQlError[];
 }
 
+/**
+ * Estrutura de resposta para partidas por paragem GTFS.
+ */
 interface GtfsStopDeparturesResponse {
   data?: {
     stop: {
@@ -113,6 +128,9 @@ interface GtfsStopDeparturesResponse {
 
 // ===== GraphQL queries (OTP/GTFS) =====
 
+/**
+ * Query para listar todas as rotas do grafo GTFS.
+ */
 const ROUTES_QUERY = `
   query Routes {
     routes {
@@ -128,6 +146,9 @@ const ROUTES_QUERY = `
   }
 `;
 
+/**
+ * Query para obter detalhe de uma rota (inclui padrões e paragens).
+ */
 const ROUTE_DETAIL_QUERY = `
   query RouteDetail($id: String!) {
     route(id: $id) {
@@ -151,6 +172,9 @@ const ROUTE_DETAIL_QUERY = `
   }
 `;
 
+/**
+ * Query para pesquisa de paragens pelo nome.
+ */
 const STOPS_SEARCH_QUERY = `
   query StopsSearch($name: String!) {
     stops(name: $name) {
@@ -162,6 +186,9 @@ const STOPS_SEARCH_QUERY = `
   }
 `;
 
+/**
+ * Query para obter partidas por paragem.
+ */
 const STOP_DEPARTURES_QUERY = `
   query StopDepartures(
     $stopId: String!,
@@ -204,6 +231,17 @@ const STOP_DEPARTURES_QUERY = `
   }
 `;
 
+/**
+ * Serviço responsável por integrar:
+ *  - API comboios.live (veículos em tempo real)
+ *  - grafo GTFS da CP via OTP GraphQL
+ *
+ * Expõe métodos para obter:
+ *  - veículos em realtime
+ *  - rotas CP
+ *  - pesquisa de estações
+ *  - partidas por estação (raw e formatadas)
+ */
 @Injectable()
 export class CpService {
   private readonly logger = new Logger(CpService.name);
@@ -219,6 +257,10 @@ export class CpService {
 
   // ===== CONFIG / URLs =====
 
+  /**
+   * URL base da API de veículos CP (comboios.live),
+   * sobreponível via env `CP_VEHICLES_API_URL`.
+   */
   private get vehiclesApiUrl(): string {
     return (
       this.configService.get<string>('CP_VEHICLES_API_URL') ||
@@ -226,6 +268,10 @@ export class CpService {
     );
   }
 
+  /**
+   * TTL (em ms) da cache de veículos realtime.
+   * Configurável com `CP_VEHICLES_CACHE_TTL_MS`, default 30s.
+   */
   private get cacheTtlMs(): number {
     const configured = this.configService.get<number>(
       'CP_VEHICLES_CACHE_TTL_MS',
@@ -233,6 +279,9 @@ export class CpService {
     return configured ?? 30_000;
   }
 
+  /**
+   * URL do endpoint GraphQL do OTP (router default).
+   */
   private get otpGraphQlUrl(): string {
     const base =
       this.configService.get<string>('OTP_BASE_URL') ||
@@ -242,6 +291,9 @@ export class CpService {
 
   // ===== COMBOIOS.LIVE (REALTIME VEHICLES) =====
 
+  /**
+   * Faz o pedido direto à API comboios.live para obter veículos.
+   */
   private async fetchVehicles(): Promise<CpVehicleDto[]> {
     const { data } = await firstValueFrom(
       this.http.get<CpVehiclesApiResponse>(this.vehiclesApiUrl),
@@ -249,6 +301,11 @@ export class CpService {
     return data.vehicles ?? [];
   }
 
+  /**
+   * Obtém a lista de veículos CP em tempo real, com cache simples.
+   *
+   * @param forceRefresh Se `true`, ignora cache e vai sempre à API upstream.
+   */
   async getVehicles(forceRefresh = false): Promise<CpVehicleDto[]> {
     const cacheIsFresh =
       Date.now() - this.cacheTimestamp < this.cacheTtlMs &&
@@ -264,6 +321,7 @@ export class CpService {
       return this.vehiclesCache;
     } catch (error) {
       this.logger.error('Failed to fetch CP vehicles', error as any);
+      // fallback para cache se existir
       if (this.vehiclesCache.length > 0) {
         this.logger.warn('Serving cached CP vehicles due to upstream failure');
         return this.vehiclesCache;
@@ -272,6 +330,12 @@ export class CpService {
     }
   }
 
+  /**
+   * Obtém um veículo específico pelo número do comboio.
+   *
+   * @param trainNumber Número do comboio
+   * @returns Veículo ou `undefined` se não estiver no feed atual.
+   */
   async getVehicle(trainNumber: string): Promise<CpVehicleDto | undefined> {
     const vehicles = await this.getVehicles();
     return vehicles.find(
@@ -281,6 +345,13 @@ export class CpService {
 
   // ===== OTP (GRAFO GTFS) – LINHAS CP =====
 
+  /**
+   * Lista todas as rotas CP presentes no grafo OTP.
+   *
+   * Filtro:
+   *  - modo "RAIL"/"TRAIN"
+   *  - ou agência cujo nome pareça "Comboios de Portugal" / "CP ..."
+   */
   async getCpRoutesFromGraph(): Promise<CpGraphRouteDto[]> {
     try {
       const response = await firstValueFrom(
@@ -329,6 +400,12 @@ export class CpService {
     }
   }
 
+  /**
+   * Obtém detalhe de uma rota CP (incluindo paragens).
+   *
+   * @param routeGtfsId ID GTFS da rota
+   * @throws NotFoundException se a rota não existir no grafo
+   */
   async getCpRouteDetail(routeGtfsId: string): Promise<CpGraphRouteDetailDto> {
     try {
       const response = await firstValueFrom(
@@ -358,7 +435,7 @@ export class CpService {
         );
       }
 
-      // juntar stops de todos os patterns (podes ordenar/deduplicar se quiseres)
+      // juntar stops de todos os patterns (deduplicados por gtfsId)
       const stopsMap = new Map<string, CpStopBasicDto>();
       for (const pattern of route.patterns || []) {
         for (const st of pattern.stops || []) {
@@ -395,6 +472,12 @@ export class CpService {
 
   // ===== OTP (GRAFO GTFS) – SEARCH DE STOPS =====
 
+  /**
+   * Pesquisa de estações CP pelo nome.
+   *
+   * @param q Termo de pesquisa
+   * @param limit Máximo de resultados
+   */
   async searchStops(q: string, limit = 10): Promise<CpStopSearchResultDto[]> {
     if (!q || q.trim().length === 0) return [];
 
@@ -436,11 +519,20 @@ export class CpService {
 
   // ===== OTP (GRAFO GTFS) – PARTIDAS POR PARAGEM =====
 
+  /**
+   * Obtém partidas brutas (GTFS) a partir do grafo para uma paragem.
+   *
+   * @param stopGtfsId ID GTFS da paragem
+   * @param opts Opções de janela temporal e nº de partidas
+   */
   async getStopDeparturesFromGraph(
     stopGtfsId: string,
     opts?: {
-      startTime?: number; // epoch seconds
-      timeRange?: number; // segundos
+      /** Epoch seconds de início da janela; se omitido usa `now` */
+      startTime?: number;
+      /** Janela temporal em segundos (default: 3600) */
+      timeRange?: number;
+      /** Nº máximo de partidas (default: 20) */
       numberOfDepartures?: number;
     },
   ): Promise<CpStopDeparturesDto> {
@@ -490,6 +582,7 @@ export class CpService {
         const patternHeadsign = patternRow.pattern?.headsign ?? undefined;
         const agencyName = route?.agency?.name ?? undefined;
 
+        // Filtra para rail/CP
         const isRail =
           route?.mode === 'RAIL' || route?.mode === 'TRAIN';
         const isCp =
@@ -536,6 +629,10 @@ export class CpService {
 
   // ===== “BOARD” PARA UI – HORÁRIOS FORMATADOS =====
 
+  /**
+   * Constrói um "quadro de partidas" formatado para UI
+   * a partir dos dados brutos de `getStopDeparturesFromGraph`.
+   */
   async getStopBoard(
     stopGtfsId: string,
     opts?: {
@@ -570,7 +667,7 @@ export class CpService {
           isRealtime: d.realtime,
         } as CpStopBoardRowDto;
       })
-      // ordenar por hora
+      // ordenar por hora textual ("HH:MM") – suficiente para janela curta
       .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
 
     return {
