@@ -14,7 +14,8 @@ class NavigationOverlay extends StatelessWidget {
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
-  String _formatTime(double seconds) {
+  // Aceita num (int ou double) para evitar erro de tipo com currentLeg.duration
+  String _formatTime(num seconds) {
     final minutes = (seconds / 60).round();
     if (minutes < 60) {
       return '$minutes min';
@@ -66,7 +67,8 @@ class NavigationOverlay extends StatelessWidget {
                 // Re-routing indicator
                 if (isReRouting)
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 8, horizontal: 12),
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primaryContainer,
@@ -95,19 +97,20 @@ class NavigationOverlay extends StatelessWidget {
                       ],
                     ),
                   ),
-                
+
                 // Progress bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 4,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    backgroundColor:
+                        theme.colorScheme.surfaceContainerHighest,
                     valueColor: AlwaysStoppedAnimation<Color>(_ecoMint),
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Next instruction
                 if (nextInstruction != null && !isReRouting)
                   Text(
@@ -117,7 +120,7 @@ class NavigationOverlay extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: 8),
-                
+
                 // Distance and time remaining
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -183,4 +186,3 @@ class NavigationOverlay extends StatelessWidget {
     );
   }
 }
-

@@ -60,7 +60,9 @@ class _MapPageState extends State<MapPage> {
 
       // Get origin - use provided from or current location
       SearchboxPlace fromPlace;
-      if (data.containsKey('fromId') && data.containsKey('fromLat') && data.containsKey('fromLon')) {
+      if (data.containsKey('fromId') &&
+          data.containsKey('fromLat') &&
+          data.containsKey('fromLon')) {
         fromPlace = SearchboxPlace(
           id: data['fromId'] as String,
           name: data['fromName'] as String? ?? 'Origem',
@@ -75,7 +77,8 @@ class _MapPageState extends State<MapPage> {
           final pos = await LocationService.instance.getCurrentLocation();
           if (!mounted) return; // Check mounted after async call
           if (pos == null) {
-            print('[MapPage] Cannot handle pending route search: no current location');
+            print(
+                '[MapPage] Cannot handle pending route search: no current location');
             return;
           }
           setState(() {
@@ -99,7 +102,8 @@ class _MapPageState extends State<MapPage> {
       final toPlace = SearchboxPlace(
         id: data['toId'] as String,
         name: data['toName'] as String,
-        placeName: data['toAddress'] as String? ?? data['toName'] as String, // Use address if available
+        placeName: data['toAddress'] as String? ??
+            data['toName'] as String, // Use address if available
         longitude: data['toLon'] as double,
         latitude: data['toLat'] as double,
       );
@@ -165,10 +169,11 @@ class _MapPageState extends State<MapPage> {
           mbx.Point(coordinates: mbx.Position(pos.longitude, pos.latitude));
       _currentLocation = pt;
       await _updateUserIndicator(pt);
-      
+
       // Follow user during navigation
       if (mounted && mapboxMap != null) {
-        final navController = Provider.of<NavigationController>(context, listen: false);
+        final navController =
+            Provider.of<NavigationController>(context, listen: false);
         if (navController.isNavigating) {
           await _followUserDuringNavigation(mapboxMap!, pt);
         }
@@ -247,6 +252,27 @@ class _MapPageState extends State<MapPage> {
     } catch (_) {}
   }
 
+  /// Mantém a câmara a seguir o utilizador durante a navegação.
+  /// Não altera zoom/pitch/bearing, só recentra no ponto atual.
+  Future<void> _followUserDuringNavigation(
+    mbx.MapboxMap map,
+    mbx.Point userPoint,
+  ) async {
+    if (!_isMapAlive) return;
+
+    final camera = mbx.CameraOptions(
+      center: userPoint,
+      // zoom, bearing e pitch ficam null para manter os valores atuais
+    );
+
+    try {
+      await map.easeTo(
+        camera,
+        mbx.MapAnimationOptions(duration: 500),
+      );
+    } catch (_) {}
+  }
+
   Future<void> _goToUser() async {
     final ok = await LocationService.instance.checkPermissions();
     if (!ok) return;
@@ -268,7 +294,7 @@ class _MapPageState extends State<MapPage> {
       print('[MapPage] Cannot open search: map not ready');
       return;
     }
-    
+
     if (_currentLocation == null) {
       print('[MapPage] Cannot open search: current location is null');
       // Try to get location again
@@ -279,7 +305,8 @@ class _MapPageState extends State<MapPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Não foi possível obter a tua localização. Verifica as permissões de GPS.'),
+              content: Text(
+                  'Não foi possível obter a tua localização. Verifica as permissões de GPS.'),
               duration: Duration(seconds: 3),
             ),
           );
@@ -294,8 +321,9 @@ class _MapPageState extends State<MapPage> {
     }
 
     final coords = _currentLocation!.coordinates;
-    print('[MapPage] Opening search screen with location: lat=${coords.lat}, lng=${coords.lng}');
-    
+    print(
+        '[MapPage] Opening search screen with location: lat=${coords.lat}, lng=${coords.lng}');
+
     if (coords.lat == 0.0 && coords.lng == 0.0) {
       print('[MapPage] WARNING: Location appears to be invalid (0,0)');
     }
@@ -327,7 +355,7 @@ class _MapPageState extends State<MapPage> {
       // Clear previous routes before showing new ones
       final otpController = context.read<OtpRoutesController>();
       otpController.clear();
-      
+
       setState(() {
         _routeOptionsArgs = args;
       });

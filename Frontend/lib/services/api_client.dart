@@ -24,7 +24,7 @@ String _computeDefaultBase() {
       // Default: use 10.0.2.2 for emulator
       // For physical device, each dev should set their IP via --dart-define or update this line
       // Note: For physical devices, you'll need to use your Windows IP (e.g., 172.29.251.201)
-      return 'http://192.168.1.69:3000';
+      return 'http://192.168.1.114:3000';
     }
   } catch (_) {
     // Platform não existe no web; ignorar
