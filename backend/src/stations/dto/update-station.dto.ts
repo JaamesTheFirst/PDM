@@ -1,56 +1,76 @@
 import { IsString, IsOptional, IsNumber, IsInt, Min } from 'class-validator';
 import { StationType } from '@prisma/client';
 
+/**
+ * DTO para atualização parcial de uma Station.
+ * Todos os campos são opcionais; só o que vier definido é atualizado.
+ */
 export class UpdateStationDto {
-	@IsOptional()
-	@IsString()
-	name?: string;
+  /** Novo nome da estação (se quiseres alterar) */
+  @IsOptional()
+  @IsString()
+  name?: string;
 
-	@IsOptional()
-	@IsString()
-	description?: string;
+  /** Nova descrição / notas adicionais */
+  @IsOptional()
+  @IsString()
+  description?: string;
 
-	@IsOptional()
-	@IsNumber()
-	latitude?: number;
+  /** Atualizar latitude */
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
 
-	@IsOptional()
-	@IsNumber()
-	longitude?: number;
+  /** Atualizar longitude */
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
 
-	@IsOptional()
-	@IsString()
-	address?: string;
+  /** Atualizar morada textual */
+  @IsOptional()
+  @IsString()
+  address?: string;
 
-	@IsOptional()
-	@IsString()
-	city?: string;
+  /** Atualizar cidade */
+  @IsOptional()
+  @IsString()
+  city?: string;
 
-	@IsOptional()
-	@IsString()
-	country?: string;
+  /** Atualizar país */
+  @IsOptional()
+  @IsString()
+  country?: string;
 
-	@IsOptional()
-	@IsString()
-	externalId?: string;
+  /** Atualizar externalId (ID do operador / fonte) */
+  @IsOptional()
+  @IsString()
+  externalId?: string;
 
-	@IsOptional()
-	// Accept alias or full enum value as string; will be normalised in the service.
-	@IsString()
-	stationType?: string;
+  /**
+   * Atualizar tipo de estação.
+   *
+   * Aceita alias (ex: "BIKE") ou valor completo de enum (ex: "BIKE_STATION").
+   * A normalização é feita na StationsService.
+   */
+  @IsOptional()
+  @IsString()
+  stationType?: string;
 
-	@IsOptional()
-	@IsInt()
-	@Min(0)
-	capacity?: number;
+  /** Atualizar capacidade total */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  capacity?: number;
 
-	@IsOptional()
-	@IsInt()
-	@Min(0)
-	availableVehicles?: number;
+  /** Atualizar nº de veículos disponíveis */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  availableVehicles?: number;
 
-	@IsOptional()
-	@IsInt()
-	@Min(0)
-	availableDocks?: number;
+  /** Atualizar nº de docas / lugares livres */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  availableDocks?: number;
 }
