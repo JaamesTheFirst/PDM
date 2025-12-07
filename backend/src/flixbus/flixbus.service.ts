@@ -19,10 +19,16 @@ import {
   FlixbusStopBoardRowDto,
 } from './dto';
 
+/**
+ * Estrutura de erro GraphQL simples, tal como devolvida pelo OTP.
+ */
 interface GtfsGraphQlError {
   message: string;
 }
 
+/**
+ * Resposta GraphQL para listagem de rotas.
+ */
 interface GtfsRoutesResponse {
   data?: {
     routes: Array<{
@@ -39,6 +45,9 @@ interface GtfsRoutesResponse {
   errors?: GtfsGraphQlError[];
 }
 
+/**
+ * Resposta GraphQL para detalhe de rota (inclui padrões e paragens).
+ */
 interface GtfsRouteDetailResponse {
   data?: {
     route: {
@@ -63,6 +72,9 @@ interface GtfsRouteDetailResponse {
   errors?: GtfsGraphQlError[];
 }
 
+/**
+ * Resposta GraphQL para pesquisa de paragens.
+ */
 interface GtfsStopsSearchResponse {
   data?: {
     stops: Array<{
@@ -75,6 +87,9 @@ interface GtfsStopsSearchResponse {
   errors?: GtfsGraphQlError[];
 }
 
+/**
+ * Resposta GraphQL para partidas por paragem.
+ */
 interface GtfsStopDeparturesResponse {
   data?: {
     stop: {
@@ -111,6 +126,9 @@ interface GtfsStopDeparturesResponse {
 
 // ===== GraphQL queries (OTP/GTFS) =====
 
+/**
+ * Query para listar todas as rotas presentes no grafo GTFS.
+ */
 const ROUTES_QUERY = `
   query Routes {
     routes {
@@ -126,6 +144,9 @@ const ROUTES_QUERY = `
   }
 `;
 
+/**
+ * Query para obter detalhe de uma rota específica, incluindo padrões/paragens.
+ */
 const ROUTE_DETAIL_QUERY = `
   query RouteDetail($id: String!) {
     route(id: $id) {
@@ -149,6 +170,9 @@ const ROUTE_DETAIL_QUERY = `
   }
 `;
 
+/**
+ * Query para pesquisar paragens pelo nome.
+ */
 const STOPS_SEARCH_QUERY = `
   query StopsSearch($name: String!) {
     stops(name: $name) {
@@ -160,6 +184,9 @@ const STOPS_SEARCH_QUERY = `
   }
 `;
 
+/**
+ * Query para obter partidas numa paragem, com parâmetros de janela temporal.
+ */
 const STOP_DEPARTURES_QUERY = `
   query StopDepartures(
     $stopId: String!,
@@ -202,6 +229,10 @@ const STOP_DEPARTURES_QUERY = `
   }
 `;
 
+/**
+ * Serviço responsável por integrar com o grafo OTP/GTFS
+ * e expor dados específicos de FlixBus (rotas, paragens, partidas).
+ */
 @Injectable()
 export class FlixbusService {
   private readonly logger = new Logger(FlixbusService.name);
@@ -213,6 +244,9 @@ export class FlixbusService {
 
   // ===== CONFIG / URLs =====
 
+  /**
+   * URL do endpoint GraphQL do OTP (router "default").
+   */
   private get otpGraphQlUrl(): string {
     const base =
       this.configService.get<string>('OTP_BASE_URL') ||
@@ -222,6 +256,13 @@ export class FlixbusService {
 
   // ===== HELPERS PARA FILTRAR FLIXBUS =====
 
+  /**
+   * Verifica se uma rota GTFS pertence à FlixBus.
+   *
+   * Critérios:
+   *  - modo BUS/COACH
+   *  - e nome/ID da agência contém algo tipo "flixbus" / "flix"
+   */
   private isFlixbusRoute(mode?: string, agencyName?: string | null, agencyGtfsId?: string | null): boolean {
     const m = (mode || '').toUpperCase();
     const name = (agencyName || '').toLowerCase();
@@ -241,6 +282,9 @@ export class FlixbusService {
 
   // ===== OTP (GRAFO GTFS) – LINHAS FLIXBUS =====
 
+  /**
+   * Lista todas as rotas FlixBus presentes no grafo OTP.
+   */
   async getFlixbusRoutesFromGraph(): Promise<FlixbusGraphRouteDto[]> {
     try {
       const response = await firstValueFrom(
@@ -284,6 +328,12 @@ export class FlixbusService {
     }
   }
 
+  /**
+   * Obtém o detalhe de uma rota FlixBus específica, incluindo paragens.
+   *
+   * @param routeGtfsId ID GTFS da rota
+   * @throws NotFoundException se a rota não existir ou não for FlixBus
+   */
   async getFlixbusRouteDetail(
     routeGtfsId: string,
   ): Promise<FlixbusGraphRouteDetailDto> {
@@ -328,7 +378,7 @@ export class FlixbusService {
         );
       }
 
-      // juntar stops de todos os patterns (deduplicado)
+      // juntar stops de todos os patterns (deduplicado por gtfsId)
       const stopsMap = new Map<string, FlixbusStopBasicDto>();
       for (const pattern of route.patterns || []) {
         for (const st of pattern.stops || []) {
@@ -366,6 +416,12 @@ export class FlixbusService {
   // ===== OTP (GRAFO GTFS) – SEARCH DE STOPS =====
   // aqui não filtramos por FlixBus, tal como em CP: a filtragem é feita nas partidas
 
+  /**
+   * Pesquisa paragens pelo nome, para autocomplete.
+   *
+   * @param q Termo de pesquisa
+   * @param limit Máximo de resultados
+   */
   async searchStops(q: string, limit = 10): Promise<FlixbusStopSearchResultDto[]> {
     if (!q || q.trim().length === 0) return [];
 
@@ -407,6 +463,10 @@ export class FlixbusService {
 
   // ===== OTP (GRAFO GTFS) – PARTIDAS POR PARAGEM (apenas FlixBus) =====
 
+  /**
+   * Obtém partidas GTFS para uma determinada paragem,
+   * filtrando apenas as rotas que são FlixBus.
+   */
   async getStopDeparturesFromGraph(
     stopGtfsId: string,
     opts?: {
@@ -507,6 +567,10 @@ export class FlixbusService {
 
   // ===== “BOARD” PARA UI – HORÁRIOS FORMATADOS =====
 
+  /**
+   * Constrói um "board" de partidas formatado para UI
+   * a partir dos dados brutos de `getStopDeparturesFromGraph`.
+   */
   async getStopBoard(
     stopGtfsId: string,
     opts?: {
@@ -540,7 +604,7 @@ export class FlixbusService {
           isRealtime: d.realtime,
         } as FlixbusStopBoardRowDto;
       })
-      // ordenar por hora
+      // ordenar por hora "HH:MM" – suficiente para janelas de tempo curtas
       .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
 
     return {
