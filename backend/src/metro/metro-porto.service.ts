@@ -1,4 +1,8 @@
 // src/metro/metro-porto.service.ts
+//
+// Serviço para ler dados do Metro do Porto a partir do grafo OTP (GraphQL).
+// Fornece endpoints para agência, linhas, paragens e partidas próximas.
+
 import {
   BadGatewayException,
   Injectable,
@@ -15,7 +19,7 @@ import {
   MetroPortoUpcomingDepartureDto,
 } from './dto';
 
-// ===== Tipos OTP GraphQL =====
+// ===== Tipos internos para mapear a resposta OTP GraphQL =====
 
 interface OtpAgency {
   id: string;
@@ -106,10 +110,11 @@ export class MetroPortoService {
   ) {
     const otpBase =
       this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
+    // Endpoint padrão do OTP GraphQL para o router "default"
     this.graphqlUrl = `${otpBase.replace(/\/$/, '')}/routers/default/index/graphql`;
   }
 
-  // --------- helper genérico ---------
+  // --------- helper genérico para chamadas GraphQL ---------
 
   private async graphqlRequest<TData>(
     query: string,
@@ -153,6 +158,9 @@ export class MetroPortoService {
 
   // ---------- Agência ----------
 
+  /**
+   * Devolve a agência que corresponde ao Metro do Porto, se existir.
+   */
   async getAgencyInfo(): Promise<MetroPortoAgencyDto | null> {
     const query = `
       query MetroAgencies {
@@ -188,6 +196,9 @@ export class MetroPortoService {
 
   // ---------- Routes ----------
 
+  /**
+   * Lista todas as rotas do Metro do Porto encontradas no grafo OTP.
+   */
   async getRoutes(): Promise<MetroPortoRouteDto[]> {
     const query = `
       query MetroRoutes {
@@ -212,6 +223,7 @@ export class MetroPortoService {
 
     const result = await this.graphqlRequest<{ routes: OtpRoute[] }>(query);
 
+    // filtra para apenas rotas cuja agência parece ser "Metro do Porto"
     const routes = result.routes.filter((r) => {
       const n = r.agency?.name?.toLowerCase() ?? '';
       return n.includes('metro') && n.includes('porto');
@@ -235,6 +247,9 @@ export class MetroPortoService {
     }));
   }
 
+  /**
+   * Detalhe de uma rota específica do Metro do Porto pelo id interno do OTP.
+   */
   async getRoute(routeId: string): Promise<MetroPortoRouteDto | null> {
     const query = `
       query MetroRouteByNode($id: ID!) {
@@ -287,6 +302,9 @@ export class MetroPortoService {
 
   // ---------- Stops ----------
 
+  /**
+   * Lista todas as paragens/estações do grafo OTP (não filtra por agência).
+   */
   async getStops(): Promise<MetroPortoStopDto[]> {
     const query = `
       query MetroStops {
@@ -320,7 +338,7 @@ export class MetroPortoService {
   }
 
   /**
-   * Pesquisa por nome de estação (para o autocomplete no frontend).
+   * Pesquisa por nome de estação (para autocomplete no frontend).
    */
   async searchStops(q: string, limit = 10): Promise<MetroPortoStopDto[]> {
     const term = (q ?? '').trim();
@@ -347,6 +365,9 @@ export class MetroPortoService {
     }));
   }
 
+  /**
+   * Detalhe de uma paragem específica pelo id interno do OTP.
+   */
   async getStop(stopId: string): Promise<MetroPortoStopDto | null> {
     const query = `
       query MetroStopByNode($id: ID!) {
@@ -387,6 +408,10 @@ export class MetroPortoService {
     };
   }
 
+  /**
+   * Lista das paragens associadas a uma rota (via patterns do OTP).
+   * Faz deduplicação de stops por id.
+   */
   async getStopsByRoute(routeId: string): Promise<MetroPortoStopDto[]> {
     const query = `
       query MetroRouteStopsByNode($id: ID!) {
@@ -445,6 +470,11 @@ export class MetroPortoService {
 
   // ---------- Partidas próximas ----------
 
+  /**
+   * Lista de partidas próximas para uma paragem, já ordenadas no tempo.
+   *
+   * Usa `stoptimesForPatterns` do OTP e mapeia para DTOs próprios.
+   */
   async getUpcomingDeparturesByStop(
     stopId: string,
     limit = 10,
@@ -532,8 +562,8 @@ export class MetroPortoService {
 
       for (const st of patternEntry.stoptimes) {
         const stopTime: MetroPortoStopTimeDto = {
-          // como o Stoptime já não traz stopId/stopName,
-          // usamos sempre o da paragem base
+          // Stoptime não traz stopId/stopName diretamente,
+          // por isso usamos sempre os da paragem base.
           stopId: baseStop.id,
           stopName: baseStop.name,
           serviceDay: st.serviceDay,
@@ -555,6 +585,7 @@ export class MetroPortoService {
       }
     }
 
+    // ordenar pelas partidas reais: serviceDay + realtimeDeparture
     departures.sort((a, b) => {
       const at = a.stopTime.serviceDay + a.stopTime.realtimeDeparture;
       const bt = b.stopTime.serviceDay + b.stopTime.realtimeDeparture;

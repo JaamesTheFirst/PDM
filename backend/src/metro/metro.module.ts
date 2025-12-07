@@ -1,4 +1,11 @@
 // src/metro/metro.module.ts
+//
+// Módulo que agrega:
+//  - MetroService (Lisboa, API oficial)
+//  - MetroTokenService (OAuth2 / API key)
+//  - MetroPortoService (OTP/GTFS)
+//  - MetroController (endpoints HTTP)
+
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import * as https from 'https';
@@ -12,6 +19,7 @@ import { MetroController } from './metro.controller';
 @Module({
   imports: [
     ConfigModule,
+    // HttpModule configurado especificamente para a API do Metro Lisboa.
     HttpModule.register({
       baseURL: 'https://api.metrolisboa.pt:8243/estadoServicoML/1.0.1',
       timeout: 5000,

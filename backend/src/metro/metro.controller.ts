@@ -1,4 +1,8 @@
 // src/metro/metro.controller.ts
+//
+// Controller único para expor endpoints do Metro de Lisboa (API oficial)
+// e do Metro do Porto (via OTP). Os paths são namespaced para cada cidade.
+
 import {
   Controller,
   Get,
@@ -85,7 +89,7 @@ export class MetroController {
     return this.metroPorto.getRoute(routeId);
   }
 
-  // ⚠️ IMPORTANTE: SEARCH vem ANTES de :stopId
+  // IMPORTANTE: a rota de search tem de vir antes da rota com :stopId
   @Get('porto/stops/search')
   searchPortoStops(
     @Query('q') q: string,
