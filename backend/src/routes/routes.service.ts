@@ -21,6 +21,10 @@ import { SaveRouteDto } from './dto/save-route.dto';
 import { ListHistoryQueryDto } from './dto/list-history.dto';
 import { ImpactService } from '../impact/impact.service';
 
+/**
+ * Itinerary enriquecido com metadados adicionais calculados no backend
+ * (modos, distâncias totais, flags de BUS/RAIL/CAR/BIKE, etc.).
+ */
 export interface EnrichedItinerary extends OtpItinerary {
   modes: string[];
   primaryMode: string;
@@ -32,6 +36,10 @@ export interface EnrichedItinerary extends OtpItinerary {
   hasBicycle: boolean;
 }
 
+/**
+ * Estrutura de resposta comum para os endpoints de planeamento
+ * (/routes/plan e /routes/plan-granular).
+ */
 export interface PlannedRoutesResponse {
   originalItineraryCount: number;
   filteredItineraryCount: number;
@@ -47,12 +55,15 @@ export class RoutesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly otp: OtpService,
-    private readonly impact: ImpactService, // 👈 para atualizar EcoStatsAggregate
+    private readonly impact: ImpactService, // usado para atualizar EcoStatsAggregate
   ) {}
 
-  // === CO2 / ECO HELPERS (mesma lógica do frontend) ===
+  // === CO₂ / ECO HELPERS (mesma lógica de base que o frontend) ===
 
-  // kg CO2 / km para cada modo (valores médios PT/EU)
+  /**
+   * Fatores de emissão médios (kg CO₂ por km) por modo.
+   * Usados para estimar emissões a partir das distâncias dos legs.
+   */
   private readonly defaultEmissionFactors: Record<string, number> = {
     WALK: 0.0,
     WALKING: 0.0,
@@ -75,7 +86,10 @@ export class RoutesService {
     FLIXBUS: 0.027,
   };
 
-  // ocupação média (passageiros por veículo)
+  /**
+   * Ocupação média por veículo (nr. de passageiros),
+   * usada para dividir emissões em modos coletivos.
+   */
   private readonly defaultOccupancyRates: Record<string, number> = {
     BUS: 20,
     TRAM: 50,
@@ -90,9 +104,16 @@ export class RoutesService {
     TAXI: 1,
   };
 
-  // baseline carro (kg CO2 / km) – igual ao ImpactService e EcoScore do frontend
+  /**
+   * baseline de carro em kg CO₂ por km,
+   * alinhado com ImpactService e EcoScore no frontend.
+   */
   private readonly baselineCo2PerKm = 0.12;
 
+  /**
+   * Calcula emissões totais de CO₂ de um itinerary, em kg,
+   * percorrendo todos os legs e aplicando factors + occupancy.
+   */
   private computeItineraryCo2Kg(it: OtpItinerary): number {
     if (!it.legs || it.legs.length === 0) return 0;
 
@@ -104,10 +125,10 @@ export class RoutesService {
       const distanceKm = distanceMeters / 1000;
       if (distanceKm <= 0) continue;
 
-      // emission factor base
+      // fator de emissão base
       let emissionFactor = this.defaultEmissionFactors[mode] ?? 0;
 
-      // tentar mapear variações do OTP
+      // tentativas de mapear modos variantes do OTP para um conhecido
       if (emissionFactor === 0 && mode !== 'WALK' && mode !== 'WALKING') {
         if (
           mode.includes('RAIL') ||
@@ -154,25 +175,28 @@ export class RoutesService {
 
       let legCo2Kg: number;
       if (occupancy && occupancy > 0) {
-        // transporte coletivo – dividir pela ocupação
+        // transporte coletivo → dividir pela ocupação
         legCo2Kg = (emissionFactor * distanceKm) / occupancy;
       } else {
-        // WALK / BIKE / CAR etc
+        // modos individuais (WALK/BIKE/CAR/etc.)
         legCo2Kg = emissionFactor * distanceKm;
       }
 
       totalCo2Kg += legCo2Kg;
     }
 
-    // nunca devolver valores negativos / NaN
+    // sanity check
     if (!Number.isFinite(totalCo2Kg) || totalCo2Kg < 0) {
       return 0;
     }
     return totalCo2Kg;
   }
 
-  // ========== Helpers de modos / filtros ==========
+  // ========== Helpers de mapeamento de modos / filtros ==========
 
+  /**
+   * Converte o modo textual do OTP para o enum TransportMode do Prisma.
+   */
   private mapOtpModeToPrisma(
     mode: string,
   ): PrismaTransportMode | null {
@@ -199,6 +223,9 @@ export class RoutesService {
     }
   }
 
+  /**
+   * Determina o modo principal do itinerary (perna mais longa, excluindo WALK).
+   */
   private getPrimaryMode(it: OtpItinerary): PrismaTransportMode {
     const nonWalkLegs = it.legs.filter((l) => l.mode !== 'WALK');
     if (nonWalkLegs.length === 0) {
@@ -208,11 +235,14 @@ export class RoutesService {
       a.distance > b.distance ? a : b,
     );
     return (
-      this.mapOtpModeToPrisma(longest.mode) ??
-      PrismaTransportMode.WALKING
+      this.mapOtpModeToPrisma(longest.mode) ?? PrismaTransportMode.WALKING
     );
   }
 
+  /**
+   * Extrai o conjunto de modos distintos presentes num itinerary,
+   * mapeados para TransportMode do Prisma.
+   */
   private getModes(it: OtpItinerary): PrismaTransportMode[] {
     const set = new Set<PrismaTransportMode>();
     for (const leg of it.legs) {
@@ -223,6 +253,10 @@ export class RoutesService {
     return Array.from(set);
   }
 
+  /**
+   * Calcula campos extra (distâncias totais, flags de modos, etc.)
+   * em cima de um OtpItinerary.
+   */
   private enrichItinerary(it: OtpItinerary): EnrichedItinerary {
     const modesSet = new Set<string>(it.legs.map((l) => l.mode));
     const nonWalkLegs = it.legs.filter((l) => l.mode !== 'WALK');
@@ -265,6 +299,9 @@ export class RoutesService {
     };
   }
 
+  /**
+   * Verifica se um itinerary passa o filtro FilterMode.
+   */
   private passesFilterMode(
     it: EnrichedItinerary,
     filterMode: FilterMode,
@@ -329,6 +366,12 @@ export class RoutesService {
 
   // ========== Planeamento + filtro no backend ==========
 
+  /**
+   * Endpoint base de planeamento:
+   * - chama OTP.plan com os parâmetros do DTO
+   * - enriquece itinerários
+   * - aplica filtros (FilterMode + maxWalkDistanceMeters)
+   */
   async planAndFilter(
     dto: PlanItineraryDto,
   ): Promise<PlannedRoutesResponse> {
@@ -362,6 +405,11 @@ export class RoutesService {
 
   // ========== Planeamento granular ==========
 
+  /**
+   * Planeamento que respeita baseModes + transitTypes:
+   * - baseModes → controlam o que o OTP pode usar
+   * - transitTypes → filtros extra feitos no backend
+   */
   async planGranular(
     dto: PlanGranularDto,
   ): Promise<PlannedRoutesResponse> {
@@ -425,7 +473,7 @@ export class RoutesService {
             mode === 'BIKE' ||
             mode.includes('BIKE')
           ) {
-            // Use rentedBike field from OTP for reliable bike-share detection
+            // deteção de bike-share com rentedBike + heurísticas de nome
             const isBikeShare = leg.rentedBike === true ||
               mode.includes('SHARE') ||
               leg.route?.longName
@@ -457,6 +505,7 @@ export class RoutesService {
           }
         }
 
+        // caso de itinerário só com WALK/BICYCLE/CAR
         if (transitTypesInItinerary.size === 0) {
           const hasWalk =
             nonWalkModes.size === 0 &&
@@ -474,6 +523,7 @@ export class RoutesService {
           dto.transitTypes.map((t) => t.toUpperCase()),
         );
 
+        // se usar algum tipo não selecionado → exclui
         for (const type of transitTypesInItinerary) {
           if (!selectedTypes.has(type)) {
             return false;
@@ -505,6 +555,9 @@ export class RoutesService {
 
   // ========== Histórico (guardar + listar) ==========
 
+  /**
+   * Normaliza os legs do OTP num formato de segmento interno.
+   */
   private buildSegments(it: OtpItinerary) {
     return it.legs.map((leg: OtpLeg) => ({
       type: leg.mode === 'WALK' ? 'WALK' : 'TRANSIT',
@@ -526,6 +579,10 @@ export class RoutesService {
     }));
   }
 
+  /**
+   * Persiste um itinerary do OTP como RouteHistory para o utilizador.
+   * Também atualiza EcoStatsAggregate via ImpactService.
+   */
   async saveItineraryForUser(
     userId: string,
     dto: SaveRouteDto,
@@ -573,7 +630,7 @@ export class RoutesService {
     const modes = this.getModes(it);
     const segments = this.buildSegments(it);
 
-    // ==== CO2 & poupança vs carro ====
+    // ==== CO₂ & poupança vs carro ====
     const distanceKm = distanceMeters / 1000;
     const baselineCarKg = this.baselineCo2PerKm * distanceKm;
 
@@ -603,7 +660,7 @@ export class RoutesService {
       co2Kg,
       co2SavedVsCarKg,
 
-      // podes deixar PLANNED se quiseres – o ImpactService ignora só CANCELLED
+      // default inicial → PLANNED (ImpactService ignora apenas CANCELLED)
       status: RouteStatus.PLANNED,
       startedAt,
       finishedAt,
@@ -617,12 +674,16 @@ export class RoutesService {
       data,
     });
 
-    // Atualizar eco_stats_aggregate (DAY / MONTH / YEAR)
+    // Atualiza eco_stats_aggregate (DAY / MONTH / YEAR) para esta viagem
     await this.impact.updateAggregatesForTrip(created.id);
 
     return created;
   }
 
+  /**
+   * Lista histórico de rotas de um utilizador autenticado,
+   * com filtros simples por status e primaryMode.
+   */
   async listHistoryForUser(
     userId: string,
     query: ListHistoryQueryDto,
@@ -648,6 +709,9 @@ export class RoutesService {
     });
   }
 
+  /**
+   * Devolve uma RouteHistory específica, garantindo que pertence ao user.
+   */
   async getHistoryById(userId: string, id: string) {
     const item = await this.prisma.routeHistory.findFirst({
       where: { id, userId },

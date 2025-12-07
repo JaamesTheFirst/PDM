@@ -9,7 +9,8 @@ import {
 import { Type } from 'class-transformer';
 
 /**
- * Granular transit types that users can select
+ * Tipos de transporte granular que o utilizador pode escolher explicitamente
+ * (em cima dos modos macro do OTP).
  */
 export enum GranularTransitType {
   BUS = 'BUS',
@@ -21,42 +22,51 @@ export enum GranularTransitType {
 }
 
 /**
- * DTO for granular route planning with specific transit type selections
- * This allows users to select specific transport types (e.g., bus + metro but not rail)
+ * DTO para planeamento granular:
+ * - baseModes controla os modos macro permitidos no OTP
+ * - transitTypes controla filtros adicionais aplicados no backend
+ *   (apenas itinerários que usam exatamente esses tipos).
  */
 export class PlanGranularDto {
+  /** Latitude de origem */
   @Type(() => Number)
   @IsNumber()
   fromLat: number;
 
+  /** Longitude de origem */
   @Type(() => Number)
   @IsNumber()
   fromLon: number;
 
+  /** Latitude de destino */
   @Type(() => Number)
   @IsNumber()
   toLat: number;
 
+  /** Longitude de destino */
   @Type(() => Number)
   @IsNumber()
   toLon: number;
 
-  // ISO opcional: "2025-11-26T18:06:57.644Z"
+  /**
+   * Data/hora completa em ISO8601 (ex: "2025-11-26T18:06:57.644Z").
+   * Se fornecido, tem prioridade sobre date/time separados.
+   */
   @IsOptional()
   @IsString()
   dateTime?: string;
 
-  // Alternativa: "YYYY-MM-DD"
+  /** Alternativa: apenas data "YYYY-MM-DD" (usar com time) */
   @IsOptional()
   @IsString()
   date?: string;
 
-  // Alternativa: "HH:mm"
+  /** Alternativa: apenas hora "HH:mm" (usar com date) */
   @IsOptional()
   @IsString()
   time?: string;
 
-  // Nº de itinerários que o OTP calcula
+  /** Nº de itinerários a pedir ao OTP (default definido no service) */
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -64,8 +74,8 @@ export class PlanGranularDto {
   numItineraries?: number;
 
   /**
-   * Base modes that OTP can use (WALK, BICYCLE, CAR, TRANSIT)
-   * Default: [WALK, TRANSIT]
+   * Modos base que o OTP pode usar (WALK, BICYCLE, CAR, TRANSIT).
+   * Default: [WALK, TRANSIT].
    */
   @IsOptional()
   @IsArray()
@@ -73,9 +83,11 @@ export class PlanGranularDto {
   baseModes?: string[];
 
   /**
-   * Granular transit types to include (BUS, RAIL, METRO, TRAM, BICYCLE_SHARE, SCOOTER_SHARE)
-   * If provided, only routes that use EXACTLY these transit types (plus walking for ingress/egress) will be returned.
-   * Example: If user selects BUS only, routes using BUS+METRO will be excluded.
+   * Tipos de transporte granular a incluir:
+   * - BUS, RAIL, METRO, TRAM, BICYCLE_SHARE, SCOOTER_SHARE
+   *
+   * Se fornecido, só são aceites itinerários que utilizem APENAS
+   * estes tipos (mais WALK para acessos).
    */
   @IsOptional()
   @IsArray()
@@ -83,7 +95,8 @@ export class PlanGranularDto {
   transitTypes?: string[];
 
   /**
-   * Walk máximo aceitável (soma de todos os legs WALK) em metros.
+   * Máximo de caminhada total permitida (soma de todos os legs WALK), em metros.
+   * Itinerários acima deste valor são descartados.
    */
   @IsOptional()
   @Type(() => Number)
@@ -91,4 +104,3 @@ export class PlanGranularDto {
   @Min(0)
   maxWalkDistanceMeters?: number;
 }
-
