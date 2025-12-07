@@ -545,6 +545,7 @@ class _SegmentRow extends StatelessWidget {
     final legMap = leg as Map<String, dynamic>? ?? {};
 
     final mode = (legMap['mode'] as String?) ?? 'WALK';
+    final rentedBike = legMap['rentedBike'] as bool? ?? false;
 
     String? fromName;
     String? toName;
@@ -577,9 +578,13 @@ class _SegmentRow extends StatelessWidget {
         : null;
 
     final titleBuffer = StringBuffer();
-    titleBuffer.write(modeLabel(mode));
-    if (routeName != null && routeName.trim().isNotEmpty) {
-      titleBuffer.write(' $routeName');
+    if (rentedBike && (mode.toUpperCase() == 'BICYCLE' || mode.toUpperCase() == 'BIKE')) {
+      titleBuffer.write('GIRA');
+    } else {
+      titleBuffer.write(modeLabel(mode));
+      if (routeName != null && routeName.trim().isNotEmpty) {
+        titleBuffer.write(' $routeName');
+      }
     }
 
     final detailsBuffer = StringBuffer();

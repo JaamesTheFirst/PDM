@@ -37,6 +37,7 @@ class OtpLeg {
   final String toName;
   final String? routeName;
   final String? polyline;
+  final bool? rentedBike; // true if this is a bike-share leg
 
   OtpLeg({
     required this.mode,
@@ -48,6 +49,7 @@ class OtpLeg {
     required this.toName,
     this.routeName,
     this.polyline,
+    this.rentedBike,
   });
 
   factory OtpLeg.fromJson(Map<String, dynamic> json) {
@@ -72,6 +74,7 @@ class OtpLeg {
       routeName: routeObj?['shortName'] as String? ??
           routeObj?['longName'] as String?,
       polyline: legGeometryObj?['points'] as String?,
+      rentedBike: json['rentedBike'] as bool?,
     );
   }
 }

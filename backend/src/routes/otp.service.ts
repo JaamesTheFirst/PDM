@@ -31,6 +31,7 @@ export interface OtpLeg {
   legGeometry?: {
     points: string;
   } | null;
+  rentedBike?: boolean; // true if this is a bike-share leg
 }
 
 export interface OtpItinerary {
@@ -99,6 +100,7 @@ const PLAN_QUERY = `
           to   { name lat lon }
           route { shortName longName }
           legGeometry { points }
+          rentedBike
         }
       }
     }

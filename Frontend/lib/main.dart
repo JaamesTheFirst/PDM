@@ -9,6 +9,7 @@ import 'app/app_shell.dart';
 import 'app/app_router.dart';
 import 'mapbox_config.dart';
 import 'features/map/state/otp_routes_controller.dart';
+import 'features/map/state/navigation_controller.dart';
 import 'services/routes_service.dart';
 
 void main() {
@@ -24,6 +25,9 @@ void main() {
         ChangeNotifierProvider(create: (_) => ThemeController()),
         ChangeNotifierProvider(
           create: (_) => OtpRoutesController(RoutesService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NavigationController(RoutesService()),
         ),
       ],
       child: const EcoApp(),

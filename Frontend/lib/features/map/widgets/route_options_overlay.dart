@@ -9,6 +9,7 @@ import '../../../../services/history_service.dart';
 import '../../../../services/routes_service.dart'; // OtpItinerary + RouteFilters
 import 'package:sustainable_transport_app/utils/polyline_decoder.dart';
 import '../state/otp_routes_controller.dart';
+import '../state/navigation_controller.dart';
 
 /// ============= ARGS =============
 class RouteOptionsArgs {
@@ -462,6 +463,30 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       : '${(meters / 1000).toStringAsFixed(1)} km';
   String _fmtDur(double seconds) => '${(seconds / 60).round()} min';
 
+  /// ====== BOTÃO "INICIAR NAVEGAÇÃO" ======
+  Future<void> _onStartNavigation(BuildContext context) async {
+    final controller = context.read<OtpRoutesController>();
+    final navController = context.read<NavigationController>();
+    final itineraries = controller.itineraries;
+
+    if (itineraries.isEmpty) return;
+
+    var index = controller.selectedIndex ?? 0;
+    if (index < 0 || index >= itineraries.length) index = 0;
+
+    final itinerary = itineraries[index];
+    
+    // Start navigation with destination coordinates
+    await navController.startNavigation(
+      itinerary,
+      destinationLat: widget.to.latitude,
+      destinationLon: widget.to.longitude,
+    );
+    
+    // Close the route options overlay
+    widget.onClose();
+  }
+
   /// ====== BOTÃO "APLICAR & FECHAR" ======
   Future<void> _onApplyAndSave(BuildContext context) async {
     final controller = context.read<OtpRoutesController>();
@@ -655,6 +680,34 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: const _OtpItinerariesPanel(),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Start Navigation button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _saving
+                          ? null
+                          : () => _onStartNavigation(context),
+                      icon: const Icon(Icons.navigation, size: 20),
+                      label: const Text(
+                        'Iniciar Navegação',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: t.colorScheme.primary,
+                        foregroundColor: t.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
 
@@ -902,7 +955,9 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
     final selected = widget.controller.selectedIndex == widget.index;
     final durationMin = (itinerary.duration / 60).round();
     final legsSummary = itinerary.legs
-        .map((leg) => leg.routeName ?? leg.mode)
+        .map((leg) => leg.rentedBike == true
+            ? 'GIRA'
+            : (leg.routeName ?? leg.mode))
         .join(' • ');
     final walkKm = itinerary.walkDistance / 1000.0;
 
@@ -1048,7 +1103,9 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              leg.routeName ?? leg.mode,
+                              leg.rentedBike == true
+                                  ? 'GIRA'
+                                  : (leg.routeName ?? leg.mode),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,

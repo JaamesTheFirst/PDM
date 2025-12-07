@@ -13,7 +13,9 @@ import '../nav/bottom_sheet_route.dart';
 import '../screens/route_search_screen.dart'; // RouteSearchScreen + RouteSearchScreenArgs
 // import '../screens/route_options_screen.dart';  // <- DEIXA DE SER USADO
 import '../widgets/route_options_overlay.dart'; // RouteOptionsArgs (tipo)
+import '../widgets/navigation_overlay.dart';
 import '../state/otp_routes_controller.dart';
+import '../state/navigation_controller.dart';
 
 class MapPage extends StatefulWidget {
   static final ValueNotifier<bool> fullscreenNotifier = ValueNotifier(false);
@@ -163,6 +165,14 @@ class _MapPageState extends State<MapPage> {
           mbx.Point(coordinates: mbx.Position(pos.longitude, pos.latitude));
       _currentLocation = pt;
       await _updateUserIndicator(pt);
+      
+      // Follow user during navigation
+      if (mounted && mapboxMap != null) {
+        final navController = Provider.of<NavigationController>(context, listen: false);
+        if (navController.isNavigating) {
+          await _followUserDuringNavigation(mapboxMap!, pt);
+        }
+      }
     });
   }
 
@@ -432,6 +442,9 @@ class _MapPageState extends State<MapPage> {
               filters: _routeOptionsArgs!.filters,
             ),
           ),
+
+        // NAVIGATION OVERLAY
+        const NavigationOverlay(),
       ],
     );
   }

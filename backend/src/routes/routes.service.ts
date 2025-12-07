@@ -425,7 +425,8 @@ export class RoutesService {
             mode === 'BIKE' ||
             mode.includes('BIKE')
           ) {
-            const isBikeShare =
+            // Use rentedBike field from OTP for reliable bike-share detection
+            const isBikeShare = leg.rentedBike === true ||
               mode.includes('SHARE') ||
               leg.route?.longName
                 ?.toUpperCase()
