@@ -1,3 +1,4 @@
+// backend/src/gbfs/gbfs.service.ts
 import {
   BadRequestException,
   Injectable,
@@ -14,6 +15,15 @@ import {
 } from './dto/gbfs-index.dto';
 import { GbfsSystemDto } from './dto/gbfs-system.dto';
 
+/**
+ * Serviço de integração GBFS.
+ *
+ * Funções principais:
+ *  - gerir/consultar sistemas GBFS registados na BD
+ *  - fazer proxy a `gbfs.json` e restantes feeds
+ *  - agregar feeds (stations + status + free_bike_status)
+ *  - sincronizar estações GBFS para a tabela `stations` (Prisma)
+ */
 @Injectable()
 export class GbfsService {
   constructor(
@@ -25,12 +35,21 @@ export class GbfsService {
   //  SISTEMAS (BD)
   // =========================
 
+  /**
+   * Lista todos os sistemas GBFS definidos em `gbfs_systems`,
+   * ordenados alfabeticamente pelo nome.
+   */
   async findAllSystems(): Promise<GbfsSystemDto[]> {
     return this.prisma.gbfsSystem.findMany({
       orderBy: { name: 'asc' },
     });
   }
 
+  /**
+   * Obtém um sistema GBFS pelo campo lógico `systemId`.
+   *
+   * @throws NotFoundException se o sistema não existir.
+   */
   async findSystemBySystemId(systemId: string): Promise<GbfsSystemDto> {
     const system = await this.prisma.gbfsSystem.findUnique({
       where: { systemId },
@@ -49,6 +68,12 @@ export class GbfsService {
   //  GBFS INDEX (gbfs.json)
   // =========================
 
+  /**
+   * Obtém o índice GBFS (`gbfs.json`) de um sistema, usando o `autoDiscoveryUrl`.
+   *
+   * @throws BadRequestException se o sistema não tiver `autoDiscoveryUrl` definido.
+   * @throws ServiceUnavailableException se o fetch ao operador falhar.
+   */
   async getGbfsIndex(systemId: string): Promise<GbfsIndexDto> {
     const system = await this.findSystemBySystemId(systemId);
 
@@ -69,6 +94,15 @@ export class GbfsService {
     }
   }
 
+  /**
+   * Escolhe o idioma mais adequado dentro do `data` de um índice GBFS.
+   *
+   * Ordem de preferência:
+   *  1. idioma pedido (se existir)
+   *  2. "pt"
+   *  3. "en"
+   *  4. primeiro idioma disponível
+   */
   private pickLanguage(
     data: GbfsIndexDto['data'],
     preferredLang?: string,
@@ -91,6 +125,9 @@ export class GbfsService {
     return langs[0];
   }
 
+  /**
+   * Lista os feeds disponíveis para um determinado sistema+idioma.
+   */
   async listFeeds(systemId: string, lang?: string): Promise<GbfsFeedMeta[]> {
     const index = await this.getGbfsIndex(systemId);
     const chosenLang = this.pickLanguage(index.data, lang);
@@ -98,6 +135,16 @@ export class GbfsService {
     return feeds;
   }
 
+  /**
+   * Obtém (proxy) um feed GBFS específico por nome.
+   *
+   * @param systemId ID lógico do sistema (campo `systemId`)
+   * @param feedName Nome do feed (ex.: "station_information")
+   * @param lang Idioma (opcional – usa `pickLanguage` se não for fornecido)
+   *
+   * @throws NotFoundException se o feed não existir para o idioma escolhido
+   * @throws ServiceUnavailableException em caso de falha ao fazer fetch
+   */
   async getFeed(
     systemId: string,
     feedName: string,
@@ -131,40 +178,70 @@ export class GbfsService {
   // =========================
 
   // metadados / versões
+
+  /**
+   * Wrapper para o feed `system_information`.
+   */
   async getSystemInformation(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'system_information', lang);
   }
 
+  /**
+   * Wrapper para o feed `gbfs_versions`.
+   */
   async getGbfsVersions(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'gbfs_versions', lang);
   }
 
   // estações / veículos
+
+  /**
+   * Wrapper para o feed `station_information`.
+   */
   async getStationInformation(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'station_information', lang);
   }
 
+  /**
+   * Wrapper para o feed `station_status`.
+   */
   async getStationStatus(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'station_status', lang);
   }
 
+  /**
+   * Wrapper para o feed `free_bike_status`.
+   */
   async getFreeBikeStatus(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'free_bike_status', lang);
   }
 
   // tipos, preços, regiões, geofencing
+
+  /**
+   * Wrapper para o feed `vehicle_types`.
+   */
   async getVehicleTypes(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'vehicle_types', lang);
   }
 
+  /**
+   * Wrapper para o feed `system_pricing_plans`.
+   */
   async getPricingPlans(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'system_pricing_plans', lang);
   }
 
+  /**
+   * Wrapper para o feed `system_regions`.
+   */
   async getRegions(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'system_regions', lang);
   }
 
+  /**
+   * Wrapper para o feed `geofencing_zones`.
+   */
   async getGeofencingZones(systemId: string, lang?: string) {
     return this.getFeed(systemId, 'geofencing_zones', lang);
   }
@@ -173,6 +250,10 @@ export class GbfsService {
   //  ESTAÇÕES + STATUS (MEMÓRIA)
   // =========================
 
+  /**
+   * Faz o merge de `station_information` + `station_status` em memória,
+   * sem tocar na BD, e devolve um objeto no espírito da especificação GBFS.
+   */
   async getStationsWithStatus(systemId: string, lang?: string) {
     const [info, status] = await Promise.all([
       this.getStationInformation(systemId, lang),
@@ -208,6 +289,13 @@ export class GbfsService {
   //  AVAILABILITY (stations + free bikes)
   // =========================
 
+  /**
+   * Versão "tolerante a falhas" de `getStationsWithStatus`.
+   *
+   * Em caso de NotFound/ServiceUnavailable, devolve `null`
+   * em vez de propagar o erro (para permitir fallback parcial
+   * noutros endpoints como `getAvailability`).
+   */
   private async safeGetStationsWithStatus(systemId: string, lang?: string) {
     try {
       return await this.getStationsWithStatus(systemId, lang);
@@ -224,6 +312,9 @@ export class GbfsService {
     }
   }
 
+  /**
+   * Versão "tolerante a falhas" de `getFreeBikeStatus`.
+   */
   private async safeGetFreeBikeStatus(systemId: string, lang?: string) {
     try {
       return await this.getFreeBikeStatus(systemId, lang);
@@ -239,6 +330,13 @@ export class GbfsService {
     }
   }
 
+  /**
+   * Agregado de disponibilidade: estações (info + status) + bikes livres.
+   *
+   * Combina `last_updated` e `ttl` dos feeds envolvidos, escolhendo:
+   *  - last_updated = máximo (mais recente)
+   *  - ttl = mínimo (mais conservador para cache)
+   */
   async getAvailability(systemId: string, lang?: string) {
     const [stationsResp, freeBikesResp] = await Promise.all([
       this.safeGetStationsWithStatus(systemId, lang),
@@ -297,6 +395,14 @@ export class GbfsService {
   //  SYNC PARA BD (Station)
   // =========================
 
+  /**
+   * Sincroniza estações de um sistema GBFS para a tabela `stations`,
+   * usando upsert por `(gbfsSystemId, externalId)`.
+   *
+   * - Lê `station_information` e `station_status`
+   * - Infere `capacity`, `availableVehicles` e `availableDocks` quando possível
+   * - Marca todas as estações como ativas (`isActive = true`)
+   */
   async syncStationsFromGbfs(systemId: string, lang?: string) {
     // 1) sistema na BD
     const system = await this.findSystemBySystemId(systemId);
@@ -407,7 +513,7 @@ export class GbfsService {
       };
     }
 
-    // 4) transacção
+    // 4) transacção de upserts
     await this.prisma.$transaction(upserts as any[]);
 
     return {
