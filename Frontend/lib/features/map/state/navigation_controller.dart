@@ -75,6 +75,29 @@ class NavigationController extends ChangeNotifier {
     _totalDistance = itinerary.legs.fold(0.0, (sum, leg) => sum + leg.distance);
     _distanceRemaining = _totalDistance;
 
+    // Setup mock location if enabled (for testing)
+    const useMockLocation = bool.fromEnvironment('MOCK_LOCATION', defaultValue: false);
+    if (useMockLocation) {
+      // Extract all route points from itinerary
+      final allRoutePoints = <List<double>>[];
+      for (final leg in itinerary.legs) {
+        if (leg.polyline != null && leg.polyline!.isNotEmpty) {
+          try {
+            final decoded = decodePolyline(leg.polyline!);
+            for (final point in decoded) {
+              allRoutePoints.add([point[0], point[1]]);
+            }
+          } catch (e) {
+            print('[NavigationController] Error decoding polyline for mock: $e');
+          }
+        }
+      }
+      if (allRoutePoints.isNotEmpty) {
+        LocationService.instance.setMockRoute(allRoutePoints, speed: 5.0); // 5 meters per second
+        print('[NavigationController] Mock location enabled with ${allRoutePoints.length} points');
+      }
+    }
+
     // Get current position
     _currentPosition = await LocationService.instance.getCurrentLocation();
     
@@ -107,6 +130,13 @@ class NavigationController extends ChangeNotifier {
     _destinationLat = null;
     _destinationLon = null;
     _lastDeviationCheck = null;
+    
+    // Stop mock location if enabled
+    const useMockLocation = bool.fromEnvironment('MOCK_LOCATION', defaultValue: false);
+    if (useMockLocation) {
+      LocationService.instance.stopMockLocation();
+    }
+    
     notifyListeners();
   }
 
