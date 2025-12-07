@@ -1,21 +1,51 @@
 #!/usr/bin/env ts-node
 /**
- * Converts GIRA Excel data to GBFS-compatible JSON format
+ * Converts GIRA CSV data to GBFS-compatible JSON format
  * This allows OTP to treat GIRA as a vehicle-rental network
  */
 
-import { readFile, utils } from 'xlsx';
+import { parse } from 'csv-parse/sync';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const GIRA_EXCEL_PATH = path.join(
+const GIRA_DATA_DIR = path.join(
   __dirname,
   '..',
   '..',
   'data',
   'gira',
-  'estacoes-gira-1-trimestre-2023.xlsx',
 );
+
+// Try to find CSV file (prefer deduplicated, then original, then fallback)
+const GIRA_CSV_PATH = (() => {
+  // 1. Prefer deduplicated CSV (if it exists)
+  const deduplicatedPath = path.join(GIRA_DATA_DIR, 'estacoes-gira-deduplicated.csv');
+  if (fs.existsSync(deduplicatedPath)) {
+    console.log(`📋 Using deduplicated CSV: ${deduplicatedPath}`);
+    return deduplicatedPath;
+  }
+
+  // 2. Try the large original file
+  const originalPath = path.join(GIRA_DATA_DIR, 'estacoes-gira-2--semestre-2022.csv');
+  if (fs.existsSync(originalPath)) {
+    console.log(`⚠️  Using original CSV (large file). Consider running 'npm run deduplicate-gira' first.`);
+    return originalPath;
+  }
+
+  // 3. Fallback to old filename
+  const fallbackPath = path.join(GIRA_DATA_DIR, 'estacoes-gira-1-trimestre-2023.csv');
+  if (fs.existsSync(fallbackPath)) {
+    return fallbackPath;
+  }
+
+  // 4. If CSV doesn't exist, try to find it in zip
+  const zipPath = path.join(GIRA_DATA_DIR, 'estacoes-gira-1-trimestre-2023.zip');
+  if (fs.existsSync(zipPath)) {
+    console.log(`⚠️  CSV not found. Please extract estacoes-gira-1-trimestre-2023.csv from the zip file.`);
+  }
+  
+  return fallbackPath; // Will throw error if not found
+})();
 
 const OUTPUT_DIR = path.join(__dirname, '..', 'build', 'gira-gbfs');
 
@@ -34,27 +64,29 @@ function toNumber(v: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function parseGiraExcel(): GiraStation[] {
-  if (!fs.existsSync(GIRA_EXCEL_PATH)) {
-    throw new Error(`GIRA Excel file not found: ${GIRA_EXCEL_PATH}`);
+function parseGiraCsv(): GiraStation[] {
+  if (!fs.existsSync(GIRA_CSV_PATH)) {
+    throw new Error(
+      `GIRA CSV file not found: ${GIRA_CSV_PATH}\n` +
+      `Please ensure estacoes-gira-1-trimestre-2023.csv exists in ${GIRA_DATA_DIR}`
+    );
   }
 
-  console.log(`📖 Reading GIRA Excel: ${GIRA_EXCEL_PATH}`);
-  const workbook = readFile(GIRA_EXCEL_PATH);
-  const [firstSheetName] = workbook.SheetNames;
+  console.log(`📖 Reading GIRA CSV: ${GIRA_CSV_PATH}`);
+  const csvContent = fs.readFileSync(GIRA_CSV_PATH, 'utf-8');
   
-  if (!firstSheetName) {
-    throw new Error('GIRA workbook contains no sheets');
-  }
+  // Parse CSV with headers
+  const rows = parse(csvContent, {
+    columns: true, // Use first line as column names
+    skip_empty_lines: true,
+    trim: true,
+    relax_column_count: true, // Allow inconsistent column counts
+  }) as Record<string, any>[];
 
-  const worksheet = workbook.Sheets[firstSheetName];
-  const rows = utils.sheet_to_json<Record<string, any>>(worksheet, {
-    defval: null,
-  });
-
-  console.log(`📄 Found ${rows.length} rows in Excel`);
+  console.log(`📄 Found ${rows.length} rows in CSV`);
 
   const stations: GiraStation[] = [];
+  let skippedCount = 0;
 
   for (const row of rows) {
     // Parse station ID and name from desigcomercial
@@ -98,7 +130,7 @@ function parseGiraExcel(): GiraStation[] {
 
     // Skip if we don't have essential data
     if (!stationId || !name || lat === null || lon === null) {
-      console.warn(`⚠️  Skipping row: missing essential data (id=${stationId}, name=${name}, lat=${lat}, lon=${lon})`);
+      skippedCount++;
       continue;
     }
 
@@ -118,6 +150,9 @@ function parseGiraExcel(): GiraStation[] {
   }
 
   console.log(`✅ Parsed ${stations.length} valid GIRA stations`);
+  if (skippedCount > 0) {
+    console.log(`⚠️  Skipped ${skippedCount} rows with missing essential data`);
+  }
   return stations;
 }
 
@@ -131,6 +166,10 @@ function generateGbfsFiles(stations: GiraStation[]) {
   const ttl = 3600; // 1 hour TTL for static data
 
   // 1. gbfs.json - Auto-discovery file
+  // Use absolute URLs so OTP can fetch the feeds correctly
+  const baseUrl = process.env.GIRA_GBFS_BASE_URL || 'http://host.docker.internal:8081';
+  // Ensure baseUrl doesn't end with a slash
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
   const gbfsIndex = {
     last_updated: now,
     ttl: ttl,
@@ -140,15 +179,15 @@ function generateGbfsFiles(stations: GiraStation[]) {
         feeds: [
           {
             name: 'system_information',
-            url: 'system_information.json',
+            url: `${cleanBaseUrl}/system_information.json`,
           },
           {
             name: 'station_information',
-            url: 'station_information.json',
+            url: `${cleanBaseUrl}/station_information.json`,
           },
           {
             name: 'station_status',
-            url: 'station_status.json',
+            url: `${cleanBaseUrl}/station_status.json`,
           },
         ],
       },
@@ -264,7 +303,7 @@ function generateGbfsFiles(stations: GiraStation[]) {
 
 function main() {
   try {
-    const stations = parseGiraExcel();
+    const stations = parseGiraCsv();
     generateGbfsFiles(stations);
   } catch (error) {
     console.error('❌ Error converting GIRA to GBFS:', error);

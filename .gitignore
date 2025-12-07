@@ -315,3 +315,8 @@ Frontend/ios/Runner/Info.plist
 /EXTERNAL
 /EXTERNALS 
 
+## ignorar scripts do OTP
+!/EXTERNALS/otp/scripts/
+# But ignore node_modules inside scripts
+EXTERNALS/otp/scripts/node_modules/ 
+

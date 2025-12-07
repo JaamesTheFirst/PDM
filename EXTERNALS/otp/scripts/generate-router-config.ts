@@ -85,6 +85,14 @@ function generateRouterConfig(gbfsSystems: GbfsSystem[], giraGbfsUrl?: string) {
       console.warn(`   Using fallback URL: ${httpUrl}`);
     }
 
+    // For GIRA, use the full URL with /gbfs.json since we control the local server
+    // OTP can handle full URLs for GBFS feeds
+    // Ensure it ends with /gbfs.json
+    if (!httpUrl.endsWith('/gbfs.json')) {
+      // Remove trailing slash if present, then add /gbfs.json
+      httpUrl = httpUrl.replace(/\/$/, '') + '/gbfs.json';
+    }
+
     updaters.push({
       type: 'vehicle-rental',
       sourceType: 'gbfs',

@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "Scripts to generate GBFS feeds and OTP router configuration",
   "scripts": {
+    "deduplicate-gira": "ts-node deduplicate-gira-csv.ts",
     "gira-to-gbfs": "ts-node gira-to-gbfs.ts",
     "generate-config": "ts-node generate-router-config.ts"
   },
   "dependencies": {
     "xlsx": "^0.18.5",
-    "csv-parse": "^5.5.2"
+    "csv-parse": "^5.5.2",
+    "csv-stringify": "^6.4.4"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
