@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app/state/theme_controller.dart';
 import '../../auth/state/auth_controller.dart';
-import '../../../app/app_router.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});

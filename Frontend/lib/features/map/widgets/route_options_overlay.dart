@@ -1,3 +1,5 @@
+// lib/features/map/widgets/route_options_overlay.dart
+
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 import 'package:provider/provider.dart';
@@ -10,6 +12,7 @@ import '../../../../services/routes_service.dart'; // OtpItinerary + RouteFilter
 import 'package:sustainable_transport_app/utils/polyline_decoder.dart';
 import '../state/otp_routes_controller.dart';
 import '../state/navigation_controller.dart';
+import '../pages/navigation_map_page.dart';
 
 /// ============= ARGS =============
 class RouteOptionsArgs {
@@ -62,9 +65,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
   // desenho no mapa
   mbx.PolylineAnnotationManager? _lineMgr;
-  mbx.PolylineAnnotation?
-  _routeLine; // Selected route (thicker, more prominent)
-  List<mbx.PolylineAnnotation> _allRouteLines = []; // All route options
+  mbx.PolylineAnnotation? _routeLine; // Selected route
+  final List<mbx.PolylineAnnotation> _allRouteLines = [];
   mbx.CircleAnnotationManager? _poiMgr;
   mbx.CircleAnnotation? _fromDot;
   mbx.CircleAnnotation? _toDot;
@@ -86,6 +88,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   late double _snapFull;
   late double _snapExpanded;
   late double _snapDocked;
+  static const double _minPanelHeight = 285.0; // ALTURA MÍNIMA -> evita overflow
 
   bool _requestedOtp = false;
 
@@ -107,8 +110,14 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       _snapExpanded = screenHeight * 0.60;
       _snapDocked = screenHeight * 0.25;
 
+      // garantir que o docked nunca é menor que a altura mínima
+      if (_snapDocked < _minPanelHeight) {
+        _snapDocked = _minPanelHeight;
+      }
+
       setState(() {
-        _panelHeight = _snapExpanded;
+        // começar no estado "expanded", mas nunca abaixo da altura mínima
+        _panelHeight = _snapExpanded.clamp(_snapDocked, _snapFull);
       });
     });
 
@@ -133,12 +142,12 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
           try {
             await _lineMgr!.delete(line);
           } catch (e) {
-            print('[RouteOptionsOverlay] Error deleting route line: $e');
+            debugPrint('[RouteOptionsOverlay] Error deleting route line: $e');
           }
         }
         _allRouteLines.clear();
       } catch (e) {
-        print('[RouteOptionsOverlay] Error clearing previous routes: $e');
+        debugPrint('[RouteOptionsOverlay] Error clearing previous routes: $e');
       }
     }
     _lastDrawnOtpIndex = null;
@@ -147,14 +156,14 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
   Future<void> _fetchOtp() async {
     if (_requestedOtp) {
-      print('[RouteOptionsOverlay] _fetchOtp: Already requested, skipping');
+      debugPrint('[RouteOptionsOverlay] _fetchOtp: Already requested, skipping');
       return;
     }
-    print('[RouteOptionsOverlay] _fetchOtp: Starting fetch');
-    print(
+    debugPrint('[RouteOptionsOverlay] _fetchOtp: Starting fetch');
+    debugPrint(
       '[RouteOptionsOverlay] From: ${widget.from.latitude}, ${widget.from.longitude}',
     );
-    print(
+    debugPrint(
       '[RouteOptionsOverlay] To: ${widget.to.latitude}, ${widget.to.longitude}',
     );
     _requestedOtp = true;
@@ -165,7 +174,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       toLon: widget.to.longitude,
       filters: widget.filters,
     );
-    print(
+    debugPrint(
       '[RouteOptionsOverlay] _fetchOtp: Fetch complete, drawing all routes',
     );
     await _drawAllOtpItineraries();
@@ -183,14 +192,14 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     final itineraries = _otpController.itineraries;
     if (itineraries.isEmpty) return;
 
-    _lineMgr ??= await widget.mapboxMap.annotations
-        .createPolylineAnnotationManager();
+    _lineMgr ??=
+        await widget.mapboxMap.annotations.createPolylineAnnotationManager();
 
     for (final line in _allRouteLines) {
       try {
         await _lineMgr!.delete(line);
       } catch (e) {
-        print('[RouteOptionsOverlay] Error deleting route line: $e');
+        debugPrint('[RouteOptionsOverlay] Error deleting route line: $e');
       }
     }
     _allRouteLines.clear();
@@ -229,7 +238,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
             geometry: mbx.LineString(
               coordinates: coords
                   .map(
-                    (c) => mbx.Position((c[0]).toDouble(), (c[1]).toDouble()),
+                    (c) =>
+                        mbx.Position((c[0]).toDouble(), (c[1]).toDouble()),
                   )
                   .toList(),
             ),
@@ -240,7 +250,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         );
         _allRouteLines.add(routeLine);
       } catch (e) {
-        print('[RouteOptionsOverlay] Error drawing route $i: $e');
+        debugPrint('[RouteOptionsOverlay] Error drawing route $i: $e');
       }
     }
 
@@ -274,7 +284,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       try {
         await _lineMgr!.delete(_routeLine!);
       } catch (e) {
-        print('[RouteOptionsOverlay] Error deleting selected route: $e');
+        debugPrint('[RouteOptionsOverlay] Error deleting selected route: $e');
       }
       _routeLine = null;
     }
@@ -296,8 +306,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
     if (coords.isEmpty) return;
 
-    _lineMgr ??= await widget.mapboxMap.annotations
-        .createPolylineAnnotationManager();
+    _lineMgr ??=
+        await widget.mapboxMap.annotations.createPolylineAnnotationManager();
 
     try {
       _routeLine = await _lineMgr!.create(
@@ -313,15 +323,15 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         ),
       );
     } catch (e) {
-      print('[RouteOptionsOverlay] Error drawing selected route: $e');
+      debugPrint('[RouteOptionsOverlay] Error drawing selected route: $e');
     }
 
     _lastDrawnOtpIndex = index;
   }
 
   Future<void> _ensureDots() async {
-    _poiMgr ??= await widget.mapboxMap.annotations
-        .createCircleAnnotationManager();
+    _poiMgr ??=
+        await widget.mapboxMap.annotations.createCircleAnnotationManager();
     try {
       await _poiMgr!.deleteAll();
     } catch (_) {}
@@ -364,7 +374,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         )
         .toList();
 
-    final padding = mbx.MbxEdgeInsets(top: 40, left: 40, right: 40, bottom: 40);
+    final padding =
+        mbx.MbxEdgeInsets(top: 40, left: 40, right: 40, bottom: 40);
 
     try {
       final cam = await widget.mapboxMap.cameraForCoordinates(
@@ -373,7 +384,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         0,
         0,
       );
-      await widget.mapboxMap.flyTo(cam, mbx.MapAnimationOptions(duration: 900));
+      await widget.mapboxMap
+          .flyTo(cam, mbx.MapAnimationOptions(duration: 900));
     } catch (_) {}
   }
 
@@ -389,8 +401,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     } else {
       final profile =
           (mode == 'scooter' || mode == 'bike_share' || mode == 'scooter_share')
-          ? 'cycling'
-          : (mode == 'taxi' ? 'driving' : mode);
+              ? 'cycling'
+              : (mode == 'taxi' ? 'driving' : mode);
       final r = await MapboxDirectionsService.instance.getRoute(
         fromLon: widget.from.longitude,
         fromLat: widget.from.latitude,
@@ -421,8 +433,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   }
 
   Future<void> _drawRoute(_RouteData route) async {
-    _lineMgr ??= await widget.mapboxMap.annotations
-        .createPolylineAnnotationManager();
+    _lineMgr ??=
+        await widget.mapboxMap.annotations.createPolylineAnnotationManager();
 
     try {
       if (_routeLine != null) {
@@ -433,12 +445,13 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         try {
           await _lineMgr!.delete(line);
         } catch (e) {
-          print('[RouteOptionsOverlay] Error deleting OTP route line: $e');
+          debugPrint(
+              '[RouteOptionsOverlay] Error deleting OTP route line: $e');
         }
       }
       _allRouteLines.clear();
     } catch (e) {
-      print('[RouteOptionsOverlay] Error clearing OTP routes: $e');
+      debugPrint('[RouteOptionsOverlay] Error clearing OTP routes: $e');
     }
 
     try {
@@ -454,13 +467,12 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         ),
       );
     } catch (e) {
-      print('[RouteOptionsOverlay] Error drawing Mapbox route: $e');
+      debugPrint('[RouteOptionsOverlay] Error drawing Mapbox route: $e');
     }
   }
 
-  String _fmt(double meters) => meters < 1000
-      ? '${meters.round()} m'
-      : '${(meters / 1000).toStringAsFixed(1)} km';
+  String _fmt(double meters) =>
+      meters < 1000 ? '${meters.round()} m' : '${(meters / 1000).toStringAsFixed(1)} km';
   String _fmtDur(double seconds) => '${(seconds / 60).round()} min';
 
   /// ====== BOTÃO "INICIAR NAVEGAÇÃO" ======
@@ -475,16 +487,20 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     if (index < 0 || index >= itineraries.length) index = 0;
 
     final itinerary = itineraries[index];
-    
-    // Start navigation with destination coordinates
+
     await navController.startNavigation(
       itinerary,
       destinationLat: widget.to.latitude,
       destinationLon: widget.to.longitude,
     );
-    
-    // Close the route options overlay
+
     widget.onClose();
+
+    if (context.mounted) {
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const NavigationMapPage()));
+    }
   }
 
   /// ====== BOTÃO "APLICAR & FECHAR" ======
@@ -502,7 +518,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
     final itinerary = itineraries[index];
 
-    // Construir JSON manualmente para bater certo com o backend (SaveRouteDto)
     final legsJson = itinerary.legs.map((leg) {
       double? fromLat;
       double? fromLon;
@@ -527,7 +542,6 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         'endTime': leg.endTime.toIso8601String(),
         'from': {'name': leg.fromName, 'lat': fromLat, 'lon': fromLon},
         'to': {'name': leg.toName, 'lat': toLat, 'lon': toLon},
-        // route pode ser null; o backend faz leg.route ?? null
         'route': null,
         'legGeometry': {'points': leg.polyline},
       };
@@ -541,15 +555,11 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       'legs': legsJson,
     };
 
-    // <<< NOVO: labels bonitos para origem / destino >>>
-    final originLabel = widget.from.name.isNotEmpty
-        ? widget.from.name
-        : widget.from.placeName;
-    final destinationLabel = widget.to.name.isNotEmpty
-        ? widget.to.name
-        : widget.to.placeName;
+    final originLabel =
+        widget.from.name.isNotEmpty ? widget.from.name : widget.from.placeName;
+    final destinationLabel =
+        widget.to.name.isNotEmpty ? widget.to.name : widget.to.placeName;
 
-    // <<< NOVO: enviar origem / destino no payload >>>
     final payload = {
       'itinerary': itineraryJson,
       'originName': originLabel,
@@ -564,7 +574,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     try {
       await HistoryService.instance.saveRouteFromItinerary(payload);
     } catch (e) {
-      print('[RouteOptionsOverlay] Error saving itinerary: $e');
+      debugPrint('[RouteOptionsOverlay] Error saving itinerary: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Não foi possível guardar esta rota.')),
@@ -625,8 +635,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                   onVerticalDragEnd: (_) {
                     final targets = [_snapDocked, _snapExpanded, _snapFull];
                     final nearest = targets.reduce(
-                      (a, b) =>
-                          (_panelHeight - a).abs() < (_panelHeight - b).abs()
+                      (a, b) => (_panelHeight - a).abs() <
+                              (_panelHeight - b).abs()
                           ? a
                           : b,
                     );
@@ -691,9 +701,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _saving
-                          ? null
-                          : () => _onStartNavigation(context),
+                      onPressed:
+                          _saving ? null : () => _onStartNavigation(context),
                       icon: const Icon(Icons.navigation, size: 20),
                       label: const Text(
                         'Iniciar Navegação',
@@ -736,9 +745,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: _saving
-                              ? null
-                              : () => _onApplyAndSave(context),
+                          onPressed:
+                              _saving ? null : () => _onApplyAndSave(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _ecoMint,
                             foregroundColor: Colors.white,
@@ -752,9 +760,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                                   height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
-                                    ),
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.white),
                                   ),
                                 )
                               : const Text(
@@ -774,6 +781,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     );
   }
 }
+
+// ======================= LISTA DE ITINERÁRIOS =======================
 
 class _OtpItinerariesPanel extends StatelessWidget {
   const _OtpItinerariesPanel();
@@ -955,9 +964,10 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
     final selected = widget.controller.selectedIndex == widget.index;
     final durationMin = (itinerary.duration / 60).round();
     final legsSummary = itinerary.legs
-        .map((leg) => leg.rentedBike == true
-            ? 'GIRA'
-            : (leg.routeName ?? leg.mode))
+        .map(
+          (leg) =>
+              leg.rentedBike == true ? 'GIRA' : (leg.routeName ?? leg.mode),
+        )
         .join(' • ');
     final walkKm = itinerary.walkDistance / 1000.0;
 
@@ -971,13 +981,13 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
       child: Container(
         decoration: BoxDecoration(
           color: selected
-              ? _RouteOptionsOverlayState._ecoMint.withOpacity(0.15)
+              ? _RouteOptionsOverlayState._ecoMint.withValues(alpha: 0.15)
               : t.cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected
                 ? _RouteOptionsOverlayState._ecoMint
-                : t.colorScheme.onSurface.withOpacity(.1),
+                : t.colorScheme.onSurface.withValues(alpha: .1),
           ),
         ),
         padding: const EdgeInsets.all(12),
@@ -1027,9 +1037,9 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: scoreColor.withOpacity(0.15),
+                    color: scoreColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: scoreColor.withOpacity(0.3)),
+                    border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1061,7 +1071,7 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: t.colorScheme.surfaceVariant.withOpacity(0.5),
+                    color: t.colorScheme.surfaceVariant.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -1069,7 +1079,7 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: t.colorScheme.onSurface.withOpacity(0.9),
+                      color: t.colorScheme.onSurface.withValues(alpha: 0.9),
                     ),
                   ),
                 ),
@@ -1095,7 +1105,7 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                       Icon(
                         _getLegIcon(leg.mode),
                         size: 16,
-                        color: t.colorScheme.onSurface.withOpacity(0.7),
+                        color: t.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -1118,7 +1128,7 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                             Text(
                               '$legDurationMin min • ${legDistanceKm.toStringAsFixed(1)} km',
                               style: t.textTheme.bodySmall?.copyWith(
-                                color: t.colorScheme.onSurface.withOpacity(0.6),
+                                color: t.colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -1165,7 +1175,7 @@ class _TransitCardBase extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: t.colorScheme.primaryContainer.withOpacity(0.35),
+        color: t.colorScheme.primaryContainer.withValues(alpha: 0.35),
       ),
       child: child,
     );

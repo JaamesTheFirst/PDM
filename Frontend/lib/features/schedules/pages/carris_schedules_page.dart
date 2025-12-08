@@ -178,7 +178,7 @@ class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
                                 ),
                           filled: true,
                           fillColor:
-                              t.colorScheme.surfaceVariant.withOpacity(0.25),
+                              t.colorScheme.surfaceVariant.withValues(alpha: 0.25),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
@@ -199,7 +199,7 @@ class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
+                                color: Colors.black.withValues(alpha: 0.08),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),

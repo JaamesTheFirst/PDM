@@ -115,7 +115,7 @@ class MapboxGeocodingService {
 
     final hasProximity = (proximityLon != null && proximityLat != null);
     if (hasProximity) {
-      params['proximity'] = '${proximityLon!},${proximityLat!}';
+      params['proximity'] = '${proximityLon},${proximityLat!}';
       if (bboxRadiusKm != null && bboxRadiusKm > 0) {
         final b = _bboxAround(lon: proximityLon, lat: proximityLat, radiusKm: bboxRadiusKm);
         params['bbox'] = '${b['minLon']},${b['minLat']},${b['maxLon']},${b['maxLat']}';

@@ -16,7 +16,9 @@ class GbfsAvailabilityPage extends StatefulWidget {
 
 class _GbfsAvailabilityPageState
     extends State<GbfsAvailabilityPage> {
-  final GbfsApiClient _api = const GbfsApiClient();
+  // <<< AQUI: sem const, porque GbfsApiClient já não tem const constructor
+  final GbfsApiClient _api = GbfsApiClient();
+
   final TextEditingController _searchController =
       TextEditingController();
 
@@ -307,6 +309,7 @@ class _GbfsAvailabilityPageState
             const SizedBox(height: 8),
             ..._visibleStations.map(
               (s) => _GbfsStationCard(
+                key: ValueKey('station_${s.id}'),
                 station: s,
                 accentColor: GbfsAvailabilityPage._gbfsGreen,
               ),
@@ -323,6 +326,7 @@ class _GbfsAvailabilityPageState
             const SizedBox(height: 8),
             ..._visibleFreeBikes.map(
               (b) => _GbfsFreeBikeCard(
+                key: ValueKey('bike_${b.id}'),
                 bike: b,
                 accentColor: GbfsAvailabilityPage._gbfsGreen,
               ),

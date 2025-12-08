@@ -33,7 +33,7 @@ class SchedulesPage extends StatelessWidget {
         Text(
           'Escolhe o operador para ver partidas ou veículos disponíveis.',
           style: t.textTheme.bodyMedium?.copyWith(
-            color: t.textTheme.bodyMedium?.color?.withOpacity(0.7),
+            color: t.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 20),
@@ -185,7 +185,7 @@ class _OperatorCard extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: 140,
-                    color: Colors.white.withOpacity(0.22),
+                    color: Colors.white.withValues(alpha: 0.22),
                   ),
                 ),
               ),
@@ -196,7 +196,7 @@ class _OperatorCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0.05),
+                        Colors.white.withValues(alpha: 0.05),
                         Colors.transparent,
                       ],
                       begin: Alignment.topLeft,
@@ -245,7 +245,7 @@ class _OperatorCard extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(999),
-                              color: Colors.black.withOpacity(0.18),
+                              color: Colors.black.withValues(alpha: 0.18),
                             ),
                             child: Text(
                               chipLabel,

@@ -1,3 +1,5 @@
+// lib/features/map/pages/map_page.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart' show Position;
@@ -13,9 +15,7 @@ import '../nav/bottom_sheet_route.dart';
 import '../screens/route_search_screen.dart'; // RouteSearchScreen + RouteSearchScreenArgs
 // import '../screens/route_options_screen.dart';  // <- DEIXA DE SER USADO
 import '../widgets/route_options_overlay.dart'; // RouteOptionsArgs (tipo)
-import '../widgets/navigation_overlay.dart';
 import '../state/otp_routes_controller.dart';
-import '../state/navigation_controller.dart';
 
 class MapPage extends StatefulWidget {
   static final ValueNotifier<bool> fullscreenNotifier = ValueNotifier(false);
@@ -77,8 +77,6 @@ class _MapPageState extends State<MapPage> {
           final pos = await LocationService.instance.getCurrentLocation();
           if (!mounted) return; // Check mounted after async call
           if (pos == null) {
-            print(
-                '[MapPage] Cannot handle pending route search: no current location');
             return;
           }
           setState(() {
@@ -169,15 +167,6 @@ class _MapPageState extends State<MapPage> {
           mbx.Point(coordinates: mbx.Position(pos.longitude, pos.latitude));
       _currentLocation = pt;
       await _updateUserIndicator(pt);
-
-      // Follow user during navigation
-      if (mounted && mapboxMap != null) {
-        final navController =
-            Provider.of<NavigationController>(context, listen: false);
-        if (navController.isNavigating) {
-          await _followUserDuringNavigation(mapboxMap!, pt);
-        }
-      }
     });
   }
 
@@ -192,7 +181,7 @@ class _MapPageState extends State<MapPage> {
         mbx.CircleAnnotationOptions(
           geometry: _currentLocation!,
           circleRadius: 22.0,
-          circleColor: _ecoMint.withOpacity(0.25).value,
+          circleColor: _ecoMint.withValues(alpha: 0.25).value,
         ),
       );
 
@@ -249,27 +238,6 @@ class _MapPageState extends State<MapPage> {
       } else {
         await mapboxMap!.setCamera(camera);
       }
-    } catch (_) {}
-  }
-
-  /// Mantém a câmara a seguir o utilizador durante a navegação.
-  /// Não altera zoom/pitch/bearing, só recentra no ponto atual.
-  Future<void> _followUserDuringNavigation(
-    mbx.MapboxMap map,
-    mbx.Point userPoint,
-  ) async {
-    if (!_isMapAlive) return;
-
-    final camera = mbx.CameraOptions(
-      center: userPoint,
-      // zoom, bearing e pitch ficam null para manter os valores atuais
-    );
-
-    try {
-      await map.easeTo(
-        camera,
-        mbx.MapAnimationOptions(duration: 500),
-      );
     } catch (_) {}
   }
 
@@ -459,7 +427,6 @@ class _MapPageState extends State<MapPage> {
 
         // OVERLAY DE OPÇÕES (meia altura)
         if (_routeOptionsArgs != null)
-          // Remove FractionallySizedBox constraint to allow full-screen expansion
           Align(
             alignment: Alignment.bottomCenter,
             child: RouteOptionsOverlay(
@@ -470,9 +437,6 @@ class _MapPageState extends State<MapPage> {
               filters: _routeOptionsArgs!.filters,
             ),
           ),
-
-        // NAVIGATION OVERLAY
-        const NavigationOverlay(),
       ],
     );
   }

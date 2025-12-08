@@ -127,10 +127,10 @@ class MapboxSearchBoxService {
     }
 
     if (verbose) {
-      debugPrint('[SearchBox][HTTP] ${_lastEndpoint}');
+      debugPrint('[SearchBox][HTTP] $_lastEndpoint');
       if (status != null) debugPrint('  status=$status (${_lastLatency?.inMilliseconds} ms)');
       if (error != null) debugPrint('  error=$error');
-      if (_lastBodyShort != null) debugPrint('  body=${_lastBodyShort}');
+      if (_lastBodyShort != null) debugPrint('  body=$_lastBodyShort');
     }
   }
 
@@ -402,8 +402,8 @@ class MapboxSearchBoxService {
     final merged = <SearchboxSuggestion>[];
     final itA = pois.iterator, itB = streets.iterator;
     while (merged.length < safeTotal && (itA.moveNext() || itB.moveNext())) {
-      if (itA.current != null && merged.length < safeTotal) merged.add(itA.current);
-      if (itB.current != null && merged.length < safeTotal) merged.add(itB.current);
+      if (merged.length < safeTotal) merged.add(itA.current);
+      if (merged.length < safeTotal) merged.add(itB.current);
     }
     if (merged.length < safeTotal) {
       merged.addAll(pois.skip(merged.length));
@@ -478,7 +478,7 @@ class MapboxSearchBoxService {
     );
 
     // converter geoc.MapboxPlace -> SearchboxPlace
-    SearchboxPlace _toSB(geoc.MapboxPlace m) {
+    SearchboxPlace toSB(geoc.MapboxPlace m) {
       final feat = (m.placeTypes.contains('poi') ||
               m.placeTypes.contains('poi.landmark'))
           ? 'poi'
@@ -497,8 +497,8 @@ class MapboxSearchBoxService {
     }
 
     final merged = <SearchboxPlace>[
-      ...geocodingPOIs.map(_toSB),
-      ...geocodingStreets.map(_toSB),
+      ...geocodingPOIs.map(toSB),
+      ...geocodingStreets.map(toSB),
     ];
 
     // dedupe por id e ordenar por distância

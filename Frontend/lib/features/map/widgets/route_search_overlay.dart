@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
-
 import '../../../../services/mapbox_geocoding_service.dart';
 import '../../../../services/mapbox_directions_service.dart';
 import '../../../../services/mapbox_searchbox_service.dart';

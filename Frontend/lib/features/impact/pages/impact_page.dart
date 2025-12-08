@@ -155,7 +155,7 @@ class _ImpactPageState extends State<ImpactPage> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: t.colorScheme.primary
-                      .withOpacity(t.brightness == Brightness.dark ? .12 : .08),
+                      .withValues(alpha: t.brightness == Brightness.dark ? .12 : .08),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
@@ -285,7 +285,7 @@ class _ImpactPageState extends State<ImpactPage> {
                           fontFamily: 'Inter',
                           fontSize: 13,
                           color: t.colorScheme.onSurface
-                              .withOpacity(0.8),
+                              .withValues(alpha: 0.8),
                         ),
                       ),
                     ),
@@ -324,7 +324,7 @@ class _ImpactPageState extends State<ImpactPage> {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12,
-                color: t.colorScheme.onSurface.withOpacity(.7),
+                color: t.colorScheme.onSurface.withValues(alpha: .7),
               ),
             ),
             const SizedBox(height: 12),
@@ -334,7 +334,7 @@ class _ImpactPageState extends State<ImpactPage> {
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
-                  color: t.colorScheme.primary.withOpacity(.9),
+                  color: t.colorScheme.primary.withValues(alpha: .9),
                 ),
               ),
           ],
@@ -388,7 +388,7 @@ class _HighlightCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: color.withOpacity(.16),
+            backgroundColor: color.withValues(alpha: .16),
             child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(width: 14),
@@ -410,7 +410,7 @@ class _HighlightCard extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13,
-                    color: t.colorScheme.onSurface.withOpacity(.7),
+                    color: t.colorScheme.onSurface.withValues(alpha: .7),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -471,7 +471,7 @@ class _StatTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: color.withOpacity(.16),
+            backgroundColor: color.withValues(alpha: .16),
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(width: 12),
@@ -487,7 +487,7 @@ class _StatTile extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12, // ↓ antes 13
-                    color: t.colorScheme.onSurface.withOpacity(0.9),
+                    color: t.colorScheme.onSurface.withValues(alpha: 0.9),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -604,7 +604,7 @@ class _DayRow extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 13,
-                color: t.colorScheme.onSurface.withOpacity(.85),
+                color: t.colorScheme.onSurface.withValues(alpha: .85),
               ),
             ),
           ),
@@ -617,7 +617,7 @@ class _DayRow extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12,
-                color: t.colorScheme.onSurface.withOpacity(.75),
+                color: t.colorScheme.onSurface.withValues(alpha: .75),
               ),
             ),
           ),
@@ -631,7 +631,7 @@ class _DayRow extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12,
-                color: t.colorScheme.onSurface.withOpacity(.9),
+                color: t.colorScheme.onSurface.withValues(alpha: .9),
               ),
             ),
           ),

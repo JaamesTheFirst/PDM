@@ -1,34 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
+
 import '../state/navigation_controller.dart';
+import '../../../services/routes_service.dart'; // OtpItinerary, OtpLeg
 
 class NavigationOverlay extends StatelessWidget {
   const NavigationOverlay({super.key});
 
+  // token de verde (se quiseres usar noutros sítios)
   static const _ecoMint = Color(0xFF3CD4A0);
 
-  String _formatDistance(double meters) {
-    if (meters < 1000) {
-      return '${meters.round()} m';
+  IconData _iconForLeg(OtpLeg? leg) {
+    if (leg == null) return Icons.navigation;
+    final mode = leg.mode.toUpperCase();
+
+    if (mode == 'WALK' || mode == 'WALKING') {
+      return Icons.directions_walk;
     }
-    return '${(meters / 1000).toStringAsFixed(1)} km';
+    if (mode.contains('BUS')) return Icons.directions_bus;
+    if (mode.contains('RAIL') ||
+        mode.contains('TRAIN') ||
+        mode == 'R' ||
+        mode == 'IC') {
+      return Icons.train;
+    }
+    if (mode.contains('METRO') || mode.contains('SUBWAY')) {
+      return Icons.subway;
+    }
+    if (mode.contains('TRAM')) return Icons.tram;
+    if (mode.contains('BIKE') || mode.contains('BICYCLE')) {
+      return Icons.directions_bike;
+    }
+    if (mode.contains('CAR')) return Icons.directions_car;
+
+    return Icons.directions_transit;
   }
 
-  // Aceita num (int ou double) para evitar erro de tipo com currentLeg.duration
-  String _formatTime(num seconds) {
-    final minutes = (seconds / 60).round();
-    if (minutes < 60) {
-      return '$minutes min';
-    }
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    return '$hours h $mins min';
+  String _modeLabel(OtpLeg? leg) {
+    if (leg == null) return 'A navegar';
+    final mode = leg.mode.toUpperCase();
+    if (mode == 'WALK' || mode == 'WALKING') return 'Caminha';
+    if (mode.contains('BUS')) return 'Autocarro';
+    if (mode.contains('RAIL') ||
+        mode.contains('TRAIN') ||
+        mode == 'R' ||
+        mode == 'IC') return 'Comboio';
+    if (mode.contains('METRO') || mode.contains('SUBWAY')) return 'Metro';
+    if (mode.contains('TRAM')) return 'Elétrico';
+    if (mode.contains('BIKE') || mode.contains('BICYCLE')) return 'Bicicleta';
+    if (mode.contains('CAR')) return 'Carro';
+    return 'Transporte';
   }
+
+  String _formatDistance(num meters) {
+    final m = meters.toDouble();
+    if (m < 1000) return '${m.round()} m';
+    return '${(m / 1000).toStringAsFixed(1)} km';
+  }
+
+  String _formatDurationMinutes(num seconds) {
+    final s = seconds.toDouble();
+    final totalMin = (s / 60).round();
+    if (totalMin < 60) return '$totalMin min';
+    final h = totalMin ~/ 60;
+    final m = totalMin % 60;
+    if (m == 0) return '${h} h';
+    return '${h} h ${m} min';
+  }
+
+  String _formatLatLon(num value) => value.toDouble().toStringAsFixed(5);
 
   @override
   Widget build(BuildContext context) {
     final navController = context.watch<NavigationController>();
-    final theme = Theme.of(context);
 
     if (!navController.isNavigating) {
       return const SizedBox.shrink();
@@ -37,144 +82,195 @@ class NavigationOverlay extends StatelessWidget {
     final itinerary = navController.activeItinerary;
     if (itinerary == null) return const SizedBox.shrink();
 
-    final distanceRemaining = navController.distanceRemaining;
-    final progress = navController.progress;
-    final nextInstruction = navController.nextInstruction;
-    final currentLeg = navController.currentLeg;
-    final isReRouting = navController.isReRouting;
+    final leg = navController.currentLeg;
+    final modeIcon = _iconForLeg(leg);
+    final modeLabel = _modeLabel(leg);
 
-    return SafeArea(
+    final legDistanceRemaining = navController.currentLegDistanceRemaining;
+    final routeDistanceRemaining = navController.distanceRemaining;
+
+    final legDuration = leg?.duration ?? 0;
+    final routeDuration = itinerary.duration;
+
+    final routeProgress = navController.progress;
+
+    final Position? pos = navController.currentPosition;
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final media = MediaQuery.of(context);
+    final topPadding = media.padding.top;
+
+    return Positioned.fill(
       child: Column(
         children: [
-          // Top navigation card
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Re-routing indicator
-                if (isReRouting)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 8, horizontal: 12),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
+          // ===== CARD SUPERIOR =====
+          Padding(
+            padding: EdgeInsets.fromLTRB(12, topPadding + 8, 12, 0),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: theme.cardColor, // adapta a light/dark
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 22,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ÍCONE GRANDE à esquerda
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        modeIcon,
+                        size: 44,
+                        color: colorScheme.primary,
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              theme.colorScheme.onPrimaryContainer,
+                    const SizedBox(width: 14),
+                    // Texto à direita
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            modeLabel,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 20,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'A recalcular rota...',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.w500,
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_formatDistance(legDistanceRemaining)} até ${leg?.toName ?? 'destino'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                // Progress bar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 4,
-                    backgroundColor:
-                        theme.colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(_ecoMint),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Next instruction
-                if (nextInstruction != null && !isReRouting)
-                  Text(
-                    nextInstruction!,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                const SizedBox(height: 8),
-
-                // Distance and time remaining
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.navigation,
-                          size: 16,
-                          color: _ecoMint,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatDistance(distanceRemaining),
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w500,
+                          const SizedBox(height: 4),
+                          Text(
+                            'Esta etapa: ${_formatDurationMinutes(legDuration)} • ${_formatDistance(leg?.distance ?? 0)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurface.withValues(alpha: 0.75),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    if (currentLeg != null)
-                      Text(
-                        _formatTime(currentLeg.duration),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
-                        ),
+                          const SizedBox(height: 10),
+                          // Barra de progresso da rota
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              minHeight: 5,
+                              value: routeProgress,
+                              backgroundColor:
+                                  colorScheme.onSurface.withValues(alpha: 0.15),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Rota: ${_formatDistance(routeDistanceRemaining)} restantes',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color:
+                                        colorScheme.onSurface.withValues(alpha: 0.9),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Duração total: ${_formatDurationMinutes(routeDuration)}',
+                                  textAlign: TextAlign.right,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color:
+                                        colorScheme.onSurface.withOpacity(0.9),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          if (pos != null)
+                            Text(
+                              'Lat: ${_formatLatLon(pos.latitude)}  •  Lon: ${_formatLatLon(pos.longitude)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color:
+                                    colorScheme.onSurface.withOpacity(0.75),
+                              ),
+                            ),
+                        ],
                       ),
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
 
           const Spacer(),
 
-          // Bottom action buttons
-          Container(
-            margin: const EdgeInsets.all(16),
+          // ===== BOTÃO PARAR NAVEGAÇÃO =====
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              0,
+              16,
+              media.padding.bottom + 16,
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Stop navigation button
-                ElevatedButton.icon(
-                  onPressed: () {
-                    navController.stopNavigation();
-                  },
-                  icon: const Icon(Icons.stop),
-                  label: const Text('Parar Navegação'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.error,
-                    foregroundColor: theme.colorScheme.onError,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: media.size.width * 0.65,
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await navController.stopNavigation();
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.error,
+                      foregroundColor: colorScheme.onError,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(26),
+                      ),
+                      elevation: 6,
+                    ),
+                    icon: const Icon(Icons.stop_rounded),
+                    label: const Text(
+                      'Parar navegação',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),

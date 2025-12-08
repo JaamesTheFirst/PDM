@@ -196,7 +196,7 @@ class _CpSchedulesPageState extends State<CpSchedulesPage> {
                                 ),
                           filled: true,
                           fillColor:
-                              t.colorScheme.surfaceVariant.withOpacity(0.25),
+                              t.colorScheme.surfaceVariant.withValues(alpha: 0.25),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:http/http.dart' as http;
 import 'api_client.dart';
 
 class GbfsStation {
