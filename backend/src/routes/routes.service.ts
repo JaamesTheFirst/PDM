@@ -90,7 +90,7 @@ export class RoutesService {
     RAIL: 150,
     TRAIN: 150,
     R: 150,
-    IC: 150,
+    IC: 120, // Intercity trains typically have lower occupancy than regional trains
     COACH: 30,
     FLIXBUS: 30,
     CAR: 1.5,

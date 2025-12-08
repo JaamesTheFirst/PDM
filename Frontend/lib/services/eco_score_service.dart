@@ -39,7 +39,7 @@ const Map<String, double> _defaultOccupancyRates = <String, double>{
   'RAIL': 150.0,
   'TRAIN': 150.0,
   'R': 150.0, // Regular rail (same as RAIL)
-  'IC': 150.0, // Intercity train (same as RAIL)
+  'IC': 120.0, // Intercity train (lower occupancy than regional trains)
   'COACH': 30.0,
   'FLIXBUS': 30.0, // FlixBus (same as COACH)
   'CAR': 1.5, // Average car occupancy

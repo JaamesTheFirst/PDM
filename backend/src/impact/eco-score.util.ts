@@ -53,7 +53,7 @@ const defaultOccupancyRates: Record<string, number> = {
   RAIL: 150.0,
   TRAIN: 150.0,
   R: 150.0,
-  IC: 150.0,
+  IC: 120.0, // Intercity trains typically have lower occupancy than regional trains
   COACH: 30.0,
   FLIXBUS: 30.0,
   CAR: 1.5,
