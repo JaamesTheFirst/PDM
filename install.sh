@@ -58,7 +58,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "4. Run: flutter doctor"
     
 else
-    print_warning "Non-macOS system detected. Please follow manual setup instructions in SETUP.md"
+    print_warning "Non-macOS system detected. Please follow manual setup instructions in docs/SETUP.md"
 fi
 
 # Create development directory structure

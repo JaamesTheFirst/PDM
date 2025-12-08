@@ -182,7 +182,7 @@ echo ""
 
 print_status "Windows development environment setup completed!"
 print_info "Please restart your terminal/command prompt to ensure all environment variables are loaded."
-print_info "If you encounter any issues, check the troubleshooting section in SETUP.md"
+print_info "If you encounter any issues, check the troubleshooting section in docs/SETUP.md"
 
 echo ""
 print_status "Happy coding! 🚀"

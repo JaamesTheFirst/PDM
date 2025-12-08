@@ -117,7 +117,7 @@ chmod +x scripts/release-run.sh
 - Flutter SDK (3.35+)
 - Node.js (18+)
 
-See [RELEASE.md](RELEASE.md) for detailed setup instructions.
+See [docs/RELEASE.md](docs/RELEASE.md) for detailed setup instructions.
 
 ## 📋 Features
 
@@ -129,14 +129,14 @@ See [RELEASE.md](RELEASE.md) for detailed setup instructions.
 
 ## 📚 Documentation
 
-- [RELEASE.md](RELEASE.md) - Setup and troubleshooting
+- [docs/RELEASE.md](docs/RELEASE.md) - Setup and troubleshooting
 - [docs/API_ROUTE_PLANNING_EXAMPLES.md](docs/API_ROUTE_PLANNING_EXAMPLES.md) - API examples
 - [docs/TESTING_NAVIGATION.md](Frontend/TESTING_NAVIGATION.md) - Navigation testing guide
 
 ## 🔧 Troubleshooting
 
 If you encounter issues:
-1. Check [RELEASE.md](RELEASE.md) troubleshooting section
+1. Check [docs/RELEASE.md](docs/RELEASE.md) troubleshooting section
 2. Ensure Docker is running
 3. Ensure all prerequisites are installed
 4. Check network connectivity
@@ -201,7 +201,7 @@ Prerequisites:
 For testing navigation without moving, use:
    .\scripts\release-run.ps1 -Mock
 
-Detailed instructions are in RELEASE.md
+Detailed instructions are in [docs/RELEASE.md](docs/RELEASE.md)
 
 Best regards,
 [Your Name]
@@ -223,7 +223,7 @@ cp -r backend release/
 cp -r Frontend release/
 cp docker-compose.yml release/
 cp README.md release/
-cp RELEASE.md release/
+cp docs/RELEASE.md release/
 cp -r docs release/
 
 # Create ZIP (Windows PowerShell)
@@ -248,7 +248,7 @@ Upload the ZIP file to the GitHub release as an attachment.
 - [ ] Mock location mode tested
 - [ ] No secrets or API keys in code
 - [ ] README.md is up to date
-- [ ] RELEASE.md is complete
+- [ ] docs/RELEASE.md is complete
 - [ ] All features tested
 - [ ] Documentation is clear
 - [ ] Tag created and pushed

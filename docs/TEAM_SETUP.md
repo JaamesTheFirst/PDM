@@ -142,8 +142,8 @@ npx prisma migrate dev    # Run migrations
 
 ## 📚 Documentation
 
-- **Detailed Windows Setup:** [SETUP_WINDOWS.md](./SETUP_WINDOWS.md)
-- **Detailed macOS Setup:** [SETUP.md](./SETUP.md)
+- **Detailed Windows Setup:** [docs/SETUP_WINDOWS.md](docs/SETUP_WINDOWS.md)
+- **Detailed macOS Setup:** [docs/SETUP.md](docs/SETUP.md)
 - **Contributing Guidelines:** [CONTRIBUTING.md](./CONTRIBUTING.md)
 - **Git Workflow:** [CONTRIBUTING.md](./CONTRIBUTING.md)
 

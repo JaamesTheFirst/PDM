@@ -69,9 +69,9 @@ Write-Host ""
 Write-Host "⏳ Waiting 5 seconds for services to be ready..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
-# Step 3: Run Flutter app
+# Step 2.5: Install Flutter dependencies (first-time setup)
 Write-Host ""
-Write-Host "📱 Step 2: Starting Flutter app..." -ForegroundColor Yellow
+Write-Host "📦 Step 2: Installing Flutter dependencies..." -ForegroundColor Yellow
 Write-Host ""
 
 $frontendDir = Join-Path $projectRoot "Frontend"
@@ -80,6 +80,28 @@ if (-not (Test-Path $frontendDir)) {
     Write-Host "ERROR: Frontend directory not found at: $frontendDir" -ForegroundColor Red
     exit 1
 }
+
+Push-Location $frontendDir
+
+try {
+    # Run flutter pub get (idempotent - safe to run multiple times)
+    Write-Host "Running 'flutter pub get'..." -ForegroundColor Gray
+    flutter pub get | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "WARNING: flutter pub get had issues, but continuing..." -ForegroundColor Yellow
+    } else {
+        Write-Host "✅ Flutter dependencies installed" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "WARNING: Could not run flutter pub get, but continuing..." -ForegroundColor Yellow
+} finally {
+    Pop-Location
+}
+
+# Step 3: Run Flutter app
+Write-Host ""
+Write-Host "📱 Step 3: Starting Flutter app..." -ForegroundColor Yellow
+Write-Host ""
 
 Push-Location $frontendDir
 

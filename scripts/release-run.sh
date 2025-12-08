@@ -72,9 +72,9 @@ echo ""
 echo -e "${YELLOW}⏳ Waiting 5 seconds for services to be ready...${NC}"
 sleep 5
 
-# Step 3: Run Flutter app
+# Step 2.5: Install Flutter dependencies (first-time setup)
 echo ""
-echo -e "${YELLOW}📱 Step 2: Starting Flutter app...${NC}"
+echo -e "${YELLOW}📦 Step 2: Installing Flutter dependencies...${NC}"
 echo ""
 
 cd "$PROJECT_ROOT/Frontend"
@@ -83,6 +83,19 @@ if [ ! -d "$PROJECT_ROOT/Frontend" ]; then
     echo -e "${RED}ERROR: Frontend directory not found.${NC}"
     exit 1
 fi
+
+# Run flutter pub get (idempotent - safe to run multiple times)
+echo -e "${GREEN}Running 'flutter pub get'...${NC}"
+if flutter pub get > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Flutter dependencies installed${NC}"
+else
+    echo -e "${YELLOW}WARNING: flutter pub get had issues, but continuing...${NC}"
+fi
+
+# Step 3: Run Flutter app
+echo ""
+echo -e "${YELLOW}📱 Step 3: Starting Flutter app...${NC}"
+echo ""
 
 if [ "$MOCK_MODE" = true ]; then
     echo -e "${MAGENTA}🎭 Running with MOCK LOCATION enabled${NC}"
