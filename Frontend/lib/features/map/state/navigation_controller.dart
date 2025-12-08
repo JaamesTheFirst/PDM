@@ -245,6 +245,14 @@ class NavigationController extends ChangeNotifier {
     _currentPosition =
         await LocationService.instance.getCurrentLocation();
 
+    // Se mock location está ativo, configura rota mock
+    if (LocationService.isMockModeEnabled && _fullGeometry.isNotEmpty) {
+      debugPrint(
+        '[NavigationController] Mock location enabled with ${_fullGeometry.length} points',
+      );
+      LocationService.instance.setMockRoute(_fullGeometry, speed: 5.0);
+    }
+
     // ouvir atualizações de localização
     _locationSubscription =
         LocationService.instance.getLocationUpdates().listen((pos) {
@@ -264,6 +272,11 @@ class NavigationController extends ChangeNotifier {
   Future<void> stopNavigation() async {
     await _locationSubscription?.cancel();
     _locationSubscription = null;
+
+    // Para mock location se estiver ativo
+    if (LocationService.isMockModeEnabled) {
+      LocationService.instance.stopMockRoute();
+    }
 
     _isNavigating = false;
     _isReRouting = false;

@@ -65,7 +65,32 @@ class _MapPageState extends State<MapPage> {
   /// Trata pedidos em [pendingRouteSearch] para abrir pesquisa diretamente.
   Future<void> _handlePendingRouteSearch() async {
     final data = MapPage.pendingRouteSearch.value;
-    if (data == null || mapboxMap == null || !_isMapAlive) return;
+    if (data == null) {
+      debugPrint('[MapPage] _handlePendingRouteSearch: data is null');
+      return;
+    }
+
+    debugPrint(
+      '[MapPage] _handlePendingRouteSearch: data=$data, mapboxMap=${mapboxMap != null}, _isMapAlive=$_isMapAlive',
+    );
+
+    // Se o mapa não está pronto, aguarda até estar
+    if (mapboxMap == null || !_isMapAlive) {
+      debugPrint(
+        '[MapPage] Map not ready yet, waiting... (mapboxMap=${mapboxMap != null}, _isMapAlive=$_isMapAlive)',
+      );
+      // Aguarda até o mapa estar pronto (máximo 5 segundos)
+      int attempts = 0;
+      while ((mapboxMap == null || !_isMapAlive) && attempts < 50) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        attempts++;
+      }
+
+      if (mapboxMap == null || !_isMapAlive) {
+        debugPrint('[MapPage] Map still not ready after waiting');
+        return;
+      }
+    }
 
     // Limpa o pedido para não repetir.
     MapPage.pendingRouteSearch.value = null;
@@ -128,10 +153,23 @@ class _MapPageState extends State<MapPage> {
       to: toPlace,
     );
 
+    debugPrint(
+      '[MapPage] Setting route options: from=${fromPlace.name}, to=${toPlace.name}',
+    );
+
+    if (!mounted) return;
+
     setState(() {
       _routeOptionsArgs = args;
     });
     MapPage.fullscreenNotifier.value = true;
+
+    debugPrint('[MapPage] Route options overlay should now be visible');
+    
+    // Force a rebuild to ensure the overlay is shown
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   /// Inicializa permissões e obtém a localização atual (uma vez).
@@ -162,6 +200,14 @@ class _MapPageState extends State<MapPage> {
   Future<void> _onMapCreated(mbx.MapboxMap map) async {
     mapboxMap = map;
     _isMapAlive = true;
+
+    // Se há um pedido pendente de pesquisa de rota, processa agora que o mapa está pronto
+    if (MapPage.pendingRouteSearch.value != null) {
+      debugPrint('[MapPage] Map created, processing pending route search');
+      // Pequeno delay para garantir que tudo está inicializado
+      await Future.delayed(const Duration(milliseconds: 100));
+      _handlePendingRouteSearch();
+    }
 
     try {
       await mapboxMap!.location

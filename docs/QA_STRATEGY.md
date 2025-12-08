@@ -169,6 +169,9 @@ jobs:
 
 ## Performance Testing
 
+**Status: ⏳ To Be Implemented**  
+*Prerequisite: Centralize app startup/spinning up process*
+
 ### Backend
 - API response time benchmarks
 - Database query optimization
