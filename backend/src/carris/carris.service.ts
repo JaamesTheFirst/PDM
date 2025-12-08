@@ -1,10 +1,6 @@
 // src/carris/carris.service.ts
 
-import {
-  BadGatewayException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -146,8 +142,7 @@ export class CarrisService {
     private readonly http: HttpService,
     private readonly config: ConfigService,
   ) {
-    const otpBase =
-      this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
+    const otpBase = this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
 
     // Garante que não há double slash no final
     this.graphqlUrl = `${otpBase.replace(/\/$/, '')}/routers/default/index/graphql`;
@@ -185,7 +180,7 @@ export class CarrisService {
       );
 
       if (data.errors?.length) {
-        const msg = data.errors.map((e) => e.message).join('; ');
+        const msg = data.errors.map(e => e.message).join('; ');
         this.logger.error(`OTP GraphQL error (Carris): ${msg}`);
         throw new BadGatewayException('OTP devolveu um erro no GraphQL');
       }
@@ -200,9 +195,7 @@ export class CarrisService {
         `Falha ao comunicar com OTP GraphQL (Carris) em ${this.graphqlUrl}`,
         error instanceof Error ? error.stack : undefined,
       );
-      throw new BadGatewayException(
-        'Falha ao comunicar com o serviço OTP (GraphQL) para Carris',
-      );
+      throw new BadGatewayException('Falha ao comunicar com o serviço OTP (GraphQL) para Carris');
     }
   }
 
@@ -241,7 +234,7 @@ export class CarrisService {
 
     const result = await this.graphqlRequest<{ agencies: OtpAgency[] }>(query);
 
-    const agency = result.agencies.find((a) => this.isCarrisAgency(a));
+    const agency = result.agencies.find(a => this.isCarrisAgency(a));
 
     if (!agency) return null;
 
@@ -287,13 +280,13 @@ export class CarrisService {
     const result = await this.graphqlRequest<{ routes: OtpRoute[] }>(query);
 
     // Filtra para BUS + Carris
-    const routes = result.routes.filter((r) => {
+    const routes = result.routes.filter(r => {
       const isBus = (r.mode ?? '').toUpperCase() === 'BUS';
       return isBus && this.isCarrisAgency(r.agency || undefined);
     });
 
     // Mapeia para DTO simplificado
-    return routes.map((r) => ({
+    return routes.map(r => ({
       id: r.id,
       shortName: r.shortName ?? null,
       longName: r.longName ?? null,
@@ -409,7 +402,7 @@ export class CarrisService {
 
     const result = await this.graphqlRequest<{ stops: OtpStop[] }>(query);
 
-    return result.stops.map((s) => ({
+    return result.stops.map(s => ({
       id: s.id,
       code: s.code ?? null,
       name: s.name,
@@ -432,15 +425,14 @@ export class CarrisService {
     const term = (q ?? '').trim();
     if (!term) return [];
 
-    const result = await this.graphqlRequest<{ stops: OtpStop[] }>(
-      STOPS_SEARCH_QUERY,
-      { name: term },
-    );
+    const result = await this.graphqlRequest<{ stops: OtpStop[] }>(STOPS_SEARCH_QUERY, {
+      name: term,
+    });
 
     const stops = result.stops ?? [];
     const trimmed = stops.slice(0, limit);
 
-    return trimmed.map((s) => ({
+    return trimmed.map(s => ({
       id: s.id,
       code: s.code ?? null,
       name: s.name,
@@ -562,9 +554,9 @@ export class CarrisService {
 
     // Dedup por ID
     const byId = new Map<string, OtpStop>();
-    allStops.forEach((s) => byId.set(s.id, s));
+    allStops.forEach(s => byId.set(s.id, s));
 
-    return Array.from(byId.values()).map((s) => ({
+    return Array.from(byId.values()).map(s => ({
       id: s.id,
       code: s.code ?? null,
       name: s.name,

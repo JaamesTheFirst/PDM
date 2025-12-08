@@ -2,7 +2,7 @@ import { IsNotEmpty, IsString } from 'class-validator';
 
 /**
  * DTO de login.
- * 
+ *
  * Permite autenticação via email **ou** username usando o campo `identifier`.
  */
 export class LoginDto {

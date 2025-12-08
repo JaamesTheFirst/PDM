@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+cd "$(dirname "$0")/../.." || exit
+
+cd backend || exit
+
+echo "🔍 Running linting..."
+npm run lint:check || exit 1
+
+echo "✨ Checking code formatting..."
+npm run format:check || exit 1
+
+echo "✅ Running type check..."
+npm run type-check || exit 1
+
+echo "🧪 Running unit tests..."
+npm run test:unit || exit 1
+
+echo "✅ Pre-commit checks passed!"

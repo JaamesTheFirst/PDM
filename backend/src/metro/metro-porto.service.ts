@@ -3,11 +3,7 @@
 // Serviço para ler dados do Metro do Porto a partir do grafo OTP (GraphQL).
 // Fornece endpoints para agência, linhas, paragens e partidas próximas.
 
-import {
-  BadGatewayException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -108,8 +104,7 @@ export class MetroPortoService {
     private readonly http: HttpService,
     private readonly config: ConfigService,
   ) {
-    const otpBase =
-      this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
+    const otpBase = this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
     // Endpoint padrão do OTP GraphQL para o router "default"
     this.graphqlUrl = `${otpBase.replace(/\/$/, '')}/routers/default/index/graphql`;
   }
@@ -135,7 +130,7 @@ export class MetroPortoService {
       );
 
       if (data.errors?.length) {
-        const msg = data.errors.map((e) => e.message).join('; ');
+        const msg = data.errors.map(e => e.message).join('; ');
         this.logger.error(`OTP GraphQL error: ${msg}`);
         throw new BadGatewayException('OTP devolveu um erro no GraphQL');
       }
@@ -150,9 +145,7 @@ export class MetroPortoService {
         `Falha ao comunicar com OTP GraphQL (${this.graphqlUrl})`,
         error instanceof Error ? error.stack : undefined,
       );
-      throw new BadGatewayException(
-        'Falha ao comunicar com o serviço OTP (GraphQL)',
-      );
+      throw new BadGatewayException('Falha ao comunicar com o serviço OTP (GraphQL)');
     }
   }
 
@@ -177,7 +170,7 @@ export class MetroPortoService {
 
     const result = await this.graphqlRequest<{ agencies: OtpAgency[] }>(query);
 
-    const agency = result.agencies.find((a) => {
+    const agency = result.agencies.find(a => {
       const n = a.name?.toLowerCase() ?? '';
       return n.includes('metro') && n.includes('porto');
     });
@@ -224,12 +217,12 @@ export class MetroPortoService {
     const result = await this.graphqlRequest<{ routes: OtpRoute[] }>(query);
 
     // filtra para apenas rotas cuja agência parece ser "Metro do Porto"
-    const routes = result.routes.filter((r) => {
+    const routes = result.routes.filter(r => {
       const n = r.agency?.name?.toLowerCase() ?? '';
       return n.includes('metro') && n.includes('porto');
     });
 
-    return routes.map((r) => ({
+    return routes.map(r => ({
       id: r.id,
       shortName: r.shortName,
       longName: r.longName,
@@ -324,7 +317,7 @@ export class MetroPortoService {
 
     const result = await this.graphqlRequest<{ stops: OtpStop[] }>(query);
 
-    return result.stops.map((s) => ({
+    return result.stops.map(s => ({
       id: s.id,
       code: s.code,
       name: s.name,
@@ -344,15 +337,14 @@ export class MetroPortoService {
     const term = (q ?? '').trim();
     if (!term) return [];
 
-    const result = await this.graphqlRequest<{ stops: OtpStop[] }>(
-      STOPS_SEARCH_QUERY,
-      { name: term },
-    );
+    const result = await this.graphqlRequest<{ stops: OtpStop[] }>(STOPS_SEARCH_QUERY, {
+      name: term,
+    });
 
     const stops = result.stops ?? [];
     const trimmed = stops.slice(0, limit);
 
-    return trimmed.map((s) => ({
+    return trimmed.map(s => ({
       id: s.id,
       code: s.code,
       name: s.name,
@@ -453,9 +445,9 @@ export class MetroPortoService {
     }
 
     const byId = new Map<string, OtpStop>();
-    allStops.forEach((s) => byId.set(s.id, s));
+    allStops.forEach(s => byId.set(s.id, s));
 
-    return Array.from(byId.values()).map((s) => ({
+    return Array.from(byId.values()).map(s => ({
       id: s.id,
       code: s.code,
       name: s.name,

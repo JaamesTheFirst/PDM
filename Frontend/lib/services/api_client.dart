@@ -1,6 +1,5 @@
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
+import '../config/app_config.dart';
 
 /// Indica se o frontend deve usar mocks de API em vez do backend real.
 ///
@@ -9,49 +8,17 @@ import 'dart:io' show Platform;
 /// consultar esta flag para decidir o que fazer.
 const bool kUseMock = bool.fromEnvironment('USE_MOCK', defaultValue: false);
 
-/// Valor de `BASE_URL` injectado via `--dart-define`.
+/// Valor de `BASE_URL` injectado via `--dart-define` (override do config gerado).
 ///
-/// Se estiver vazio, é calculado um valor por omissão em [_computeDefaultBase].
+/// Se estiver vazio, usa o valor do [AppConfig] gerado pelo spin-up script.
 const String _envBase = String.fromEnvironment('BASE_URL', defaultValue: '');
-
-/// Calcula a `baseUrl` por omissão de acordo com a plataforma.
-///
-/// - Web / Desktop / iOS simulador → `http://localhost:3000`  
-/// - Android (emulador) → IP da máquina de desenvolvimento (por omissão,
-///   `http://192.168.1.114:3000`, que cada dev pode ajustar)
-///
-/// Usa `kIsWeb` e um `try/catch` ao redor de [Platform] para evitar erros
-/// quando `dart:io` não está disponível (ex.: Web).
-String _computeDefaultBase() {
-  // Web/desktop/iOS simulador => localhost
-  if (kIsWeb) return 'http://localhost:3000';
-
-  try {
-    if (Platform.isAndroid) {
-      // Para Android emulator, usar 10.0.2.2 (ou IP custom) via BASE_URL.
-      // Para device físico, cada dev deve passar o IP da máquina:
-      // flutter run --dart-define=BASE_URL=http://SEU_IP:3000
-      const String customUrl = String.fromEnvironment('BASE_URL');
-      if (customUrl.isNotEmpty) return customUrl;
-
-      // Valor por defeito quando não há BASE_URL definida.
-      // Ajusta este IP para o da tua rede local, se necessário.
-      return 'http://192.168.1.114:3000';
-    }
-  } catch (_) {
-    // Platform não existe no web; ignorar e cair no fallback.
-  }
-
-  // Fallback genérico para todas as outras plataformas.
-  return 'http://localhost:3000';
-}
 
 /// URL base efectivamente usada pelo [ApiClient].
 ///
 /// Ordem de prioridade:
-/// 1. `BASE_URL` vindo de `--dart-define`
-/// 2. Valor calculado em [_computeDefaultBase]
-final String kBaseUrl = _envBase.isNotEmpty ? _envBase : _computeDefaultBase();
+/// 1. `BASE_URL` vindo de `--dart-define` (override manual)
+/// 2. Valor do [AppConfig] gerado automaticamente pelo spin-up script
+final String kBaseUrl = _envBase.isNotEmpty ? _envBase : AppConfig.apiBaseUrl;
 
 /// Cliente HTTP simples para comunicar com o backend NestJS.
 ///

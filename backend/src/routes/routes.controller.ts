@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { RoutesService, PlannedRoutesResponse } from './routes.service';
 import { PlanItineraryDto } from './dto/plan-itinerary.dto';
 import { PlanGranularDto } from './dto/plan-granular.dto';
@@ -43,10 +35,7 @@ export class RoutesController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('history')
-  saveRoute(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: SaveRouteDto,
-  ) {
+  saveRoute(@CurrentUser() user: JwtPayload, @Body() dto: SaveRouteDto) {
     return this.routesService.saveItineraryForUser(user.sub, dto);
   }
 
@@ -55,10 +44,7 @@ export class RoutesController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('history')
-  listHistory(
-    @CurrentUser() user: JwtPayload,
-    @Query() query: ListHistoryQueryDto,
-  ) {
+  listHistory(@CurrentUser() user: JwtPayload, @Query() query: ListHistoryQueryDto) {
     return this.routesService.listHistoryForUser(user.sub, query);
   }
 
@@ -67,10 +53,7 @@ export class RoutesController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('history/:id')
-  getHistoryItem(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-  ) {
+  getHistoryItem(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.routesService.getHistoryById(user.sub, id);
   }
 }

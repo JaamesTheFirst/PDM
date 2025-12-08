@@ -1,48 +1,20 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-
+import '../config/app_config.dart';
 import 'auth_service.dart';
 
 /// Base URL para o módulo de histórico de rotas.
 ///
 /// Pode ser sobreposto via:
 /// `--dart-define=ROUTES_BASE_URL=http://...`
+/// Se não estiver definida, usa o valor do [AppConfig] gerado pelo spin-up script.
 const String _envHistoryBase =
     String.fromEnvironment('ROUTES_BASE_URL', defaultValue: '');
 
-/// Calcula a base URL usada pelo [HistoryService].
-///
-/// Regras:
-/// - Se `ROUTES_BASE_URL` estiver definido → usa esse valor.
-/// - Web → `http://localhost:3000`.
-/// - Android → tenta ler `ROUTES_BASE_URL`, senão usa um IP de rede local.
-/// - Restantes plataformas → `http://localhost:3000`.
-String _computeHistoryBase() {
-  if (_envHistoryBase.isNotEmpty) return _envHistoryBase;
-
-  if (kIsWeb) return 'http://localhost:3000';
-
-  try {
-    if (Platform.isAndroid) {
-      const String custom =
-          String.fromEnvironment('ROUTES_BASE_URL', defaultValue: '');
-      if (custom.isNotEmpty) return custom;
-
-      // Android device -> IP da máquina de desenvolvimento
-      return 'http://192.168.1.69:3000';
-    }
-  } catch (_) {
-    // Platform não existe no Web; ignora e usa o fallback.
-  }
-
-  return 'http://localhost:3000';
-}
-
 /// Base URL efectiva usada para o histórico.
-final String kHistoryBaseUrl = _computeHistoryBase();
+final String kHistoryBaseUrl =
+    _envHistoryBase.isNotEmpty ? _envHistoryBase : AppConfig.apiBaseUrl;
 
 /// Modelo de um registo de histórico de rotas.
 ///

@@ -51,11 +51,25 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
       final nav = context.read<NavigationController>();
       nav.addListener(_onNavChanged);
 
-      _locSubForTracking ??=
-          LocationService.instance.getLocationUpdates().listen((pos) {
-        _updateUserFromPosition(pos);
-      });
+      // Subscreve ao stream de localização
+      _subscribeToLocationUpdates();
     });
+  }
+
+  /// Subscreve ao stream de atualizações de localização.
+  /// Cancela subscrição anterior se existir e cria nova.
+  void _subscribeToLocationUpdates() {
+    _locSubForTracking?.cancel();
+    _locSubForTracking = LocationService.instance.getLocationUpdates().listen(
+      (pos) {
+        if (mounted) {
+          _updateUserFromPosition(pos);
+        }
+      },
+      onError: (error) {
+        debugPrint('[NavigationMapPage] Location stream error: $error');
+      },
+    );
   }
 
   @override
@@ -98,6 +112,12 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
 
     final nav = context.read<NavigationController>();
 
+    // Se navegação acabou de começar, re-subscribe ao stream (pode ter mudado para mock)
+    // Isso garante que pegamos o mock stream se mock location estiver ativo
+    if (nav.isNavigating) {
+      _subscribeToLocationUpdates();
+    }
+
     // Atualiza a posição do utilizador no mapa.
     final pos = nav.currentPosition;
     if (pos != null) {
@@ -119,6 +139,9 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
       coordinates: mbx.Position(pos.longitude, pos.latitude),
     );
     _currentPoint = pt;
+
+    // Only log occasionally to avoid spam
+    // (Position updates happen frequently for smooth movement)
 
     await _ensureUserIndicator();
 
@@ -182,9 +205,11 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
 
     try {
       if (animated) {
+        // Shorter animation duration for smoother following during navigation
+        // 200ms is fast enough to feel responsive but smooth
         await _mapboxMap!.easeTo(
           camera,
-          mbx.MapAnimationOptions(duration: 600),
+          mbx.MapAnimationOptions(duration: 200),
         );
       } else {
         await _mapboxMap!.setCamera(camera);

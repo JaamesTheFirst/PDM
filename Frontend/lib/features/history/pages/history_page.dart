@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../services/history_service.dart';
@@ -89,20 +90,28 @@ class _HistoryPageState extends State<HistoryPage> {
   /// - Preenche [MapPage.pendingRouteSearch] com o destino da rota antiga.
   /// - Mostra um [SnackBar] informativo.
   Future<void> _repeatTrip(RouteHistoryItem item) async {
+    debugPrint(
+      '[HistoryPage] Repeating trip to: ${item.destinationName} (${item.destinationLatitude}, ${item.destinationLongitude})',
+    );
+
     // Mudar para o tab do mapa.
     AppShell.navigateToTab.value = 0;
 
-    // Pequeno delay para o MapPage montar.
-    await Future.delayed(const Duration(milliseconds: 300));
+    // Aguarda um pouco mais para garantir que o MapPage está montado e o mapa está pronto
+    await Future.delayed(const Duration(milliseconds: 500));
 
     // Origem = localização atual; destino = destino da viagem antiga.
-    MapPage.pendingRouteSearch.value = {
+    final routeData = {
       'toId': 'route_${item.id}',
       'toName': item.destinationName,
       'toAddress': item.destinationName,
       'toLat': item.destinationLatitude,
       'toLon': item.destinationLongitude,
     };
+
+    debugPrint('[HistoryPage] Setting pendingRouteSearch: $routeData');
+
+    MapPage.pendingRouteSearch.value = routeData;
 
     if (!mounted) return;
 
@@ -507,7 +516,10 @@ class _RouteHistoryCard extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
-                        onPressed: onRepeatTrip,
+                        onPressed: () {
+                          debugPrint('[HistoryPage] Repetir rota clicked for: ${item.destinationName}');
+                          onRepeatTrip();
+                        },
                         icon: const Icon(Icons.refresh, size: 18),
                         label: const Text('Repetir rota'),
                         style: TextButton.styleFrom(
@@ -517,6 +529,7 @@ class _RouteHistoryCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          minimumSize: const Size(44, 44), // Ensure minimum touch target
                         ),
                       ),
                     ),

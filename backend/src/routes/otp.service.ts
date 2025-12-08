@@ -1,8 +1,4 @@
-import {
-  BadGatewayException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -15,7 +11,7 @@ export interface OtpLeg {
   mode: string;
   distance: number;
   duration: number;
-  startTime: number;  // OTP envia em ms desde epoch
+  startTime: number; // OTP envia em ms desde epoch
   endTime: number;
   from: {
     name: string;
@@ -132,8 +128,7 @@ export class OtpService {
     private readonly http: HttpService,
     private readonly config: ConfigService,
   ) {
-    const base =
-      this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
+    const base = this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
     this.otpBaseUrl = base.replace(/\/$/, '');
   }
 
@@ -179,11 +174,10 @@ export class OtpService {
    * Default: [WALK, TRANSIT].
    */
   private resolveTransportModes(dto: PlanItineraryDto): { mode: string }[] {
-    const modes = dto.modes && dto.modes.length > 0
-      ? dto.modes
-      : [TransportMode.WALK, TransportMode.TRANSIT];
+    const modes =
+      dto.modes && dto.modes.length > 0 ? dto.modes : [TransportMode.WALK, TransportMode.TRANSIT];
 
-    return modes.map((m) => ({ mode: m }));
+    return modes.map(m => ({ mode: m }));
   }
 
   /**
@@ -215,7 +209,7 @@ export class OtpService {
       );
 
       if (response.data.errors?.length) {
-        const msg = response.data.errors.map((e) => e.message).join('; ');
+        const msg = response.data.errors.map(e => e.message).join('; ');
         this.logger.error(`OTP GraphQL errors: ${msg}`);
         throw new BadGatewayException('OTP returned an error');
       }

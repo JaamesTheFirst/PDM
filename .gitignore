@@ -122,6 +122,7 @@ app.*.map.json
 backend/prisma/dev.db*
 backend/prisma/*.db
 backend/prisma/*.db-journal
+backend/prisma/migrations/
 
 # ===========================================
 # Docker
@@ -297,26 +298,23 @@ Frontend/ios/Runner/Info.plist
 *.bak
 *.orig
 
-
-
-
 # ===========================================
 # External APIs
 # ===========================================
-# isto esta aqui apenas porque fiz clone do repositorio transportes-portugal-API
+# isto esta aqui apenas porque fiz clone do repositorio transportes-port
+# ugal-API
 # localmente para poder ter tudo na mesma instancia do cursor.
 # Assim nao precido de dar commit do diretorio externo inteiro.
-# Se vcs quiserem ter o repositorio externo basta seguirem: 
+# Se vcs quiserem ter o repositorio externo basta seguirem:
 # ~/a/vossa/linha/de/comandos/wsl$ mkdir EXTERNAL
 # ~/a/vossa/linha/de/comandos/wsl$ git clone https://github.com/AndreVarandas/transportes-portugal-api.git
 #
 # Para que isto funcione tem de ter mongoDB instalado que a base de dados
-# deles e nao relacional 
+# deles e nao relacional
 /EXTERNAL
-/EXTERNALS 
+/EXTERNALS
 
 ## ignorar scripts do OTP
 !/EXTERNALS/otp/scripts/
 # But ignore node_modules inside scripts
-EXTERNALS/otp/scripts/node_modules/ 
-
+EXTERNALS/otp/scripts/node_modules/

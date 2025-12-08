@@ -1,10 +1,5 @@
 // src/impact/impact.controller.ts
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ImpactService } from './impact.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -39,14 +34,8 @@ export class ImpactController {
    * Se `days` não for fornecido, assume 7.
    */
   @Get('summary/days')
-  getSummaryForLastDays(
-    @CurrentUser() user: JwtPayload,
-    @Query('days') days = '7',
-  ) {
-    return this.impactService.getSummaryForLastDays(
-      user.sub,
-      Number(days),
-    );
+  getSummaryForLastDays(@CurrentUser() user: JwtPayload, @Query('days') days = '7') {
+    return this.impactService.getSummaryForLastDays(user.sub, Number(days));
   }
 
   /**
@@ -62,11 +51,7 @@ export class ImpactController {
   ) {
     const fromDate = new Date(from);
     const toDate = new Date(to);
-    return this.impactService.getSummaryForRange(
-      user.sub,
-      fromDate,
-      toDate,
-    );
+    return this.impactService.getSummaryForRange(user.sub, fromDate, toDate);
   }
 
   /**
@@ -93,10 +78,6 @@ export class ImpactController {
     @Query('type') type: EcoPeriodType = EcoPeriodType.DAY,
     @Query('limit') limit = '30',
   ) {
-    return this.impactService.getEcoStatsTimeline(
-      user.sub,
-      type,
-      Number(limit),
-    );
+    return this.impactService.getEcoStatsTimeline(user.sub, type, Number(limit));
   }
 }

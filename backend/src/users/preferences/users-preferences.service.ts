@@ -69,9 +69,7 @@ export class UsersPreferencesService {
       // log simples para debug server-side
       console.error('ERROR usersPreferences.updatePreferences', err);
       // envolver num InternalServerErrorException para não vazar detalhe de erro interno
-      throw new InternalServerErrorException(
-        err?.message || 'Failed to update preferences',
-      );
+      throw new InternalServerErrorException(err?.message || 'Failed to update preferences');
     }
   }
 

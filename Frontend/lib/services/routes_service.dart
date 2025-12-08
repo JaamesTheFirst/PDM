@@ -1,37 +1,19 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 
 /// Base URL para o módulo de planeamento de rotas.
 ///
 /// Pode ser sobreposta via:
 /// `--dart-define=ROUTES_BASE_URL=http://...`
+/// Se não estiver definida, usa o valor do [AppConfig] gerado pelo spin-up script.
 const String _envRoutesBase =
     String.fromEnvironment('ROUTES_BASE_URL', defaultValue: '');
 
-/// Calcula a base URL usada pelo [RoutesService].
-String _computeRoutesBase() {
-  if (_envRoutesBase.isNotEmpty) return _envRoutesBase;
-  if (kIsWeb) return 'http://localhost:3000';
-  try {
-    if (Platform.isAndroid) {
-      const String custom =
-          String.fromEnvironment('ROUTES_BASE_URL', defaultValue: '');
-      if (custom.isNotEmpty) return custom;
-      // Android emulator -> host machine (10.0.2.2)
-      // Para dispositivos físicos, ROUTES_BASE_URL deve ser definido.
-      return 'http://10.0.2.2:3000';
-    }
-  } catch (_) {
-    // Platform não disponível no web.
-  }
-  return 'http://localhost:3000';
-}
-
 /// Base URL efectiva usada para planeamento de rotas.
-final String kRoutesBaseUrl = _computeRoutesBase();
+final String kRoutesBaseUrl =
+    _envRoutesBase.isNotEmpty ? _envRoutesBase : AppConfig.apiBaseUrl;
 
 /// Leg (segmento) de um itinerário OTP.
 class OtpLeg {

@@ -43,9 +43,7 @@ export class MetroService {
     const legacyApiKey = this.config.get<string>('METRO_LISBOA_API_KEY');
 
     try {
-      const bearerToken = legacyApiKey
-        ? legacyApiKey
-        : await this.tokenService.getAccessToken();
+      const bearerToken = legacyApiKey ? legacyApiKey : await this.tokenService.getAccessToken();
       const response = await firstValueFrom(
         this.http.get<MetroApiResponse<T>>(path, {
           headers: {
@@ -57,8 +55,7 @@ export class MetroService {
 
       return response.data.resposta;
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown Metro API error';
+      const message = error instanceof Error ? error.message : 'Unknown Metro API error';
       this.logger.error(`Metro API request failed for path ${path}: ${message}`);
       throw new BadGatewayException('Failed to reach Metro Lisboa API');
     }
@@ -67,29 +64,21 @@ export class MetroService {
   // ===== Tempos de espera =====
 
   getAllStationWaitingTimes(): Promise<MetroWaitingTimeDto[]> {
-    return this.callMetroApi<MetroWaitingTimeDto[]>(
-      '/tempoEspera/Estacao/todos',
-    );
+    return this.callMetroApi<MetroWaitingTimeDto[]>('/tempoEspera/Estacao/todos');
   }
 
   getStationWaitingTimes(stationId: string): Promise<MetroWaitingTimeDto[]> {
-    return this.callMetroApi<MetroWaitingTimeDto[]>(
-      `/tempoEspera/Estacao/${stationId}`,
-    );
+    return this.callMetroApi<MetroWaitingTimeDto[]>(`/tempoEspera/Estacao/${stationId}`);
   }
 
   getLineWaitingTimes(lineId: string): Promise<MetroWaitingTimeDto[]> {
-    return this.callMetroApi<MetroWaitingTimeDto[]>(
-      `/tempoEspera/Linha/${lineId}`,
-    );
+    return this.callMetroApi<MetroWaitingTimeDto[]>(`/tempoEspera/Linha/${lineId}`);
   }
 
   // ===== Informação de estações =====
 
   getStationInfo(stationId: string): Promise<MetroStationInfoDto[]> {
-    return this.callMetroApi<MetroStationInfoDto[]>(
-      `/infoEstacao/${stationId}`,
-    );
+    return this.callMetroApi<MetroStationInfoDto[]>(`/infoEstacao/${stationId}`);
   }
 
   getAllStationsInfo(): Promise<MetroStationInfoDto[]> {
@@ -103,9 +92,7 @@ export class MetroService {
   }
 
   getLineStatus(lineId: string): Promise<Partial<MetroLineStatusSummaryDto>> {
-    return this.callMetroApi<Partial<MetroLineStatusSummaryDto>>(
-      `/estadoLinha/${lineId}`,
-    );
+    return this.callMetroApi<Partial<MetroLineStatusSummaryDto>>(`/estadoLinha/${lineId}`);
   }
 
   // ===== Destinos =====

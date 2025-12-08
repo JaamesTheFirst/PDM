@@ -1,12 +1,5 @@
 // src/flixbus/flixbus.controller.ts
-import {
-  Controller,
-  Get,
-  Query,
-  Param,
-  DefaultValuePipe,
-  ParseIntPipe,
-} from '@nestjs/common';
+import { Controller, Get, Query, Param, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { FlixbusService } from './flixbus.service';
 import {
   FlixbusGraphRouteDto,

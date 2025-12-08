@@ -53,7 +53,7 @@ const defaultOccupancyRates: Record<string, number> = {
   RAIL: 150.0,
   TRAIN: 150.0,
   R: 150.0,
-  IC: 150.0,
+  IC: 120.0, // Intercity trains typically have lower occupancy than regional trains
   COACH: 30.0,
   FLIXBUS: 30.0,
   CAR: 1.5,
@@ -84,9 +84,7 @@ export interface EcoScoreLegInput {
  *  - heurísticas para viagens zero-emissão e car-only
  *  - mapeamento final para score 0–100
  */
-export function calculateEcoScoreFromLegs(
-  legs: EcoScoreLegInput[],
-): EcoScoreResultBackend {
+export function calculateEcoScoreFromLegs(legs: EcoScoreLegInput[]): EcoScoreResultBackend {
   let totalCo2Kg = 0;
   let totalDistanceKm = 0;
   let hasPhysicalActivity = false;
@@ -102,12 +100,7 @@ export function calculateEcoScoreFromLegs(
 
     // fallback: tentar deduzir categoria pelo nome do modo
     if (emissionFactor === 0 && mode !== 'WALK' && mode !== 'WALKING') {
-      if (
-        mode.includes('RAIL') ||
-        mode.includes('TRAIN') ||
-        mode === 'R' ||
-        mode === 'IC'
-      ) {
+      if (mode.includes('RAIL') || mode.includes('TRAIN') || mode === 'R' || mode === 'IC') {
         emissionFactor = defaultEmissionFactors['RAIL'] ?? 0.014;
       } else if (mode.includes('BUS') || mode === 'COACH') {
         emissionFactor = defaultEmissionFactors['BUS'] ?? 0.089;
@@ -122,12 +115,7 @@ export function calculateEcoScoreFromLegs(
     let occupancy = defaultOccupancyRates[mode];
 
     if (occupancy == null && mode !== 'WALK' && mode !== 'WALKING') {
-      if (
-        mode.includes('RAIL') ||
-        mode.includes('TRAIN') ||
-        mode === 'R' ||
-        mode === 'IC'
-      ) {
+      if (mode.includes('RAIL') || mode.includes('TRAIN') || mode === 'R' || mode === 'IC') {
         occupancy = mode === 'IC' ? 120 : 150;
       } else if (mode.includes('BUS') || mode === 'COACH') {
         occupancy = mode === 'FLIXBUS' || mode === 'COACH' ? 30 : 20;
@@ -171,8 +159,7 @@ export function calculateEcoScoreFromLegs(
     primaryMode = 'WALKING';
   }
 
-  const co2PerKm =
-    totalDistanceKm > 0 ? totalCo2Kg / totalDistanceKm : 0;
+  const co2PerKm = totalDistanceKm > 0 ? totalCo2Kg / totalDistanceKm : 0;
 
   // ------------- detetar viagem zero-emissão -------------
   let isOnlyZeroEmission = true;
@@ -181,12 +168,7 @@ export function calculateEcoScoreFromLegs(
     let emissionFactor = defaultEmissionFactors[mode] ?? 0;
 
     if (emissionFactor === 0 && mode !== 'WALK' && mode !== 'WALKING') {
-      if (
-        mode.includes('RAIL') ||
-        mode.includes('TRAIN') ||
-        mode === 'R' ||
-        mode === 'IC'
-      ) {
+      if (mode.includes('RAIL') || mode.includes('TRAIN') || mode === 'R' || mode === 'IC') {
         emissionFactor = defaultEmissionFactors['RAIL'] ?? 0.014;
       } else if (mode.includes('BUS') || mode === 'COACH') {
         emissionFactor = defaultEmissionFactors['BUS'] ?? 0.089;
@@ -209,18 +191,13 @@ export function calculateEcoScoreFromLegs(
   let isCarOnly = true;
   for (const leg of legs) {
     const mode = (leg.mode || '').toUpperCase();
-    if (
-      mode !== 'WALK' &&
-      mode !== 'WALKING' &&
-      mode !== 'CAR' &&
-      !mode.includes('CAR')
-    ) {
+    if (mode !== 'WALK' && mode !== 'WALKING' && mode !== 'CAR' && !mode.includes('CAR')) {
       isCarOnly = false;
       break;
     }
   }
   if (
-    !legs.some((l) => {
+    !legs.some(l => {
       const m = (l.mode || '').toUpperCase();
       return m === 'CAR' || m.includes('CAR');
     })
@@ -232,11 +209,7 @@ export function calculateEcoScoreFromLegs(
   let hasFossilBus = false;
   for (const leg of legs) {
     const mode = (leg.mode || '').toUpperCase();
-    if (
-      mode.includes('BUS') &&
-      !mode.includes('ELECTRIC') &&
-      !mode.includes('HYBRID')
-    ) {
+    if (mode.includes('BUS') && !mode.includes('ELECTRIC') && !mode.includes('HYBRID')) {
       hasFossilBus = true;
       break;
     }
@@ -254,8 +227,7 @@ export function calculateEcoScoreFromLegs(
     if (co2PerKmGram >= 120) {
       baseScore = 0;
     } else if (co2PerKmGram >= 80) {
-      baseScore =
-        20 - ((co2PerKmGram - 80) / 40) * 20;
+      baseScore = 20 - ((co2PerKmGram - 80) / 40) * 20;
     } else {
       baseScore = 20;
     }
@@ -267,20 +239,15 @@ export function calculateEcoScoreFromLegs(
     if (co2PerKmGram <= 0.1) {
       baseScore = 95 - (co2PerKmGram / 0.1) * 5;
     } else if (co2PerKmGram <= 1) {
-      baseScore =
-        90 - ((co2PerKmGram - 0.1) / 0.9) * 10;
+      baseScore = 90 - ((co2PerKmGram - 0.1) / 0.9) * 10;
     } else if (co2PerKmGram <= 5) {
-      baseScore =
-        80 - ((co2PerKmGram - 1) / 4) * 20;
+      baseScore = 80 - ((co2PerKmGram - 1) / 4) * 20;
     } else if (co2PerKmGram <= 20) {
-      baseScore =
-        60 - ((co2PerKmGram - 5) / 15) * 20;
+      baseScore = 60 - ((co2PerKmGram - 5) / 15) * 20;
     } else if (co2PerKmGram <= 50) {
-      baseScore =
-        40 - ((co2PerKmGram - 20) / 30) * 20;
+      baseScore = 40 - ((co2PerKmGram - 20) / 30) * 20;
     } else {
-      baseScore =
-        20 - ((co2PerKmGram - 50) / 150) * 20;
+      baseScore = 20 - ((co2PerKmGram - 50) / 150) * 20;
     }
 
     // penalização se usar autocarros fósseis
@@ -321,8 +288,7 @@ export function calculateEcoScoreForPeriod(params: {
   hasAnyActiveTrip: boolean;
   isOnlyZeroEmission: boolean;
 }): number {
-  const { totalCo2Kg, totalDistanceKm, hasAnyActiveTrip, isOnlyZeroEmission } =
-    params;
+  const { totalCo2Kg, totalDistanceKm, hasAnyActiveTrip, isOnlyZeroEmission } = params;
 
   if (totalDistanceKm <= 0) {
     return 0;

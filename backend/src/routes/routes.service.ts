@@ -1,8 +1,5 @@
 // src/routes/routes.service.ts
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   Prisma,
@@ -11,11 +8,7 @@ import {
   EcoPeriodType,
 } from '@prisma/client';
 import { OtpService, OtpItinerary, OtpLeg } from './otp.service';
-import {
-  PlanItineraryDto,
-  FilterMode,
-  TransportMode,
-} from './dto/plan-itinerary.dto';
+import { PlanItineraryDto, FilterMode, TransportMode } from './dto/plan-itinerary.dto';
 import { PlanGranularDto } from './dto/plan-granular.dto';
 import { SaveRouteDto } from './dto/save-route.dto';
 import { ListHistoryQueryDto } from './dto/list-history.dto';
@@ -97,7 +90,7 @@ export class RoutesService {
     RAIL: 150,
     TRAIN: 150,
     R: 150,
-    IC: 150,
+    IC: 120, // Intercity trains typically have lower occupancy than regional trains
     COACH: 30,
     FLIXBUS: 30,
     CAR: 1.5,
@@ -130,12 +123,7 @@ export class RoutesService {
 
       // tentativas de mapear modos variantes do OTP para um conhecido
       if (emissionFactor === 0 && mode !== 'WALK' && mode !== 'WALKING') {
-        if (
-          mode.includes('RAIL') ||
-          mode.includes('TRAIN') ||
-          mode === 'R' ||
-          mode === 'IC'
-        ) {
+        if (mode.includes('RAIL') || mode.includes('TRAIN') || mode === 'R' || mode === 'IC') {
           emissionFactor = this.defaultEmissionFactors['RAIL'] ?? 0.014;
         } else if (mode.includes('BUS') || mode === 'COACH') {
           emissionFactor = this.defaultEmissionFactors['BUS'] ?? 0.089;
@@ -151,21 +139,11 @@ export class RoutesService {
       // ocupação
       let occupancy = this.defaultOccupancyRates[mode];
 
-      if (
-        occupancy == null &&
-        mode !== 'WALK' &&
-        mode !== 'WALKING'
-      ) {
-        if (
-          mode.includes('RAIL') ||
-          mode.includes('TRAIN') ||
-          mode === 'R' ||
-          mode === 'IC'
-        ) {
+      if (occupancy == null && mode !== 'WALK' && mode !== 'WALKING') {
+        if (mode.includes('RAIL') || mode.includes('TRAIN') || mode === 'R' || mode === 'IC') {
           occupancy = mode === 'IC' ? 120 : 150;
         } else if (mode.includes('BUS') || mode === 'COACH') {
-          occupancy =
-            mode === 'FLIXBUS' || mode === 'COACH' ? 30 : 20;
+          occupancy = mode === 'FLIXBUS' || mode === 'COACH' ? 30 : 20;
         } else if (mode.includes('METRO') || mode.includes('SUBWAY')) {
           occupancy = 100;
         } else if (mode.includes('TRAM')) {
@@ -197,9 +175,7 @@ export class RoutesService {
   /**
    * Converte o modo textual do OTP para o enum TransportMode do Prisma.
    */
-  private mapOtpModeToPrisma(
-    mode: string,
-  ): PrismaTransportMode | null {
+  private mapOtpModeToPrisma(mode: string): PrismaTransportMode | null {
     switch (mode) {
       case 'WALK':
         return PrismaTransportMode.WALKING;
@@ -227,16 +203,12 @@ export class RoutesService {
    * Determina o modo principal do itinerary (perna mais longa, excluindo WALK).
    */
   private getPrimaryMode(it: OtpItinerary): PrismaTransportMode {
-    const nonWalkLegs = it.legs.filter((l) => l.mode !== 'WALK');
+    const nonWalkLegs = it.legs.filter(l => l.mode !== 'WALK');
     if (nonWalkLegs.length === 0) {
       return PrismaTransportMode.WALKING;
     }
-    const longest = nonWalkLegs.reduce((a, b) =>
-      a.distance > b.distance ? a : b,
-    );
-    return (
-      this.mapOtpModeToPrisma(longest.mode) ?? PrismaTransportMode.WALKING
-    );
+    const longest = nonWalkLegs.reduce((a, b) => (a.distance > b.distance ? a : b));
+    return this.mapOtpModeToPrisma(longest.mode) ?? PrismaTransportMode.WALKING;
   }
 
   /**
@@ -258,30 +230,18 @@ export class RoutesService {
    * em cima de um OtpItinerary.
    */
   private enrichItinerary(it: OtpItinerary): EnrichedItinerary {
-    const modesSet = new Set<string>(it.legs.map((l) => l.mode));
-    const nonWalkLegs = it.legs.filter((l) => l.mode !== 'WALK');
+    const modesSet = new Set<string>(it.legs.map(l => l.mode));
+    const nonWalkLegs = it.legs.filter(l => l.mode !== 'WALK');
 
     const primary =
       nonWalkLegs.length === 0
         ? 'WALK'
-        : nonWalkLegs.reduce((a, b) =>
-            a.distance > b.distance ? a : b,
-          ).mode;
+        : nonWalkLegs.reduce((a, b) => (a.distance > b.distance ? a : b)).mode;
 
-    const totalDistanceMeters = Math.round(
-      it.legs.reduce(
-        (sum, l) => sum + (l.distance || 0),
-        0,
-      ),
-    );
+    const totalDistanceMeters = Math.round(it.legs.reduce((sum, l) => sum + (l.distance || 0), 0));
 
     const totalWalkDistanceMeters = Math.round(
-      it.legs
-        .filter((l) => l.mode === 'WALK')
-        .reduce(
-          (sum, l) => sum + (l.distance || 0),
-          0,
-        ),
+      it.legs.filter(l => l.mode === 'WALK').reduce((sum, l) => sum + (l.distance || 0), 0),
     );
 
     const modes = Array.from(modesSet);
@@ -302,33 +262,20 @@ export class RoutesService {
   /**
    * Verifica se um itinerary passa o filtro FilterMode.
    */
-  private passesFilterMode(
-    it: EnrichedItinerary,
-    filterMode: FilterMode,
-  ): boolean {
-    const nonWalkModes = new Set(
-      it.legs
-        .filter((l) => l.mode !== 'WALK')
-        .map((l) => l.mode),
-    );
+  private passesFilterMode(it: EnrichedItinerary, filterMode: FilterMode): boolean {
+    const nonWalkModes = new Set(it.legs.filter(l => l.mode !== 'WALK').map(l => l.mode));
 
     switch (filterMode) {
       case FilterMode.WALK_ONLY:
         return nonWalkModes.size === 0;
 
       case FilterMode.BUS_ONLY:
-        return (
-          it.modes.includes('BUS') &&
-          Array.from(nonWalkModes).every((m) => m === 'BUS')
-        );
+        return it.modes.includes('BUS') && Array.from(nonWalkModes).every(m => m === 'BUS');
 
       case FilterMode.RAIL_ONLY:
         return (
-          (it.modes.includes('RAIL') ||
-            it.modes.includes('TRAIN')) &&
-          Array.from(nonWalkModes).every(
-            (m) => m === 'RAIL' || m === 'TRAIN',
-          )
+          (it.modes.includes('RAIL') || it.modes.includes('TRAIN')) &&
+          Array.from(nonWalkModes).every(m => m === 'RAIL' || m === 'TRAIN')
         );
 
       case FilterMode.METRO_ONLY:
@@ -336,27 +283,14 @@ export class RoutesService {
           (it.modes.includes('SUBWAY') ||
             it.modes.includes('TRAM') ||
             it.modes.includes('METRO')) &&
-          Array.from(nonWalkModes).every(
-            (m) =>
-              m === 'SUBWAY' ||
-              m === 'TRAM' ||
-              m === 'METRO',
-          )
+          Array.from(nonWalkModes).every(m => m === 'SUBWAY' || m === 'TRAM' || m === 'METRO')
         );
 
       case FilterMode.CAR_ONLY:
-        return (
-          it.modes.includes('CAR') &&
-          Array.from(nonWalkModes).every((m) => m === 'CAR')
-        );
+        return it.modes.includes('CAR') && Array.from(nonWalkModes).every(m => m === 'CAR');
 
       case FilterMode.BICYCLE_ONLY:
-        return (
-          it.modes.includes('BICYCLE') &&
-          Array.from(nonWalkModes).every(
-            (m) => m === 'BICYCLE',
-          )
-        );
+        return it.modes.includes('BICYCLE') && Array.from(nonWalkModes).every(m => m === 'BICYCLE');
 
       case FilterMode.ANY:
       default:
@@ -372,19 +306,15 @@ export class RoutesService {
    * - enriquece itinerários
    * - aplica filtros (FilterMode + maxWalkDistanceMeters)
    */
-  async planAndFilter(
-    dto: PlanItineraryDto,
-  ): Promise<PlannedRoutesResponse> {
+  async planAndFilter(dto: PlanItineraryDto): Promise<PlannedRoutesResponse> {
     const otpPlan = await this.otp.plan(dto);
     const original = otpPlan.itineraries || [];
-    const enriched = original.map((it) =>
-      this.enrichItinerary(it),
-    );
+    const enriched = original.map(it => this.enrichItinerary(it));
 
     const filterMode = dto.filterMode ?? FilterMode.ANY;
     const maxWalk = dto.maxWalkDistanceMeters;
 
-    const filtered = enriched.filter((it) => {
+    const filtered = enriched.filter(it => {
       if (typeof maxWalk === 'number') {
         if (it.totalWalkDistanceMeters > maxWalk) return false;
       }
@@ -410,12 +340,10 @@ export class RoutesService {
    * - baseModes → controlam o que o OTP pode usar
    * - transitTypes → filtros extra feitos no backend
    */
-  async planGranular(
-    dto: PlanGranularDto,
-  ): Promise<PlannedRoutesResponse> {
+  async planGranular(dto: PlanGranularDto): Promise<PlannedRoutesResponse> {
     const baseModes =
       dto.baseModes && dto.baseModes.length > 0
-        ? dto.baseModes.map((m) => m as TransportMode)
+        ? dto.baseModes.map(m => m as TransportMode)
         : [TransportMode.WALK, TransportMode.TRANSIT];
 
     const planDto: PlanItineraryDto = {
@@ -433,18 +361,12 @@ export class RoutesService {
 
     const otpPlan = await this.otp.plan(planDto);
     const original = otpPlan.itineraries || [];
-    const enriched = original.map((it) =>
-      this.enrichItinerary(it),
-    );
+    const enriched = original.map(it => this.enrichItinerary(it));
 
     let filtered = enriched;
     if (dto.transitTypes && dto.transitTypes.length > 0) {
-      filtered = enriched.filter((it) => {
-        const nonWalkModes = new Set(
-          it.legs
-            .filter((l) => l.mode !== 'WALK')
-            .map((l) => l.mode),
-        );
+      filtered = enriched.filter(it => {
+        const nonWalkModes = new Set(it.legs.filter(l => l.mode !== 'WALK').map(l => l.mode));
 
         const transitTypesInItinerary = new Set<string>();
 
@@ -454,50 +376,28 @@ export class RoutesService {
 
           if (mode === 'BUS' || mode.includes('BUS')) {
             transitTypesInItinerary.add('BUS');
-          } else if (
-            mode === 'RAIL' ||
-            mode === 'TRAIN' ||
-            mode === 'R' ||
-            mode === 'IC'
-          ) {
+          } else if (mode === 'RAIL' || mode === 'TRAIN' || mode === 'R' || mode === 'IC') {
             transitTypesInItinerary.add('RAIL');
-          } else if (
-            mode === 'METRO' ||
-            mode === 'SUBWAY'
-          ) {
+          } else if (mode === 'METRO' || mode === 'SUBWAY') {
             transitTypesInItinerary.add('METRO');
           } else if (mode === 'TRAM') {
             transitTypesInItinerary.add('TRAM');
-          } else if (
-            mode === 'BICYCLE' ||
-            mode === 'BIKE' ||
-            mode.includes('BIKE')
-          ) {
+          } else if (mode === 'BICYCLE' || mode === 'BIKE' || mode.includes('BIKE')) {
             // deteção de bike-share com rentedBike + heurísticas de nome
-            const isBikeShare = leg.rentedBike === true ||
+            const isBikeShare =
+              leg.rentedBike === true ||
               mode.includes('SHARE') ||
-              leg.route?.longName
-                ?.toUpperCase()
-                .includes('GIRA') ||
-              leg.route?.longName
-                ?.toUpperCase()
-                .includes('BIKE SHARE') ||
-              leg.route?.shortName
-                ?.toUpperCase()
-                .includes('GIRA');
+              leg.route?.longName?.toUpperCase().includes('GIRA') ||
+              leg.route?.longName?.toUpperCase().includes('BIKE SHARE') ||
+              leg.route?.shortName?.toUpperCase().includes('GIRA');
 
             if (isBikeShare) {
               transitTypesInItinerary.add('BICYCLE_SHARE');
             }
-          } else if (
-            mode === 'SCOOTER' ||
-            mode.includes('SCOOTER')
-          ) {
+          } else if (mode === 'SCOOTER' || mode.includes('SCOOTER')) {
             const isScooterShare =
               mode.includes('SHARE') ||
-              leg.route?.longName
-                ?.toUpperCase()
-                .includes('SCOOTER SHARE');
+              leg.route?.longName?.toUpperCase().includes('SCOOTER SHARE');
 
             if (isScooterShare) {
               transitTypesInItinerary.add('SCOOTER_SHARE');
@@ -507,21 +407,14 @@ export class RoutesService {
 
         // caso de itinerário só com WALK/BICYCLE/CAR
         if (transitTypesInItinerary.size === 0) {
-          const hasWalk =
-            nonWalkModes.size === 0 &&
-            baseModes.includes(TransportMode.WALK);
+          const hasWalk = nonWalkModes.size === 0 && baseModes.includes(TransportMode.WALK);
           const hasBicycle =
-            nonWalkModes.has('BICYCLE') &&
-            baseModes.includes(TransportMode.BICYCLE);
-          const hasCar =
-            nonWalkModes.has('CAR') &&
-            baseModes.includes(TransportMode.CAR);
+            nonWalkModes.has('BICYCLE') && baseModes.includes(TransportMode.BICYCLE);
+          const hasCar = nonWalkModes.has('CAR') && baseModes.includes(TransportMode.CAR);
           return hasWalk || hasBicycle || hasCar;
         }
 
-        const selectedTypes = new Set(
-          dto.transitTypes.map((t) => t.toUpperCase()),
-        );
+        const selectedTypes = new Set(dto.transitTypes.map(t => t.toUpperCase()));
 
         // se usar algum tipo não selecionado → exclui
         for (const type of transitTypesInItinerary) {
@@ -535,11 +428,7 @@ export class RoutesService {
     }
 
     if (typeof dto.maxWalkDistanceMeters === 'number') {
-      filtered = filtered.filter(
-        (it) =>
-          it.totalWalkDistanceMeters <=
-          dto.maxWalkDistanceMeters!,
-      );
+      filtered = filtered.filter(it => it.totalWalkDistanceMeters <= dto.maxWalkDistanceMeters!);
     }
 
     return {
@@ -583,10 +472,7 @@ export class RoutesService {
    * Persiste um itinerary do OTP como RouteHistory para o utilizador.
    * Também atualiza EcoStatsAggregate via ImpactService.
    */
-  async saveItineraryForUser(
-    userId: string,
-    dto: SaveRouteDto,
-  ) {
+  async saveItineraryForUser(userId: string, dto: SaveRouteDto) {
     const it = dto.itinerary;
     if (!it || !it.legs || it.legs.length === 0) {
       throw new Error('Itinerary inválido (sem legs)');
@@ -600,27 +486,18 @@ export class RoutesService {
       originName = firstLeg.from.name || 'Origem';
     }
 
-    const originLatitude =
-      dto.originLatitude ?? firstLeg.from.lat;
-    const originLongitude =
-      dto.originLongitude ?? firstLeg.from.lon;
+    const originLatitude = dto.originLatitude ?? firstLeg.from.lat;
+    const originLongitude = dto.originLongitude ?? firstLeg.from.lon;
 
     let destinationName = dto.destinationName?.trim();
     if (!destinationName || destinationName.length === 0) {
       destinationName = lastLeg.to.name || 'Destino';
     }
 
-    const destinationLatitude =
-      dto.destinationLatitude ?? lastLeg.to.lat;
-    const destinationLongitude =
-      dto.destinationLongitude ?? lastLeg.to.lon;
+    const destinationLatitude = dto.destinationLatitude ?? lastLeg.to.lat;
+    const destinationLongitude = dto.destinationLongitude ?? lastLeg.to.lon;
 
-    const distanceMeters = Math.round(
-      it.legs.reduce(
-        (sum, leg) => sum + (leg.distance || 0),
-        0,
-      ),
-    );
+    const distanceMeters = Math.round(it.legs.reduce((sum, leg) => sum + (leg.distance || 0), 0));
     const durationSeconds = Math.round(it.duration);
 
     const startedAt = new Date(firstLeg.startTime);
@@ -684,22 +561,15 @@ export class RoutesService {
    * Lista histórico de rotas de um utilizador autenticado,
    * com filtros simples por status e primaryMode.
    */
-  async listHistoryForUser(
-    userId: string,
-    query: ListHistoryQueryDto,
-  ) {
+  async listHistoryForUser(userId: string, query: ListHistoryQueryDto) {
     const where: Prisma.RouteHistoryWhereInput = { userId };
 
     if (query.status && query.status in RouteStatus) {
       where.status = query.status as RouteStatus;
     }
 
-    if (
-      query.primaryMode &&
-      query.primaryMode in PrismaTransportMode
-    ) {
-      where.primaryMode =
-        query.primaryMode as PrismaTransportMode;
+    if (query.primaryMode && query.primaryMode in PrismaTransportMode) {
+      where.primaryMode = query.primaryMode as PrismaTransportMode;
     }
 
     return this.prisma.routeHistory.findMany({
