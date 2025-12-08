@@ -1,7 +1,7 @@
 // lib/features/schedules/data/carris_api.dart
 import 'dart:async';
 import 'dart:convert';
-
+import '../../../services/api_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -79,10 +79,10 @@ class CarrisStop {
 
 /// Dados brutos do stoptime OTP
 class CarrisStopTime {
-  final int serviceDay;          // epoch seconds
-  final int scheduledDeparture;  // secs desde serviceDay
-  final int realtimeDeparture;   // secs desde serviceDay
-  final int departureDelay;      // secs
+  final int serviceDay; // epoch seconds
+  final int scheduledDeparture; // secs desde serviceDay
+  final int realtimeDeparture; // secs desde serviceDay
+  final int departureDelay; // secs
   final String? stopHeadsign;
   final String? tripHeadsign;
   final String? routeId;
@@ -175,12 +175,13 @@ class CarrisUpcomingDeparture {
 }
 
 class CarrisApiClient {
-  CarrisApiClient({http.Client? client}) : _client = client ?? http.Client();
+  CarrisApiClient({http.Client? client, String? baseUrl})
+      : _client = client ?? http.Client(),
+        _baseUrl = baseUrl ?? kBaseUrl;
 
   final http.Client _client;
+  final String _baseUrl;
 
-  // mesmo esquema do CP
-  static const String _baseUrl = String.fromEnvironment('BASE_URL');
   static const Duration _timeout = Duration(seconds: 8);
 
   Uri _buildUri(String path, [Map<String, dynamic>? query]) {

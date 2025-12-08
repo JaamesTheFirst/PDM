@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../../services/api_client.dart';
 
 /// Modelo de uma paragem do Metro do Porto (vinda do backend)
 class MetroPortoStop {
@@ -47,17 +48,13 @@ class MetroPortoDepartureRow {
 }
 
 class MetroPortoApiClient {
-  // ATENÇÃO: garante que isto bate certo com o resto da app
-  static const String _defaultBaseUrl =
-      kIsWeb ? 'http://localhost:3000' : 'http://192.168.1.244:3000';
-
   final String baseUrl;
   final http.Client _client;
 
   MetroPortoApiClient({
     String? baseUrl,
     http.Client? client,
-  })  : baseUrl = baseUrl ?? _defaultBaseUrl,
+  })  : baseUrl = baseUrl ?? kBaseUrl,
         _client = client ?? http.Client();
 
   Uri _uri(String path, [Map<String, String>? query]) {

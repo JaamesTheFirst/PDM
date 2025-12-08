@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../../services/api_client.dart';
 
 /// Resultado de pesquisa de estações CP (GET /cp/stops/search)
 class CpStopSearchResult {
@@ -93,12 +94,13 @@ class CpStopBoard {
 }
 
 class CpApiClient {
-  CpApiClient({http.Client? client}) : _client = client ?? http.Client();
+  CpApiClient({http.Client? client, String? baseUrl})
+      : _client = client ?? http.Client(),
+        _baseUrl = baseUrl ?? kBaseUrl;
 
   final http.Client _client;
+  final String _baseUrl;
 
-  // ⚠️ METE AQUI O IP DA TUA MÁQUINA
-  static const String _baseUrl = String.fromEnvironment('BASE_URL');
   static const Duration _timeout = Duration(seconds: 8);
 
   Uri _buildUri(String path, [Map<String, dynamic>? query]) {
@@ -196,18 +198,21 @@ class CpApiClient {
       try {
         final resp = await _client.get(uri).timeout(_timeout);
         debugPrint(
-            '[CP API] searchStops($tag) status=${resp.statusCode} bodyLen=${resp.body.length}');
+          '[CP API] searchStops($tag) status=${resp.statusCode} bodyLen=${resp.body.length}',
+        );
 
         if (resp.statusCode != 200) {
           debugPrint(
-              '[CP API] searchStops($tag) HTTP error ${resp.statusCode}');
+            '[CP API] searchStops($tag) HTTP error ${resp.statusCode}',
+          );
           return;
         }
 
         final json = jsonDecode(resp.body);
         if (json is! List) {
           debugPrint(
-              '[CP API] searchStops($tag) resposta inesperada (não é array)');
+            '[CP API] searchStops($tag) resposta inesperada (não é array)',
+          );
           return;
         }
 
@@ -230,13 +235,13 @@ class CpApiClient {
     await _fetch(trimmed, tag: 'orig');
 
     // 2. se normalizado for diferente, tenta também sem acentos/lowercase
-    if (allResults.length < limit &&
-        normalized != trimmed.toLowerCase()) {
+    if (allResults.length < limit && normalized != trimmed.toLowerCase()) {
       await _fetch(normalized, tag: 'norm');
     }
 
     debugPrint(
-        '[CP API] searchStops -> ${allResults.length} resultados finais.');
+      '[CP API] searchStops -> ${allResults.length} resultados finais.',
+    );
     return allResults;
   }
 
@@ -284,22 +289,26 @@ class CpApiClient {
     try {
       final resp = await _client.get(uri).timeout(_timeout);
       debugPrint(
-          '[CP API] getStopBoard status=${resp.statusCode} bodyLen=${resp.body.length}');
+        '[CP API] getStopBoard status=${resp.statusCode} bodyLen=${resp.body.length}',
+      );
 
       if (resp.statusCode != 200) {
         throw Exception(
-            'Erro ${resp.statusCode} ao carregar board de partidas CP.');
+          'Erro ${resp.statusCode} ao carregar board de partidas CP.',
+        );
       }
 
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
       final board = CpStopBoard.fromJson(json);
       debugPrint(
-          '[CP API] getStopBoard -> ${board.departures.length} partidas.');
+        '[CP API] getStopBoard -> ${board.departures.length} partidas.',
+      );
       return board;
     } on TimeoutException {
       debugPrint('[CP API] getStopBoard TIMEOUT');
       throw Exception(
-          'Timeout ao contactar o servidor CP (getStopBoard).');
+        'Timeout ao contactar o servidor CP (getStopBoard).',
+      );
     } catch (e) {
       debugPrint('[CP API] getStopBoard ERROR: $e');
       rethrow;

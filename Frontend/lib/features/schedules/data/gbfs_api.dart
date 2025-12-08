@@ -1,6 +1,7 @@
 // lib/data/gbfs_api.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../services/api_client.dart';
 
 /// Disponibilidade agregada de uma estação GBFS.
 class GbfsStationAvailability {
@@ -190,12 +191,12 @@ class GbfsSystem {
 
 /// Cliente para falar com o teu backend GBFS
 class GbfsApiClient {
-  /// Ajusta isto ao IP/porta do teu backend Nest
+  /// URL base do backend Nest (vem do ApiClient por defeito)
   final String baseUrl;
 
-  const GbfsApiClient({
-    this.baseUrl = 'http://192.168.1.244:3000',
-  });
+  GbfsApiClient({
+    String? baseUrl,
+  }) : baseUrl = baseUrl ?? kBaseUrl;
 
   Uri _uri(String path, [Map<String, dynamic>? query]) {
     return Uri.parse(baseUrl).replace(

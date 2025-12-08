@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../../services/api_client.dart';
 
 class GiraStationRecord {
   final String? estado;
@@ -94,12 +95,7 @@ class GiraApiClient {
     http.Client? client,
     String? baseUrl,
   })  : _client = client ?? http.Client(),
-        baseUrl = baseUrl ??
-            const String.fromEnvironment(
-              'API_BASE_URL',
-              // mete aqui o teu IP se quiseres fixo
-              defaultValue: 'http://192.168.1.244:3000',
-            );
+        baseUrl = baseUrl ?? kBaseUrl;
 
   Uri _uri(String path, [Map<String, String>? query]) {
     return Uri.parse('$baseUrl$path').replace(queryParameters: query);
