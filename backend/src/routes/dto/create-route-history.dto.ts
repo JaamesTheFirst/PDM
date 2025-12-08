@@ -14,7 +14,7 @@ import { RouteStatus, TransportMode } from '@prisma/client';
 
 /**
  * DTO para criar um registo de histórico de rota (RouteHistory).
- * 
+ *
  * Normalmente é preenchido pelo backend quando guarda um itinerary
  * planeado pelo OTP, mas a estrutura suporta também criação manual/
  * futura via API se precisares.

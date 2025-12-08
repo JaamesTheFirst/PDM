@@ -9,10 +9,7 @@ import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { StationType } from '@prisma/client';
-import {
-  GbfsIndexDto,
-  GbfsFeedMeta,
-} from './dto/gbfs-index.dto';
+import { GbfsIndexDto, GbfsFeedMeta } from './dto/gbfs-index.dto';
 import { GbfsSystemDto } from './dto/gbfs-system.dto';
 
 /**
@@ -56,9 +53,7 @@ export class GbfsService {
     });
 
     if (!system) {
-      throw new NotFoundException(
-        `GBFS system with systemId "${systemId}" not found`,
-      );
+      throw new NotFoundException(`GBFS system with systemId "${systemId}" not found`);
     }
 
     return system;
@@ -78,9 +73,7 @@ export class GbfsService {
     const system = await this.findSystemBySystemId(systemId);
 
     if (!system.autoDiscoveryUrl) {
-      throw new BadRequestException(
-        `System "${systemId}" does not have an autoDiscoveryUrl`,
-      );
+      throw new BadRequestException(`System "${systemId}" does not have an autoDiscoveryUrl`);
     }
 
     try {
@@ -88,9 +81,7 @@ export class GbfsService {
       const response = await lastValueFrom(response$);
       return response.data;
     } catch (error) {
-      throw new ServiceUnavailableException(
-        `Failed to fetch gbfs index for system "${systemId}"`,
-      );
+      throw new ServiceUnavailableException(`Failed to fetch gbfs index for system "${systemId}"`);
     }
   }
 
@@ -103,10 +94,7 @@ export class GbfsService {
    *  3. "en"
    *  4. primeiro idioma disponível
    */
-  private pickLanguage(
-    data: GbfsIndexDto['data'],
-    preferredLang?: string,
-  ): string {
+  private pickLanguage(data: GbfsIndexDto['data'], preferredLang?: string): string {
     const langs = Object.keys(data ?? {});
     if (!langs.length) {
       throw new NotFoundException('No languages available in GBFS index');
@@ -145,16 +133,12 @@ export class GbfsService {
    * @throws NotFoundException se o feed não existir para o idioma escolhido
    * @throws ServiceUnavailableException em caso de falha ao fazer fetch
    */
-  async getFeed(
-    systemId: string,
-    feedName: string,
-    lang?: string,
-  ): Promise<any> {
+  async getFeed(systemId: string, feedName: string, lang?: string): Promise<any> {
     const index = await this.getGbfsIndex(systemId);
     const chosenLang = this.pickLanguage(index.data, lang);
     const feeds = index.data[chosenLang]?.feeds ?? [];
 
-    const feed = feeds.find((f) => f.name === feedName);
+    const feed = feeds.find(f => f.name === feedName);
 
     if (!feed) {
       throw new NotFoundException(
@@ -263,9 +247,7 @@ export class GbfsService {
     const infoStations = info?.data?.stations ?? [];
     const statusStations = status?.data?.stations ?? [];
 
-    const statusById = new Map<string, any>(
-      statusStations.map((s: any) => [s.station_id, s]),
-    );
+    const statusById = new Map<string, any>(statusStations.map((s: any) => [s.station_id, s]));
 
     const merged = infoStations.map((s: any) => {
       const st = statusById.get(s.station_id) ?? {};
@@ -302,10 +284,7 @@ export class GbfsService {
     } catch (err) {
       // se o sistema não tiver stations ou o feed falhar,
       // tratamos como "sem estações" para este endpoint
-      if (
-        err instanceof NotFoundException ||
-        err instanceof ServiceUnavailableException
-      ) {
+      if (err instanceof NotFoundException || err instanceof ServiceUnavailableException) {
         return null;
       }
       throw err;
@@ -320,10 +299,7 @@ export class GbfsService {
       return await this.getFreeBikeStatus(systemId, lang);
     } catch (err) {
       // idem para free_bike_status
-      if (
-        err instanceof NotFoundException ||
-        err instanceof ServiceUnavailableException
-      ) {
+      if (err instanceof NotFoundException || err instanceof ServiceUnavailableException) {
         return null;
       }
       throw err;
@@ -373,12 +349,9 @@ export class GbfsService {
     const nowSeconds = Math.floor(Date.now() / 1000);
 
     const last_updated =
-      lastUpdatedCandidates.length > 0
-        ? Math.max(...lastUpdatedCandidates)
-        : nowSeconds;
+      lastUpdatedCandidates.length > 0 ? Math.max(...lastUpdatedCandidates) : nowSeconds;
 
-    const ttl =
-      ttlCandidates.length > 0 ? Math.min(...ttlCandidates) : 60;
+    const ttl = ttlCandidates.length > 0 ? Math.min(...ttlCandidates) : 60;
 
     return {
       system_id: systemId,
@@ -416,9 +389,7 @@ export class GbfsService {
     const infoStations = info?.data?.stations ?? [];
     const statusStations = status?.data?.stations ?? [];
 
-    const statusById = new Map<string, any>(
-      statusStations.map((s: any) => [s.station_id, s]),
-    );
+    const statusById = new Map<string, any>(statusStations.map((s: any) => [s.station_id, s]));
 
     if (!infoStations.length) {
       return {
@@ -456,14 +427,10 @@ export class GbfsService {
                 : null;
 
         const availableVehicles =
-          typeof st.num_bikes_available === 'number'
-            ? st.num_bikes_available
-            : null;
+          typeof st.num_bikes_available === 'number' ? st.num_bikes_available : null;
 
         const availableDocks =
-          typeof st.num_docks_available === 'number'
-            ? st.num_docks_available
-            : null;
+          typeof st.num_docks_available === 'number' ? st.num_docks_available : null;
 
         return this.prisma.station.upsert({
           where: {

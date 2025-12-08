@@ -58,28 +58,20 @@ export class MetroTokenService {
     const clientId = this.config.get<string>('METRO_LISBOA_CLIENT_ID');
     const clientSecret = this.config.get<string>('METRO_LISBOA_CLIENT_SECRET');
     if (!clientId || !clientSecret) {
-      throw new BadGatewayException(
-        'Metro Lisboa client credentials are not configured',
-      );
+      throw new BadGatewayException('Metro Lisboa client credentials are not configured');
     }
 
-    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString(
-      'base64',
-    );
+    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
     try {
       const response = await firstValueFrom(
-        this.http.post<MetroTokenResponse>(
-          '/token',
-          'grant_type=client_credentials',
-          {
-            ...this.tokenHttpConfig,
-            headers: {
-              ...this.tokenHttpConfig.headers,
-              Authorization: `Basic ${basicAuth}`,
-            },
+        this.http.post<MetroTokenResponse>('/token', 'grant_type=client_credentials', {
+          ...this.tokenHttpConfig,
+          headers: {
+            ...this.tokenHttpConfig.headers,
+            Authorization: `Basic ${basicAuth}`,
           },
-        ),
+        }),
       );
 
       this.accessToken = response.data.access_token;

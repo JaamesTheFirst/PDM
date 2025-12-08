@@ -35,14 +35,9 @@ export class StationsService {
       return await this.prisma.station.create({ data: data as any });
     } catch (err: any) {
       // Prisma unique constraint error code = P2002
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         // Determinar campo que falhou (se disponível)
-        const target =
-          (err.meta && (err.meta.target || err.meta.field_name)) ||
-          'unique field';
+        const target = (err.meta && (err.meta.target || err.meta.field_name)) || 'unique field';
         throw new ConflictException(`Unique constraint failed: ${target}`);
       }
       // Outros erros sobem como estão (Internal Server Error por Nest)
@@ -121,10 +116,7 @@ export class StationsService {
     try {
       return await this.prisma.station.delete({ where: { id } });
     } catch (err: any) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2025'
-      ) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
         // Registo a apagar não existe
         return null;
       }
@@ -158,7 +150,7 @@ export class StationsService {
     };
 
     // Conjunto de possíveis valores finais (ex: "BIKE_STATION", "SCOOTER_STATION", ...)
-    const possible = Object.keys(mapping).map((k) => mapping[k]);
+    const possible = Object.keys(mapping).map(k => mapping[k]);
 
     // Se já for um valor final conhecido, aceita.
     if (possible.includes(v)) return v;

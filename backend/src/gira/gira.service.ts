@@ -1,17 +1,9 @@
 // src/gira/gira.service.ts
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { existsSync } from 'fs';
 import { readFile, utils } from 'xlsx';
-import {
-  GiraStationRecordDto,
-  GiraStationsSliceDto,
-} from './dto';
+import { GiraStationRecordDto, GiraStationsSliceDto } from './dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { GiraStation } from '@prisma/client';
 
@@ -41,21 +33,14 @@ export class GiraService implements OnModuleInit {
     const count = await this.prisma.giraStation.count();
 
     if (forceReload || count === 0) {
-      this.logger.log(
-        `Initializing GIRA stations (force=${forceReload}, existing=${count})`,
-      );
+      this.logger.log(`Initializing GIRA stations (force=${forceReload}, existing=${count})`);
       try {
         await this.loadStationsFromFile();
       } catch (err) {
-        this.logger.error(
-          'Error loading GIRA stations on module init',
-          (err as Error).stack,
-        );
+        this.logger.error('Error loading GIRA stations on module init', (err as Error).stack);
       }
     } else {
-      this.logger.log(
-        `GIRA stations already present in DB (${count}); skipping file load`,
-      );
+      this.logger.log(`GIRA stations already present in DB (${count}); skipping file load`);
     }
   }
 
@@ -70,17 +55,14 @@ export class GiraService implements OnModuleInit {
    *                         Se omitido, usa `GIRA_STATIONS_FILE` do .env.
    */
   async loadStationsFromFile(filePathOverride?: string) {
-    const filePath =
-      filePathOverride ?? this.config.get<string>('GIRA_STATIONS_FILE');
+    const filePath = filePathOverride ?? this.config.get<string>('GIRA_STATIONS_FILE');
 
     if (!filePath) {
       this.logger.warn('GIRA_STATIONS_FILE not configured; skipping ingestion');
       return;
     }
     if (!existsSync(filePath)) {
-      throw new BadRequestException(
-        `GIRA stations file not found at path ${filePath}`,
-      );
+      throw new BadRequestException(`GIRA stations file not found at path ${filePath}`);
     }
 
     this.logger.log(`Loading GIRA stations from ${filePath}`);
@@ -138,37 +120,21 @@ export class GiraService implements OnModuleInit {
       const chunk = rows.slice(i, i + chunkSize);
 
       await this.prisma.giraStation.createMany({
-        data: chunk.map((r) => ({
+        data: chunk.map(r => ({
           // mapeamento das colunas do ficheiro para os campos do modelo Prisma
           // (adapta estes nomes às colunas reais do teu ficheiro GIRA)
-          externalId:
-            getString(r, 'ID') ??
-            getString(r, 'Station ID') ??
-            getString(r, 'Id'),
+          externalId: getString(r, 'ID') ?? getString(r, 'Station ID') ?? getString(r, 'Id'),
 
-          name:
-            getString(r, 'Name') ??
-            getString(r, 'Station Name'),
+          name: getString(r, 'Name') ?? getString(r, 'Station Name'),
 
           address: getString(r, 'Address'),
-          parish:
-            getString(r, 'Parish') ??
-            getString(r, 'Freguesia'),
+          parish: getString(r, 'Parish') ?? getString(r, 'Freguesia'),
 
-          latitude:
-            getNumber(r, 'Latitude') ??
-            getNumber(r, 'lat') ??
-            getNumber(r, 'LAT'),
+          latitude: getNumber(r, 'Latitude') ?? getNumber(r, 'lat') ?? getNumber(r, 'LAT'),
 
-          longitude:
-            getNumber(r, 'Longitude') ??
-            getNumber(r, 'lon') ??
-            getNumber(r, 'LON'),
+          longitude: getNumber(r, 'Longitude') ?? getNumber(r, 'lon') ?? getNumber(r, 'LON'),
 
-          capacity:
-            getNumber(r, 'Capacity') ??
-            getNumber(r, 'Docks') ??
-            getNumber(r, 'Capacidade'),
+          capacity: getNumber(r, 'Capacity') ?? getNumber(r, 'Docks') ?? getNumber(r, 'Capacidade'),
 
           // guarda o registo original para não perder colunas
           raw: r as any,
@@ -177,10 +143,7 @@ export class GiraService implements OnModuleInit {
       });
 
       this.logger.log(
-        `Inserted GIRA stations ${i}–${Math.min(
-          i + chunkSize,
-          rows.length,
-        )} / ${rows.length}`,
+        `Inserted GIRA stations ${i}–${Math.min(i + chunkSize, rows.length)} / ${rows.length}`,
       );
     }
 
@@ -215,10 +178,7 @@ export class GiraService implements OnModuleInit {
    *
    * Todos os dados vêm da BD, não do ficheiro original.
    */
-  async getStationsSlice(
-    limit = 100,
-    offset = 0,
-  ): Promise<GiraStationsSliceDto> {
+  async getStationsSlice(limit = 100, offset = 0): Promise<GiraStationsSliceDto> {
     // proteção mínima contra limites abusivos
     const safeLimit = Math.min(Math.max(limit, 1), 1000);
     const safeOffset = Math.max(offset, 0);
@@ -234,7 +194,7 @@ export class GiraService implements OnModuleInit {
 
     return {
       total,
-      slice: rows.map((r) => this.toRecordDto(r)),
+      slice: rows.map(r => this.toRecordDto(r)),
     };
   }
 
@@ -252,9 +212,7 @@ export class GiraService implements OnModuleInit {
    */
   async searchStations(field: string, value: string): Promise<GiraStationRecordDto[]> {
     if (!field || !value) {
-      throw new BadRequestException(
-        'Both "field" and "value" query parameters are required',
-      );
+      throw new BadRequestException('Both "field" and "value" query parameters are required');
     }
 
     const normalizedField = field.toLowerCase().trim();
@@ -269,9 +227,7 @@ export class GiraService implements OnModuleInit {
     const prismaField = fieldMap[normalizedField];
     if (!prismaField) {
       throw new BadRequestException(
-        `Unsupported search field "${field}". Use one of: ${Object.keys(
-          fieldMap,
-        ).join(', ')}`,
+        `Unsupported search field "${field}". Use one of: ${Object.keys(fieldMap).join(', ')}`,
       );
     }
 
@@ -286,6 +242,6 @@ export class GiraService implements OnModuleInit {
       take: 500, // safety limit para não rebentar a resposta
     });
 
-    return rows.map((r) => this.toRecordDto(r));
+    return rows.map(r => this.toRecordDto(r));
   }
 }

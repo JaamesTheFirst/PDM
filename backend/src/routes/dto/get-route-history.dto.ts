@@ -1,11 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsDateString,
-  IsEnum,
-  IsInt,
-  IsOptional,
-  Min,
-} from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
 import { RouteStatus, TransportMode } from '@prisma/client';
 
 /**

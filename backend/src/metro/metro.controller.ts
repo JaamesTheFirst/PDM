@@ -3,14 +3,7 @@
 // Controller único para expor endpoints do Metro de Lisboa (API oficial)
 // e do Metro do Porto (via OTP). Os paths são namespaced para cada cidade.
 
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  DefaultValuePipe,
-  ParseIntPipe,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { MetroService } from './metro.service';
 import { MetroPortoService } from './metro-porto.service';
 

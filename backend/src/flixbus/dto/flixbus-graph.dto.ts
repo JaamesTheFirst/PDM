@@ -76,19 +76,19 @@ export interface FlixbusDepartureDto {
   /** Nome longo da rota */
   routeLongName?: string | null;
   /** Modo (BUS / COACH, etc.) */
-  mode: string;                    // BUS / COACH, etc.
+  mode: string; // BUS / COACH, etc.
   /** Nome da agência (idealmente "FlixBus") */
   agencyName?: string | null;
   /** Destino / headsign da viagem */
   headsign?: string | null;
   /** Partida agendada – segundos desde `serviceDay` */
-  scheduledDeparture: number;      // segundos desde serviceDay
+  scheduledDeparture: number; // segundos desde serviceDay
   /** Partida em tempo real – segundos desde `serviceDay` */
-  realtimeDeparture: number;       // idem, com atraso
+  realtimeDeparture: number; // idem, com atraso
   /** Indica se o valor de realtime é efetivamente em tempo real */
   realtime: boolean;
   /** Epoch (segundos) da meia-noite local do dia de serviço */
-  serviceDay: number;              // epoch (segundos, meia-noite local)
+  serviceDay: number; // epoch (segundos, meia-noite local)
 }
 
 // Resposta bruta de partidas por stop
@@ -116,9 +116,9 @@ export interface FlixbusStopDeparturesDto {
  */
 export interface FlixbusStopBoardRowDto {
   /** Hora de partida formatada ("HH:MM") */
-  time: string;                     // "HH:MM"
+  time: string; // "HH:MM"
   /** Destino da viagem (headsign ou similar) */
-  destination: string | null;       // headsign
+  destination: string | null; // headsign
   /** Nome curto da linha */
   lineShortName?: string | null;
   /** Nome longo da linha */
@@ -126,7 +126,7 @@ export interface FlixbusStopBoardRowDto {
   /** ID GTFS da rota associada */
   routeGtfsId?: string;
   /** Atraso em minutos (pode ser 0) */
-  delayMinutes: number;             // pode ser 0
+  delayMinutes: number; // pode ser 0
   /** Indica se a informação é realtime ou apenas planeada */
   isRealtime: boolean;
 }

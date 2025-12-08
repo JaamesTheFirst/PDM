@@ -1,20 +1,8 @@
 // src/carris/carris.controller.ts
 
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  DefaultValuePipe,
-  ParseIntPipe,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { CarrisService } from './carris.service';
-import {
-  CarrisAgencyDto,
-  CarrisRouteDto,
-  CarrisStopDto,
-  CarrisUpcomingDepartureDto,
-} from './dto';
+import { CarrisAgencyDto, CarrisRouteDto, CarrisStopDto, CarrisUpcomingDepartureDto } from './dto';
 
 /**
  * Controller responsável pela API de dados da Carris.
@@ -87,7 +75,7 @@ export class CarrisController {
 
   /**
    * Lista todas as paragens disponíveis no grafo OTP.
-   * 
+   *
    * Nota: nem todas podem ser necessariamente da Carris,
    * depende de como o grafo foi construído.
    *
@@ -118,9 +106,7 @@ export class CarrisController {
    * @param routeId ID da rota
    */
   @Get('routes/:routeId/stops')
-  getStopsByRoute(
-    @Param('routeId') routeId: string,
-  ): Promise<CarrisStopDto[]> {
+  getStopsByRoute(@Param('routeId') routeId: string): Promise<CarrisStopDto[]> {
     return this.carrisService.getStopsByRoute(routeId);
   }
 

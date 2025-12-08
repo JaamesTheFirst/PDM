@@ -1,11 +1,4 @@
-import {
-  IsArray,
-  IsInt,
-  IsOptional,
-  IsString,
-  IsBoolean,
-  IsNumber,
-} from 'class-validator';
+import { IsArray, IsInt, IsOptional, IsString, IsBoolean, IsNumber } from 'class-validator';
 
 /**
  * DTO para atualização das preferências de navegação/rotas do utilizador.

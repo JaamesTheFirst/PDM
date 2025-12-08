@@ -2,9 +2,9 @@
 
 /**
  * Re-export de todos os DTOs publicamente expostos pelo módulo Carris.
- * 
+ *
  * Permite fazer:
- * 
+ *
  * ```ts
  * import { CarrisRouteDto } from './dto';
  * ```

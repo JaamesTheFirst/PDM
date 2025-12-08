@@ -12,9 +12,7 @@ import { JwtPayload } from '../types/jwt-payload.type';
  *
  * O valor vem de `req.user`, preenchido pelo `JwtStrategy`.
  */
-export const CurrentUser = createParamDecorator(
-  (_: unknown, ctx: ExecutionContext): JwtPayload => {
-    const req = ctx.switchToHttp().getRequest();
-    return req.user as JwtPayload;
-  },
-);
+export const CurrentUser = createParamDecorator((_: unknown, ctx: ExecutionContext): JwtPayload => {
+  const req = ctx.switchToHttp().getRequest();
+  return req.user as JwtPayload;
+});

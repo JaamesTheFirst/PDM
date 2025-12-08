@@ -58,14 +58,10 @@ export class CpController {
    * @throws NotFoundException se o comboio não estiver no feed mais recente.
    */
   @Get('vehicles/:trainNumber')
-  async getVehicle(
-    @Param('trainNumber') trainNumber: string,
-  ): Promise<CpVehicleDto> {
+  async getVehicle(@Param('trainNumber') trainNumber: string): Promise<CpVehicleDto> {
     const vehicle = await this.cpService.getVehicle(trainNumber);
     if (!vehicle) {
-      throw new NotFoundException(
-        `Train ${trainNumber} not found in latest CP feed`,
-      );
+      throw new NotFoundException(`Train ${trainNumber} not found in latest CP feed`);
     }
     return vehicle;
   }
@@ -88,9 +84,7 @@ export class CpController {
    * GET /cp/routes/graph/:routeGtfsId
    */
   @Get('routes/graph/:routeGtfsId')
-  getCpRouteDetail(
-    @Param('routeGtfsId') routeGtfsId: string,
-  ): Promise<CpGraphRouteDetailDto> {
+  getCpRouteDetail(@Param('routeGtfsId') routeGtfsId: string): Promise<CpGraphRouteDetailDto> {
     return this.cpService.getCpRouteDetail(routeGtfsId);
   }
 

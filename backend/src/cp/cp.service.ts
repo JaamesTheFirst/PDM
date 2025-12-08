@@ -1,10 +1,5 @@
 // src/cp/cp.service.ts
-import {
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -263,8 +258,7 @@ export class CpService {
    */
   private get vehiclesApiUrl(): string {
     return (
-      this.configService.get<string>('CP_VEHICLES_API_URL') ||
-      'https://comboios.live/api/vehicles'
+      this.configService.get<string>('CP_VEHICLES_API_URL') || 'https://comboios.live/api/vehicles'
     );
   }
 
@@ -273,9 +267,7 @@ export class CpService {
    * Configurável com `CP_VEHICLES_CACHE_TTL_MS`, default 30s.
    */
   private get cacheTtlMs(): number {
-    const configured = this.configService.get<number>(
-      'CP_VEHICLES_CACHE_TTL_MS',
-    );
+    const configured = this.configService.get<number>('CP_VEHICLES_CACHE_TTL_MS');
     return configured ?? 30_000;
   }
 
@@ -283,9 +275,7 @@ export class CpService {
    * URL do endpoint GraphQL do OTP (router default).
    */
   private get otpGraphQlUrl(): string {
-    const base =
-      this.configService.get<string>('OTP_BASE_URL') ||
-      'http://localhost:8080/otp';
+    const base = this.configService.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
     return `${base.replace(/\/$/, '')}/routers/default/index/graphql`;
   }
 
@@ -308,8 +298,7 @@ export class CpService {
    */
   async getVehicles(forceRefresh = false): Promise<CpVehicleDto[]> {
     const cacheIsFresh =
-      Date.now() - this.cacheTimestamp < this.cacheTtlMs &&
-      this.vehiclesCache.length > 0;
+      Date.now() - this.cacheTimestamp < this.cacheTtlMs && this.vehiclesCache.length > 0;
 
     if (!forceRefresh && cacheIsFresh) {
       return this.vehiclesCache;
@@ -338,9 +327,7 @@ export class CpService {
    */
   async getVehicle(trainNumber: string): Promise<CpVehicleDto | undefined> {
     const vehicles = await this.getVehicles();
-    return vehicles.find(
-      (vehicle) => String(vehicle.trainNumber) === String(trainNumber),
-    );
+    return vehicles.find(vehicle => String(vehicle.trainNumber) === String(trainNumber));
   }
 
   // ===== OTP (GRAFO GTFS) – LINHAS CP =====
@@ -367,24 +354,20 @@ export class CpService {
       );
 
       if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(
-          response.data.errors.map((e) => e.message).join('; '),
-        );
+        this.logger.error(response.data.errors.map(e => e.message).join('; '));
         throw new ServiceUnavailableException('OTP returned an error');
       }
 
       const routes = response.data.data?.routes ?? [];
 
-      const cpRoutes = routes.filter((r) => {
+      const cpRoutes = routes.filter(r => {
         const agencyName = (r.agency?.name || '').toLowerCase();
         const isRail = r.mode === 'RAIL' || r.mode === 'TRAIN';
-        const isCp =
-          agencyName.includes('comboios de portugal') ||
-          agencyName.startsWith('cp ');
+        const isCp = agencyName.includes('comboios de portugal') || agencyName.startsWith('cp ');
         return isRail || isCp;
       });
 
-      return cpRoutes.map((r) => ({
+      return cpRoutes.map(r => ({
         gtfsId: r.gtfsId,
         shortName: r.shortName ?? null,
         longName: r.longName ?? null,
@@ -394,9 +377,7 @@ export class CpService {
       }));
     } catch (error) {
       this.logger.error('Failed to fetch CP routes from OTP', error as any);
-      throw new ServiceUnavailableException(
-        'Failed to fetch CP routes from OTP',
-      );
+      throw new ServiceUnavailableException('Failed to fetch CP routes from OTP');
     }
   }
 
@@ -422,17 +403,13 @@ export class CpService {
       );
 
       if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(
-          response.data.errors.map((e) => e.message).join('; '),
-        );
+        this.logger.error(response.data.errors.map(e => e.message).join('; '));
         throw new ServiceUnavailableException('OTP returned an error');
       }
 
       const route = response.data.data?.route;
       if (!route) {
-        throw new NotFoundException(
-          `Route ${routeGtfsId} not found in OTP graph`,
-        );
+        throw new NotFoundException(`Route ${routeGtfsId} not found in OTP graph`);
       }
 
       // juntar stops de todos os patterns (deduplicados por gtfsId)
@@ -460,13 +437,8 @@ export class CpService {
         stops: Array.from(stopsMap.values()),
       };
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch CP route detail ${routeGtfsId} from OTP`,
-        error as any,
-      );
-      throw new ServiceUnavailableException(
-        'Failed to fetch CP route detail from OTP',
-      );
+      this.logger.error(`Failed to fetch CP route detail ${routeGtfsId} from OTP`, error as any);
+      throw new ServiceUnavailableException('Failed to fetch CP route detail from OTP');
     }
   }
 
@@ -496,16 +468,14 @@ export class CpService {
       );
 
       if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(
-          response.data.errors.map((e) => e.message).join('; '),
-        );
+        this.logger.error(response.data.errors.map(e => e.message).join('; '));
         throw new ServiceUnavailableException('OTP returned an error');
       }
 
       const stops = response.data.data?.stops ?? [];
       const trimmed = stops.slice(0, limit);
 
-      return trimmed.map((s) => ({
+      return trimmed.map(s => ({
         gtfsId: s.gtfsId,
         name: s.name,
         lat: s.lat,
@@ -562,17 +532,13 @@ export class CpService {
       );
 
       if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(
-          response.data.errors.map((e) => e.message).join('; '),
-        );
+        this.logger.error(response.data.errors.map(e => e.message).join('; '));
         throw new ServiceUnavailableException('OTP returned an error');
       }
 
       const stop = response.data.data?.stop;
       if (!stop) {
-        throw new NotFoundException(
-          `Stop ${stopGtfsId} not found in OTP graph`,
-        );
+        throw new NotFoundException(`Stop ${stopGtfsId} not found in OTP graph`);
       }
 
       const departures: CpDepartureDto[] = [];
@@ -583,8 +549,7 @@ export class CpService {
         const agencyName = route?.agency?.name ?? undefined;
 
         // Filtra para rail/CP
-        const isRail =
-          route?.mode === 'RAIL' || route?.mode === 'TRAIN';
+        const isRail = route?.mode === 'RAIL' || route?.mode === 'TRAIN';
         const isCp =
           (agencyName || '').toLowerCase().includes('comboios de portugal') ||
           (agencyName || '').toLowerCase().startsWith('cp ');
@@ -617,13 +582,8 @@ export class CpService {
         departures,
       };
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch departures for stop ${stopGtfsId} from OTP`,
-        error as any,
-      );
-      throw new ServiceUnavailableException(
-        'Failed to fetch departures for this stop from OTP',
-      );
+      this.logger.error(`Failed to fetch departures for stop ${stopGtfsId} from OTP`, error as any);
+      throw new ServiceUnavailableException('Failed to fetch departures for this stop from OTP');
     }
   }
 
@@ -644,7 +604,7 @@ export class CpService {
     const raw = await this.getStopDeparturesFromGraph(stopGtfsId, opts);
 
     const rows: CpStopBoardRowDto[] = raw.departures
-      .map((d) => {
+      .map(d => {
         const departureEpochSeconds = d.serviceDay + d.realtimeDeparture;
         const scheduledEpochSeconds = d.serviceDay + d.scheduledDeparture;
 
@@ -653,8 +613,7 @@ export class CpService {
         const mm = String(date.getMinutes()).padStart(2, '0');
         const time = `${hh}:${mm}`;
 
-        const delaySeconds =
-          d.realtimeDeparture - d.scheduledDeparture;
+        const delaySeconds = d.realtimeDeparture - d.scheduledDeparture;
         const delayMinutes = Math.round(delaySeconds / 60);
 
         return {

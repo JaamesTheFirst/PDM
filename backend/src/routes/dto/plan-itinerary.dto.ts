@@ -1,12 +1,4 @@
-import {
-  IsArray,
-  IsEnum,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -25,7 +17,7 @@ export enum TransportMode {
  * depois de receber os itinerários do OTP.
  */
 export enum FilterMode {
-  ANY = 'ANY',           // não filtra por modo, devolve todos
+  ANY = 'ANY', // não filtra por modo, devolve todos
   WALK_ONLY = 'WALK_ONLY',
   BUS_ONLY = 'BUS_ONLY',
   RAIL_ONLY = 'RAIL_ONLY',

@@ -1,14 +1,7 @@
 // src/impact/impact.service.ts
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  ImpactDayBucketDto,
-  ImpactSummaryDto,
-} from './dto/impact-summary.dto';
+import { ImpactDayBucketDto, ImpactSummaryDto } from './dto/impact-summary.dto';
 import { EcoPeriodType, RouteStatus, TransportMode } from '@prisma/client';
 
 /**
@@ -38,9 +31,7 @@ export class ImpactService {
     const now = new Date();
     const periodEnd = this.endOfDay(now);
 
-    const periodStart = this.startOfDay(
-      new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000),
-    );
+    const periodStart = this.startOfDay(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000));
 
     const histories = await this.loadHistories(userId, periodStart, periodEnd);
     return this.buildSummaryFromHistories(histories, periodStart, periodEnd);
@@ -51,19 +42,14 @@ export class ImpactService {
    *
    * Protegido para [1, 365] dias.
    */
-  async getSummaryForLastDays(
-    userId: string,
-    days: number,
-  ): Promise<ImpactSummaryDto> {
+  async getSummaryForLastDays(userId: string, days: number): Promise<ImpactSummaryDto> {
     if (!Number.isFinite(days) || days <= 0 || days > 365) {
       throw new BadRequestException('Número inválido de dias.');
     }
 
     const now = new Date();
     const periodEnd = this.endOfDay(now);
-    const periodStart = this.startOfDay(
-      new Date(now.getTime() - (days - 1) * 24 * 60 * 60 * 1000),
-    );
+    const periodStart = this.startOfDay(new Date(now.getTime() - (days - 1) * 24 * 60 * 60 * 1000));
 
     const histories = await this.loadHistories(userId, periodStart, periodEnd);
     return this.buildSummaryFromHistories(histories, periodStart, periodEnd);
@@ -74,11 +60,7 @@ export class ImpactService {
    *
    * Se `from > to`, lança BadRequestException.
    */
-  async getSummaryForRange(
-    userId: string,
-    from: Date,
-    to: Date,
-  ): Promise<ImpactSummaryDto> {
+  async getSummaryForRange(userId: string, from: Date, to: Date): Promise<ImpactSummaryDto> {
     if (from > to) {
       throw new BadRequestException('"from" não pode ser depois de "to".');
     }
@@ -147,10 +129,7 @@ export class ImpactService {
 
     // se co2SavedVsCarKg não existir ou for <= 0, recalculamos
     let co2Saved: number;
-    if (
-      typeof trip.co2SavedVsCarKg === 'number' &&
-      trip.co2SavedVsCarKg > 0
-    ) {
+    if (typeof trip.co2SavedVsCarKg === 'number' && trip.co2SavedVsCarKg > 0) {
       co2Saved = trip.co2SavedVsCarKg;
     } else {
       co2Saved = baselineCarKg - co2Kg;
@@ -163,11 +142,7 @@ export class ImpactService {
     // referência temporal para buckets DAY/MONTH/YEAR
     const refDate = trip.createdAt ?? trip.finishedAt ?? trip.startedAt;
 
-    for (const type of [
-      EcoPeriodType.DAY,
-      EcoPeriodType.MONTH,
-      EcoPeriodType.YEAR,
-    ]) {
+    for (const type of [EcoPeriodType.DAY, EcoPeriodType.MONTH, EcoPeriodType.YEAR]) {
       const period = this.getPeriodKey(refDate, type);
 
       await this.prisma.ecoStatsAggregate.upsert({
@@ -228,10 +203,7 @@ export class ImpactService {
       const baselineCarKg = this.baselineCo2PerKm * distanceKm;
 
       let co2Saved: number;
-      if (
-        typeof trip.co2SavedVsCarKg === 'number' &&
-        trip.co2SavedVsCarKg > 0
-      ) {
+      if (typeof trip.co2SavedVsCarKg === 'number' && trip.co2SavedVsCarKg > 0) {
         co2Saved = trip.co2SavedVsCarKg;
       } else {
         co2Saved = baselineCarKg - co2Kg;
@@ -241,11 +213,7 @@ export class ImpactService {
       const ecoScore = this.computeEcoScoreForTrip(trip);
       const refDate = trip.createdAt ?? trip.finishedAt ?? trip.startedAt;
 
-      for (const type of [
-        EcoPeriodType.DAY,
-        EcoPeriodType.MONTH,
-        EcoPeriodType.YEAR,
-      ]) {
+      for (const type of [EcoPeriodType.DAY, EcoPeriodType.MONTH, EcoPeriodType.YEAR]) {
         const period = this.getPeriodKey(refDate, type);
 
         await this.prisma.ecoStatsAggregate.upsert({
@@ -284,11 +252,7 @@ export class ImpactService {
    * Devolve a timeline de EcoStatsAggregate para um determinado tipo
    * (DAY / MONTH / YEAR), limitada a `limit` registos.
    */
-  async getEcoStatsTimeline(
-    userId: string,
-    type: EcoPeriodType,
-    limit = 30,
-  ) {
+  async getEcoStatsTimeline(userId: string, type: EcoPeriodType, limit = 30) {
     if (limit <= 0 || limit > 365) {
       throw new BadRequestException('Limit inválido.');
     }
@@ -346,10 +310,7 @@ export class ImpactService {
         );
       case EcoPeriodType.MONTH:
         // YYYY-MM
-        return (
-          `${y.toString().padStart(4, '0')}-` +
-          `${m.toString().padStart(2, '0')}`
-        );
+        return `${y.toString().padStart(4, '0')}-` + `${m.toString().padStart(2, '0')}`;
       case EcoPeriodType.YEAR:
       default:
         // YYYY
@@ -361,11 +322,7 @@ export class ImpactService {
    * Lê RouteHistory no intervalo [start, end], usando `startedAt` como filtro.
    * Ignora viagens com status CANCELLED e ordena por `createdAt` ascendente.
    */
-  private async loadHistories(
-    userId: string,
-    start: Date,
-    end: Date,
-  ) {
+  private async loadHistories(userId: string, start: Date, end: Date) {
     return this.prisma.routeHistory.findMany({
       where: {
         userId,
@@ -384,10 +341,7 @@ export class ImpactService {
   /**
    * Constrói um resumo vazio (sem viagens) para o período indicado.
    */
-  private buildEmptySummary(
-    periodStart: Date,
-    periodEnd: Date,
-  ): ImpactSummaryDto {
+  private buildEmptySummary(periodStart: Date, periodEnd: Date): ImpactSummaryDto {
     return {
       periodStart: periodStart.toISOString(),
       periodEnd: periodEnd.toISOString(),
@@ -443,10 +397,7 @@ export class ImpactService {
       const baselineCarKg = this.baselineCo2PerKm * distanceKm;
 
       let co2Saved: number;
-      if (
-        typeof trip.co2SavedVsCarKg === 'number' &&
-        trip.co2SavedVsCarKg > 0
-      ) {
+      if (typeof trip.co2SavedVsCarKg === 'number' && trip.co2SavedVsCarKg > 0) {
         co2Saved = trip.co2SavedVsCarKg;
       } else {
         co2Saved = baselineCarKg - co2Kg;
@@ -464,10 +415,8 @@ export class ImpactService {
 
       // viagem “ativa” se tiver pelo menos um modo físico
       const modes = (trip.modes ?? []) as TransportMode[];
-      const hasActive = modes.some((m) =>
-        ['WALKING', 'BIKE', 'BIKE_SHARE', 'SCOOTER', 'SCOOTER_SHARE'].includes(
-          m,
-        ),
+      const hasActive = modes.some(m =>
+        ['WALKING', 'BIKE', 'BIKE_SHARE', 'SCOOTER', 'SCOOTER_SHARE'].includes(m),
       );
       if (hasActive) {
         activeTrips += 1;
@@ -499,9 +448,7 @@ export class ImpactService {
       bucket.trips += 1;
     }
 
-    const days = Array.from(bucketsMap.values()).sort((a, b) =>
-      a.date.localeCompare(b.date),
-    );
+    const days = Array.from(bucketsMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
     const avgEcoScore = totalTrips > 0 ? totalEcoScore / totalTrips : 0;
 
@@ -559,20 +506,16 @@ export class ImpactService {
     ]);
 
     const carModes = ['CAR', 'TAXI', 'EV_CAR'];
-    const hasCarMode = modes.some((m) => carModes.includes(m));
-    const hasNonCarMode = modes.some((m) => !carModes.includes(m));
+    const hasCarMode = modes.some(m => carModes.includes(m));
+    const hasNonCarMode = modes.some(m => !carModes.includes(m));
     const isCarOnly = hasCarMode && !hasNonCarMode;
 
-    const hasPhysicalActivity = modes.some((m) => zeroEmission.has(m));
+    const hasPhysicalActivity = modes.some(m => zeroEmission.has(m));
 
-    const isOnlyZeroEmission =
-      modes.length > 0 && modes.every((m) => zeroEmission.has(m));
+    const isOnlyZeroEmission = modes.length > 0 && modes.every(m => zeroEmission.has(m));
 
     const hasFossilBus = modes.some(
-      (m) =>
-        m.includes('BUS') &&
-        !m.includes('ELECTRIC') &&
-        !m.includes('HYBRID'),
+      m => m.includes('BUS') && !m.includes('ELECTRIC') && !m.includes('HYBRID'),
     );
 
     let baseScore = 0;
@@ -584,8 +527,7 @@ export class ImpactService {
       if (co2PerKmGram >= 120) {
         baseScore = 0;
       } else if (co2PerKmGram >= 80) {
-        baseScore =
-          20 - ((co2PerKmGram - 80) / 40) * 20;
+        baseScore = 20 - ((co2PerKmGram - 80) / 40) * 20;
       } else {
         baseScore = 20;
       }
@@ -597,20 +539,15 @@ export class ImpactService {
       if (co2PerKmGram <= 0.1) {
         baseScore = 95 - (co2PerKmGram / 0.1) * 5;
       } else if (co2PerKmGram <= 1) {
-        baseScore =
-          90 - ((co2PerKmGram - 0.1) / 0.9) * 10;
+        baseScore = 90 - ((co2PerKmGram - 0.1) / 0.9) * 10;
       } else if (co2PerKmGram <= 5) {
-        baseScore =
-          80 - ((co2PerKmGram - 1) / 4) * 20;
+        baseScore = 80 - ((co2PerKmGram - 1) / 4) * 20;
       } else if (co2PerKmGram <= 20) {
-        baseScore =
-          60 - ((co2PerKmGram - 5) / 15) * 20;
+        baseScore = 60 - ((co2PerKmGram - 5) / 15) * 20;
       } else if (co2PerKmGram <= 50) {
-        baseScore =
-          40 - ((co2PerKmGram - 20) / 30) * 20;
+        baseScore = 40 - ((co2PerKmGram - 20) / 30) * 20;
       } else {
-        baseScore =
-          20 - ((co2PerKmGram - 50) / 150) * 20;
+        baseScore = 20 - ((co2PerKmGram - 50) / 150) * 20;
       }
 
       if (hasFossilBus) {

@@ -11,7 +11,7 @@ import { GiraModule } from './gira/gira.module';
 import { CpModule } from './cp/cp.module';
 import { HealthController } from './health/health.controller';
 import { GbfsModule } from './gbfs/gbfs.module';
-import {FlixbusModule} from './flixbus/flixbus.module';
+import { FlixbusModule } from './flixbus/flixbus.module';
 import { CarrisModule } from './carris/carris.module';
 import { ImpactModule } from './impact/impact.module';
 
@@ -37,3 +37,4 @@ import { ImpactModule } from './impact/impact.module';
   controllers: [HealthController],
 })
 export class AppModule {}
+// test

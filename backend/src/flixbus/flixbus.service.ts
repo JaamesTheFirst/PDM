@@ -1,10 +1,5 @@
 // src/flixbus/flixbus.service.ts
-import {
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -248,9 +243,7 @@ export class FlixbusService {
    * URL do endpoint GraphQL do OTP (router "default").
    */
   private get otpGraphQlUrl(): string {
-    const base =
-      this.configService.get<string>('OTP_BASE_URL') ||
-      'http://localhost:8080/otp';
+    const base = this.configService.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
     return `${base.replace(/\/$/, '')}/routers/default/index/graphql`;
   }
 
@@ -263,19 +256,19 @@ export class FlixbusService {
    *  - modo BUS/COACH
    *  - e nome/ID da agência contém algo tipo "flixbus" / "flix"
    */
-  private isFlixbusRoute(mode?: string, agencyName?: string | null, agencyGtfsId?: string | null): boolean {
+  private isFlixbusRoute(
+    mode?: string,
+    agencyName?: string | null,
+    agencyGtfsId?: string | null,
+  ): boolean {
     const m = (mode || '').toUpperCase();
     const name = (agencyName || '').toLowerCase();
     const agId = (agencyGtfsId || '').toLowerCase();
 
     const isCoachOrBus = m === 'BUS' || m === 'COACH';
     const isFlixName =
-      name.includes('flixbus') ||
-      name.includes('flix bus') ||
-      name.includes('flix');
-    const isFlixId =
-      agId.includes('flixbus') ||
-      agId.includes('flix');
+      name.includes('flixbus') || name.includes('flix bus') || name.includes('flix');
+    const isFlixId = agId.includes('flixbus') || agId.includes('flix');
 
     return isCoachOrBus && (isFlixName || isFlixId);
   }
@@ -300,19 +293,17 @@ export class FlixbusService {
       );
 
       if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(
-          response.data.errors.map((e) => e.message).join('; '),
-        );
+        this.logger.error(response.data.errors.map(e => e.message).join('; '));
         throw new ServiceUnavailableException('OTP returned an error');
       }
 
       const routes = response.data.data?.routes ?? [];
 
-      const flixRoutes = routes.filter((r) =>
+      const flixRoutes = routes.filter(r =>
         this.isFlixbusRoute(r.mode, r.agency?.name ?? null, r.agency?.gtfsId ?? null),
       );
 
-      return flixRoutes.map((r) => ({
+      return flixRoutes.map(r => ({
         gtfsId: r.gtfsId,
         shortName: r.shortName ?? null,
         longName: r.longName ?? null,
@@ -322,9 +313,7 @@ export class FlixbusService {
       }));
     } catch (error) {
       this.logger.error('Failed to fetch FlixBus routes from OTP', error as any);
-      throw new ServiceUnavailableException(
-        'Failed to fetch FlixBus routes from OTP',
-      );
+      throw new ServiceUnavailableException('Failed to fetch FlixBus routes from OTP');
     }
   }
 
@@ -334,9 +323,7 @@ export class FlixbusService {
    * @param routeGtfsId ID GTFS da rota
    * @throws NotFoundException se a rota não existir ou não for FlixBus
    */
-  async getFlixbusRouteDetail(
-    routeGtfsId: string,
-  ): Promise<FlixbusGraphRouteDetailDto> {
+  async getFlixbusRouteDetail(routeGtfsId: string): Promise<FlixbusGraphRouteDetailDto> {
     try {
       const response = await firstValueFrom(
         this.http.post<GtfsRouteDetailResponse>(
@@ -352,30 +339,20 @@ export class FlixbusService {
       );
 
       if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(
-          response.data.errors.map((e) => e.message).join('; '),
-        );
+        this.logger.error(response.data.errors.map(e => e.message).join('; '));
         throw new ServiceUnavailableException('OTP returned an error');
       }
 
       const route = response.data.data?.route;
       if (!route) {
-        throw new NotFoundException(
-          `Route ${routeGtfsId} not found in OTP graph`,
-        );
+        throw new NotFoundException(`Route ${routeGtfsId} not found in OTP graph`);
       }
 
       // opcional: garantir que esta route é mesmo FlixBus
       if (
-        !this.isFlixbusRoute(
-          route.mode,
-          route.agency?.name ?? null,
-          route.agency?.gtfsId ?? null,
-        )
+        !this.isFlixbusRoute(route.mode, route.agency?.name ?? null, route.agency?.gtfsId ?? null)
       ) {
-        throw new NotFoundException(
-          `Route ${routeGtfsId} is not a FlixBus route`,
-        );
+        throw new NotFoundException(`Route ${routeGtfsId} is not a FlixBus route`);
       }
 
       // juntar stops de todos os patterns (deduplicado por gtfsId)
@@ -407,9 +384,7 @@ export class FlixbusService {
         `Failed to fetch FlixBus route detail ${routeGtfsId} from OTP`,
         error as any,
       );
-      throw new ServiceUnavailableException(
-        'Failed to fetch FlixBus route detail from OTP',
-      );
+      throw new ServiceUnavailableException('Failed to fetch FlixBus route detail from OTP');
     }
   }
 
@@ -440,16 +415,14 @@ export class FlixbusService {
       );
 
       if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(
-          response.data.errors.map((e) => e.message).join('; '),
-        );
+        this.logger.error(response.data.errors.map(e => e.message).join('; '));
         throw new ServiceUnavailableException('OTP returned an error');
       }
 
       const stops = response.data.data?.stops ?? [];
       const trimmed = stops.slice(0, limit);
 
-      return trimmed.map((s) => ({
+      return trimmed.map(s => ({
         gtfsId: s.gtfsId,
         name: s.name,
         lat: s.lat,
@@ -501,17 +474,13 @@ export class FlixbusService {
       );
 
       if (response.data.errors && response.data.errors.length > 0) {
-        this.logger.error(
-          response.data.errors.map((e) => e.message).join('; '),
-        );
+        this.logger.error(response.data.errors.map(e => e.message).join('; '));
         throw new ServiceUnavailableException('OTP returned an error');
       }
 
       const stop = response.data.data?.stop;
       if (!stop) {
-        throw new NotFoundException(
-          `Stop ${stopGtfsId} not found in OTP graph`,
-        );
+        throw new NotFoundException(`Stop ${stopGtfsId} not found in OTP graph`);
       }
 
       const departures: FlixbusDepartureDto[] = [];
@@ -522,11 +491,7 @@ export class FlixbusService {
         const agencyName = route?.agency?.name ?? undefined;
         const agencyId = route?.agency?.gtfsId ?? undefined;
 
-        const isFlix = this.isFlixbusRoute(
-          route?.mode,
-          agencyName ?? null,
-          agencyId ?? null,
-        );
+        const isFlix = this.isFlixbusRoute(route?.mode, agencyName ?? null, agencyId ?? null);
         if (!isFlix) {
           continue;
         }
@@ -559,9 +524,7 @@ export class FlixbusService {
         `Failed to fetch FlixBus departures for stop ${stopGtfsId} from OTP`,
         error as any,
       );
-      throw new ServiceUnavailableException(
-        'Failed to fetch departures for this stop from OTP',
-      );
+      throw new ServiceUnavailableException('Failed to fetch departures for this stop from OTP');
     }
   }
 
@@ -582,7 +545,7 @@ export class FlixbusService {
     const raw = await this.getStopDeparturesFromGraph(stopGtfsId, opts);
 
     const rows: FlixbusStopBoardRowDto[] = raw.departures
-      .map((d) => {
+      .map(d => {
         const departureEpochSeconds = d.serviceDay + d.realtimeDeparture;
         const scheduledEpochSeconds = d.serviceDay + d.scheduledDeparture;
 
