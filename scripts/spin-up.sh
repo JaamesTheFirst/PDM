@@ -23,25 +23,24 @@ echo -e "${BLUE}🚀 Starting Modular Spin-Up...${NC}\n"
 
 echo -e "${YELLOW}📡 Detecting Windows LAN IP (Wi-Fi/Ethernet)...${NC}"
 
-# Method 1: Parse ipconfig output to find Wi-Fi adapter IPv4
-# Get ipconfig output, find Wi-Fi section, extract IPv4 address
+# Method 1: Extract Wi-Fi adapter IPv4 from ipconfig
+# Look for Wi-Fi section and extract the first valid IPv4 address
 WINDOWS_HOST_IP=$(powershell.exe -Command "ipconfig" 2>/dev/null | \
   awk '
-    /Wi-Fi|Wireless LAN adapter Wi-Fi/ {
-      wifi_section=1
-      next
-    }
-    wifi_section && /IPv4 Address/ {
-      gsub(/.*IPv4 Address[^:]*:[ ]*/, "")
-      gsub(/[ \r\n]/, "")
-      if ($0 !~ /^172\./ && $0 !~ /^169\.254\./ && $0 !~ /^127\./ && $0 ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/) {
-        print $0
-        exit
+    BEGIN { in_wifi=0 }
+    /Wi-Fi|Wireless LAN adapter Wi-Fi/ { in_wifi=1; next }
+    in_wifi && /IPv4 Address/ {
+      # Extract IP using regex match
+      if (match($0, /([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/)) {
+        ip = substr($0, RSTART, RLENGTH)
+        # Exclude WSL (172.16-31.x), link-local (169.254.x), loopback (127.x)
+        if (ip !~ /^172\.(1[6-9]|2[0-9]|3[0-1])\./ && ip !~ /^169\.254\./ && ip !~ /^127\./) {
+          print ip
+          exit
+        }
       }
     }
-    /^[A-Z]/ && wifi_section {
-      wifi_section=0
-    }
+    /^[A-Z]/ && in_wifi && !/Wi-Fi/ { in_wifi=0 }
   ' | head -1)
 
 # Method 2: Fallback - try Ethernet adapter
@@ -67,14 +66,23 @@ if [ -z "$WINDOWS_HOST_IP" ] || [ -z "${WINDOWS_HOST_IP// }" ]; then
 fi
 
 # Method 3: Fallback - get any non-WSL, non-link-local IPv4
+# Extract all IPv4 addresses and filter out WSL/loopback/link-local
 if [ -z "$WINDOWS_HOST_IP" ] || [ -z "${WINDOWS_HOST_IP// }" ]; then
   WINDOWS_HOST_IP=$(powershell.exe -Command "ipconfig" 2>/dev/null | \
     grep -i "IPv4" | \
-    sed 's/.*IPv4[^:]*:[ ]*//' | \
-    sed 's/[ \r\n]//g' | \
-    grep -vE '^172\.|^169\.254\.|^127\.' | \
-    grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | \
-    head -1)
+    grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | \
+    grep -vE '^172\.(1[6-9]|2[0-9]|3[0-1])\.|^169\.254\.|^127\.' | \
+    # Prefer 10.x or 192.168.x addresses
+    grep -E '^10\.|^192\.168\.' | head -1)
+  
+  # If no 10.x or 192.168.x found, get any valid IP
+  if [ -z "$WINDOWS_HOST_IP" ] || [ -z "${WINDOWS_HOST_IP// }" ]; then
+    WINDOWS_HOST_IP=$(powershell.exe -Command "ipconfig" 2>/dev/null | \
+      grep -i "IPv4" | \
+      grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | \
+      grep -vE '^172\.(1[6-9]|2[0-9]|3[0-1])\.|^169\.254\.|^127\.' | \
+      head -1)
+  fi
 fi
 
 # Method 4: Fallback - get default gateway (Windows host IP in WSL2)
