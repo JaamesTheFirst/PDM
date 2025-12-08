@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// Barra de navegação inferior principal da aplicação.
+///
+/// - Mostra 5 tabs: Mapa, Histórico, Horários, Impacto e Definições.
+/// - Destaca a tab selecionada com uma barra verde animada no topo.
+/// - Atualiza também a cor da system navigation bar para combinar
+///   com o background atual (claro/escuro).
 class AppBottomNav extends StatelessWidget {
+  /// Índice da tab atualmente selecionada (0–4).
   final int currentIndex;
+
+  /// Callback chamado quando o utilizador toca numa tab.
+  /// Recebe o índice da tab selecionada.
   final ValueChanged<int> onTap;
 
   const AppBottomNav({
@@ -13,12 +23,11 @@ class AppBottomNav extends StatelessWidget {
 
   // Design System tokens
   static const _ecoMint = Color(0xFF3CD4A0);
-  static const _coolGrey = Color(0xFFA1A1A1);
   static const _offWhiteSand = Color(0xFFF8F7F4);
 
   @override
   Widget build(BuildContext context) {
-    const int tabCount = 5; // <-- AGORA 5 TABS
+    const int tabCount = 5; // Número de tabs
     const double barHeight = 94;
     const double horizontalPadding = 12;
 
@@ -31,6 +40,7 @@ class AppBottomNav extends StatelessWidget {
 
     final bg = isDark ? t.scaffoldBackgroundColor : _offWhiteSand;
 
+    // Ajuste da system navigation bar para bater certo com a bottom bar.
     final systemUi = SystemUiOverlayStyle(
       systemNavigationBarColor: bg,
       systemNavigationBarIconBrightness:
@@ -38,7 +48,7 @@ class AppBottomNav extends StatelessWidget {
       systemNavigationBarDividerColor: Colors.transparent,
     );
 
-    // alinhamento da barra verde
+    // Cálculo do alinhamento horizontal da barra verde de seleção.
     final step = 2 / (tabCount - 1);
     final alignX = -1.0 + step * currentIndex;
 
@@ -65,7 +75,7 @@ class AppBottomNav extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  // ===== Barra verde no topo =====
+                  // ===== Barra verde no topo (indicador de tab) =====
                   AnimatedAlign(
                     alignment: Alignment(alignX, -1.0),
                     duration: duration,
@@ -156,10 +166,20 @@ class AppBottomNav extends StatelessWidget {
   }
 }
 
+/// Item individual da bottom navigation.
+///
+/// Mostra um ícone e um label, mudando cor e escala quando está selecionado.
 class _NavItem extends StatelessWidget {
+  /// Ícone a mostrar na tab.
   final IconData icon;
+
+  /// Texto abaixo do ícone.
   final String label;
+
+  /// Indica se este item está selecionado.
   final bool selected;
+
+  /// Callback chamado quando o item é tocado.
   final VoidCallback onTap;
 
   const _NavItem({
