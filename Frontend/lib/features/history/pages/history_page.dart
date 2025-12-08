@@ -4,6 +4,12 @@ import '../../../services/history_service.dart';
 import '../../../app/app_shell.dart';
 import '../../map/pages/map_page.dart';
 
+/// Página que mostra o histórico de viagens do utilizador.
+///
+/// - Carrega a lista de [RouteHistoryItem] a partir do [HistoryService].
+/// - Lida com estados de loading, erro e lista vazia.
+/// - Permite expandir cada viagem para ver as legs detalhadas.
+/// - Permite repetir uma viagem, enviando um pedido para o [MapPage].
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
 
@@ -12,12 +18,21 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  /// Serviço responsável por obter o histórico a partir da API/local.
   final _historyService = HistoryService.instance;
+
+  /// Lista atual de viagens do histórico.
   List<RouteHistoryItem> _history = [];
+
+  /// Indica se está a decorrer um carregamento de dados.
   bool _isLoading = true;
+
+  /// Mensagem de erro, se tiver ocorrido falha ao carregar o histórico.
   String? _error;
 
-  /// Quais cards estão expandidos (por id)
+  /// Conjunto de IDs de viagens atualmente expandidas.
+  ///
+  /// Isto permite que o utilizador expanda/colapse cada card de forma independente.
   final Set<String> _expandedIds = {};
 
   @override
@@ -26,6 +41,12 @@ class _HistoryPageState extends State<HistoryPage> {
     _loadHistory();
   }
 
+  /// Carrega o histórico de viagens a partir do [HistoryService].
+  ///
+  /// Atualiza o estado local de:
+  /// - [_isLoading]
+  /// - [_history]
+  /// - [_error]
   Future<void> _loadHistory() async {
     setState(() {
       _isLoading = true;
@@ -46,7 +67,10 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  /// Formata SEMPRE como data/hora absoluta: dd/MM/yyyy HH:mm
+  /// Formata SEMPRE como data/hora absoluta: `dd/MM/yyyy HH:mm`.
+  ///
+  /// Usa a versão local do [DateTime] (via [toLocal]) e zero-padding
+  /// para dia, mês, hora e minuto.
   String _formatDate(DateTime date) {
     final local = date.toLocal();
     final d = local.day.toString().padLeft(2, '0');
@@ -57,11 +81,18 @@ class _HistoryPageState extends State<HistoryPage> {
     return '$d/$m/$y $hh:$mm';
   }
 
+  /// Pede ao app para repetir a viagem [item] no mapa.
+  ///
+  /// Fluxo:
+  /// - Muda para a tab do mapa via [AppShell.navigateToTab].
+  /// - Aguarda um pequeno delay para o [MapPage] montar.
+  /// - Preenche [MapPage.pendingRouteSearch] com o destino da rota antiga.
+  /// - Mostra um [SnackBar] informativo.
   Future<void> _repeatTrip(RouteHistoryItem item) async {
-    // Mudar para o tab do mapa
+    // Mudar para o tab do mapa.
     AppShell.navigateToTab.value = 0;
 
-    // Pequeno delay para o MapPage montar
+    // Pequeno delay para o MapPage montar.
     await Future.delayed(const Duration(milliseconds: 300));
 
     // Origem = localização atual; destino = destino da viagem antiga.
@@ -87,6 +118,7 @@ class _HistoryPageState extends State<HistoryPage> {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
 
+    // Estado de carregamento.
     if (_isLoading) {
       return Container(
         color: t.scaffoldBackgroundColor,
@@ -94,6 +126,7 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }
 
+    // Estado de erro.
     if (_error != null) {
       return Container(
         color: t.scaffoldBackgroundColor,
@@ -102,7 +135,11 @@ class _HistoryPageState extends State<HistoryPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Colors.red,
+              ),
               const SizedBox(height: 12),
               Text(
                 'Erro ao carregar histórico',
@@ -125,6 +162,7 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }
 
+    // Estado sem viagens guardadas.
     if (_history.isEmpty) {
       return Container(
         color: t.scaffoldBackgroundColor,
@@ -136,19 +174,22 @@ class _HistoryPageState extends State<HistoryPage> {
               Icon(
                 Icons.history,
                 size: 48,
-                color: t.colorScheme.onSurface.withOpacity(.6),
+                color: t.colorScheme.onSurface.withValues(alpha: .6),
               ),
               const SizedBox(height: 12),
               Text(
                 'Ainda não há viagens no histórico',
-                style: TextStyle(fontSize: 16, color: t.colorScheme.onSurface),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: t.colorScheme.onSurface,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Planeia e aplica uma rota para começar a guardar as tuas viagens.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: t.colorScheme.onSurface.withOpacity(.7),
+                  color: t.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -158,6 +199,7 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }
 
+    // Lista de viagens.
     return Container(
       color: t.scaffoldBackgroundColor,
       child: RefreshIndicator(
@@ -169,9 +211,9 @@ class _HistoryPageState extends State<HistoryPage> {
           itemBuilder: (context, index) {
             final item = _history[index];
 
-            // depois – dá prioridade ao createdAt
-            final refDate =
-                item.createdAt ??
+            // Dá prioridade ao createdAt; se não existir, recorre aos outros campos
+            // e, em último caso, a DateTime.now.
+            final refDate = item.createdAt ??
                 item.startedAt ??
                 item.finishedAt ??
                 item.updatedAt ??
@@ -201,6 +243,14 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 }
 
+/// Card que representa uma viagem no histórico.
+///
+/// Mostra:
+/// - origem → destino
+/// - duração e distância total
+/// - data/hora da viagem
+/// - botão para repetir rota
+/// Quando expandido, mostra o detalhe dos segmentos/legs.
 class _RouteHistoryCard extends StatelessWidget {
   static const _ecoMint = Color(0xFF3CD4A0);
 
@@ -218,6 +268,7 @@ class _RouteHistoryCard extends StatelessWidget {
     required this.onRepeatTrip,
   });
 
+  /// Escolhe um ícone adequado para o modo de transporte.
   IconData _iconForMode(String mode) {
     final m = mode.toUpperCase();
     if (m == 'WALKING' || m == 'WALK' || m == 'FOOT') {
@@ -236,6 +287,7 @@ class _RouteHistoryCard extends StatelessWidget {
     return Icons.directions_transit;
   }
 
+  /// Devolve um label legível em PT para o modo de transporte.
   String _modeLabel(String mode) {
     final m = mode.toUpperCase();
     if (m == 'WALK' || m == 'WALKING' || m == 'FOOT') return 'A pé';
@@ -251,6 +303,7 @@ class _RouteHistoryCard extends StatelessWidget {
     return mode;
   }
 
+  /// Indica se o nome é um placeholder genérico (Origin/Destination).
   bool _isPlaceholderName(String? value) {
     if (value == null) return true;
     final v = value.trim();
@@ -259,6 +312,11 @@ class _RouteHistoryCard extends StatelessWidget {
     return lower == 'origin' || lower == 'destination';
   }
 
+  /// Resolve o nome a mostrar para origem/destino:
+  ///
+  /// - Tenta usar [baseName].
+  /// - Se for placeholder, tenta extrair do primeiro/último segmento.
+  /// - Se mesmo assim não conseguir, devolve "Origem"/"Destino".
   String _resolveEndpointName({
     required String? baseName,
     required List<dynamic> segments,
@@ -287,7 +345,7 @@ class _RouteHistoryCard extends StatelessWidget {
     return name;
   }
 
-  /// Formata duração em min / h / dias
+  /// Formata duração total (em segundos) como label em minutos/horas/dias.
   String _formatDuration(int totalSeconds) {
     if (totalSeconds <= 0) return '0 min';
 
@@ -303,8 +361,8 @@ class _RouteHistoryCard extends StatelessWidget {
 
     if (totalHours < 24) {
       // entre 1h e 24h
-      if (minutes == 0) return '${totalHours} h';
-      return '${totalHours} h ${minutes} min';
+      if (minutes == 0) return '$totalHours h';
+      return '$totalHours h $minutes min';
     }
 
     // >= 24h → dias + horas
@@ -316,7 +374,7 @@ class _RouteHistoryCard extends StatelessWidget {
     if (hours == 0) {
       return dayLabel;
     }
-    return '$dayLabel ${hours} h';
+    return '$dayLabel $hours h';
   }
 
   @override
@@ -327,9 +385,8 @@ class _RouteHistoryCard extends StatelessWidget {
     final durationLabel = _formatDuration(item.durationSeconds);
     final subtitle = '$durationLabel • ${distanceKm.toStringAsFixed(1)} km';
 
-    final List<dynamic> segments = item.segments is List
-        ? (item.segments as List)
-        : const [];
+    final List<dynamic> segments =
+        item.segments is List ? (item.segments as List) : const [];
 
     final originDisplay = _resolveEndpointName(
       baseName: item.originName,
@@ -360,10 +417,10 @@ class _RouteHistoryCard extends StatelessWidget {
           ],
           border: Border.all(
             color: isExpanded
-                ? _ecoMint.withOpacity(0.7)
+                ? _ecoMint.withValues(alpha: 0.7)
                 : (t.brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0x143CD4A0)),
+                    ? Colors.white10
+                    : const Color(0x143CD4A0)),
           ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -373,7 +430,7 @@ class _RouteHistoryCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: _ecoMint.withOpacity(0.16),
+                  backgroundColor: _ecoMint.withValues(alpha: 0.16),
                   child: Icon(
                     _iconForMode(item.primaryMode),
                     color: _ecoMint,
@@ -398,7 +455,7 @@ class _RouteHistoryCard extends StatelessWidget {
                       Text(
                         subtitle,
                         style: t.textTheme.bodySmall?.copyWith(
-                          color: t.colorScheme.onSurface.withOpacity(0.7),
+                          color: t.colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -414,7 +471,7 @@ class _RouteHistoryCard extends StatelessWidget {
                       formattedDate,
                       style: TextStyle(
                         fontSize: 12,
-                        color: t.colorScheme.onSurface.withOpacity(0.5),
+                        color: t.colorScheme.onSurface.withValues(alpha: 0.5),
                         fontFamily: 'Inter',
                       ),
                     ),
@@ -426,7 +483,7 @@ class _RouteHistoryCard extends StatelessWidget {
                       child: Icon(
                         Icons.chevron_right_rounded,
                         size: 20,
-                        color: t.colorScheme.onSurface.withOpacity(0.6),
+                        color: t.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -479,9 +536,16 @@ class _RouteHistoryCard extends StatelessWidget {
   }
 }
 
+/// Vista que mostra a lista de segmentos/legs de um itinerário
+/// dentro de um card de histórico.
 class _ItinerarySegmentsView extends StatelessWidget {
+  /// Lista de segmentos em formato dinâmico (maps vindos do backend).
   final List<dynamic>? segments;
+
+  /// Função para obter ícone para um modo.
   final IconData Function(String mode) iconForMode;
+
+  /// Função para obter label em PT para um modo.
   final String Function(String mode) modeLabel;
 
   const _ItinerarySegmentsView({
@@ -502,7 +566,7 @@ class _ItinerarySegmentsView extends StatelessWidget {
         child: Text(
           'Detalhes de itinerário não disponíveis.',
           style: t.textTheme.bodySmall?.copyWith(
-            color: t.colorScheme.onSurface.withOpacity(0.6),
+            color: t.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       );
@@ -523,6 +587,13 @@ class _ItinerarySegmentsView extends StatelessWidget {
   }
 }
 
+/// Linha que representa um único segmento/leg de um itinerário.
+///
+/// Mostra:
+/// - Ícone do modo.
+/// - Nome do modo/linha (ex.: Metro A, Autocarro 500).
+/// - Duração e distância.
+/// - Origem → destino desse segmento.
 class _SegmentRow extends StatelessWidget {
   final dynamic leg;
   final bool isFirst;
@@ -570,15 +641,15 @@ class _SegmentRow extends StatelessWidget {
     final distanceMeters = (legMap['distance'] as num?)?.toDouble();
     final durationSeconds = (legMap['duration'] as num?)?.toDouble();
 
-    final distanceKm = distanceMeters != null
-        ? (distanceMeters / 1000.0)
-        : null;
-    final durationMin = durationSeconds != null
-        ? (durationSeconds / 60.0).round()
-        : null;
+    final distanceKm =
+        distanceMeters != null ? (distanceMeters / 1000.0) : null;
+    final durationMin =
+        durationSeconds != null ? (durationSeconds / 60.0).round() : null;
 
+    // Título: GIRA (se rentedBike) ou "Modo Linha".
     final titleBuffer = StringBuffer();
-    if (rentedBike && (mode.toUpperCase() == 'BICYCLE' || mode.toUpperCase() == 'BIKE')) {
+    if (rentedBike &&
+        (mode.toUpperCase() == 'BICYCLE' || mode.toUpperCase() == 'BIKE')) {
       titleBuffer.write('GIRA');
     } else {
       titleBuffer.write(modeLabel(mode));
@@ -587,15 +658,17 @@ class _SegmentRow extends StatelessWidget {
       }
     }
 
+    // Detalhes: "X min • Y km".
     final detailsBuffer = StringBuffer();
     if (durationMin != null) {
-      detailsBuffer.write('${durationMin} min');
+      detailsBuffer.write('$durationMin min');
     }
     if (distanceKm != null) {
       if (detailsBuffer.isNotEmpty) detailsBuffer.write(' • ');
       detailsBuffer.write('${distanceKm.toStringAsFixed(1)} km');
     }
 
+    // Label de origem/destino do segmento.
     final pathLabel = (fromName != null && toName != null)
         ? '$fromName → $toName'
         : (fromName ?? toName ?? '');
@@ -606,14 +679,18 @@ class _SegmentRow extends StatelessWidget {
         Column(
           children: [
             SizedBox(height: isFirst ? 10 : 4),
-            Icon(iconForMode(mode), size: 18, color: t.colorScheme.primary),
+            Icon(
+              iconForMode(mode),
+              size: 18,
+              color: t.colorScheme.primary,
+            ),
             if (!isLast)
               Container(
                 width: 2,
                 height: 32,
                 margin: const EdgeInsets.only(top: 2),
                 decoration: BoxDecoration(
-                  color: t.colorScheme.primary.withOpacity(0.3),
+                  color: t.colorScheme.primary.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -639,7 +716,7 @@ class _SegmentRow extends StatelessWidget {
                   Text(
                     detailsBuffer.toString(),
                     style: t.textTheme.bodySmall?.copyWith(
-                      color: t.colorScheme.onSurface.withOpacity(0.7),
+                      color: t.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 if (pathLabel.isNotEmpty)
@@ -648,7 +725,7 @@ class _SegmentRow extends StatelessWidget {
                     child: Text(
                       pathLabel,
                       style: t.textTheme.bodySmall?.copyWith(
-                        color: t.colorScheme.onSurface.withOpacity(0.6),
+                        color: t.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ),

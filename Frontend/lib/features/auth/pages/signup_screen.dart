@@ -134,7 +134,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               : _lastName.text.trim(),
         );
 
-    if (!context.mounted) return;
+    if (!mounted) return;
 
     if (ok) {
       // Navega para AppShell e limpa a stack de navegação.

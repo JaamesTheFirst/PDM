@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _password.text,
         );
 
-    if (!context.mounted) return;
+    if (!mounted) return;
 
     if (ok) {
       // Navega para o AppShell (app principal com mapa).
