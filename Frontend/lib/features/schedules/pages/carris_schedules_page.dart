@@ -4,6 +4,12 @@ import 'package:flutter/foundation.dart';
 import '../widgets/departure_card.dart';
 import '../data/carris_api.dart';
 
+/// Página de horários da Carris / rede urbana.
+///
+/// Funcionalidades:
+/// - Pesquisar paragens Carris.
+/// - Ver próximas partidas para uma paragem seleccionada.
+/// - Mostrar estados de carregamento/erro de forma amigável.
 class CarrisSchedulesPage extends StatefulWidget {
   const CarrisSchedulesPage({super.key});
 
@@ -12,18 +18,34 @@ class CarrisSchedulesPage extends StatefulWidget {
 }
 
 class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
+  /// Amarelo institucional aproximado da Carris.
   static const _carrisYellow = Color(0xFFFFD600);
 
+  /// Campo de pesquisa de paragem Carris.
   final TextEditingController _searchController = TextEditingController();
+
+  /// Cliente de API para interagir com dados da Carris.
   final CarrisApiClient _api = CarrisApiClient();
 
+  /// Query de pesquisa actual.
   String _searchQuery = '';
+
+  /// Flag de carregamento durante pesquisa de paragens.
   bool _loadingSearch = false;
+
+  /// Flag de carregamento durante obtenção de partidas.
   bool _loadingDepartures = false;
+
+  /// Mensagem de erro global.
   String? _error;
 
+  /// Paragem actualmente seleccionada.
   CarrisStopSearchResult? _selectedStop;
+
+  /// Resultados da pesquisa de paragens.
   List<CarrisStopSearchResult> _searchResults = [];
+
+  /// Lista de partidas próximas para a paragem seleccionada.
   List<CarrisUpcomingDeparture> _departures = [];
 
   @override
@@ -34,6 +56,10 @@ class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
 
   // ==================== SEARCH STOPS ====================
 
+  /// Pesquisa por paragens Carris com base na query do utilizador.
+  ///
+  /// - Ignora queries com menos de 2 caracteres.
+  /// - Actualiza [_searchResults] com o resultado do backend.
   Future<void> _performSearch() async {
     final q = _searchController.text.trim();
     debugPrint('[CARRIS PAGE] _performSearch("$q")');
@@ -74,6 +100,11 @@ class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
     }
   }
 
+  /// Handler chamado quando o utilizador selecciona uma paragem.
+  ///
+  /// - Guarda a paragem em [_selectedStop].
+  /// - Preenche o campo de texto com o nome da paragem.
+  /// - Dispara o carregamento de partidas via [_loadDepartures].
   void _onSelectStop(CarrisStopSearchResult stop) {
     debugPrint('[CARRIS PAGE] _onSelectStop -> ${stop.name} (${stop.gtfsId})');
     setState(() {
@@ -86,6 +117,7 @@ class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
 
   // ===================== LOAD DEPARTURES =====================
 
+  /// Carrega as próximas partidas (upcoming departures) para a paragem seleccionada.
   Future<void> _loadDepartures() async {
     if (_selectedStop == null) {
       debugPrint('[CARRIS PAGE] _loadDepartures sem paragem selecionada');
@@ -178,7 +210,7 @@ class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
                                 ),
                           filled: true,
                           fillColor:
-                              t.colorScheme.surfaceVariant.withOpacity(0.25),
+                              t.colorScheme.surfaceVariant.withValues(alpha: 0.25),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
@@ -199,7 +231,7 @@ class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
+                                color: Colors.black.withValues(alpha: 0.08),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -247,6 +279,8 @@ class _CarrisSchedulesPageState extends State<CarrisSchedulesPage> {
     );
   }
 
+  /// Constrói a secção com as partidas da paragem seleccionada,
+  /// incluindo mensagens de estado (erro, sem paragem, sem partidas).
   Widget _buildDeparturesSection(BuildContext context) {
     final t = Theme.of(context);
 

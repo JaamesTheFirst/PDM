@@ -10,12 +10,38 @@ import '../../../../services/search_history_service.dart';
 import '../../../../services/routes_service.dart';
 import './route_options_overlay.dart'; // RouteOptionsArgs
 
+/// Overlay de pesquisa de rotas sobre o mapa.
+///
+/// Responsabilidades principais:
+/// - Gerir os campos "De" e "Para" (origem/destino) com autocomplete.
+/// - Mostrar sugestões próximas (nearby) e resultados de pesquisa Mapbox Searchbox.
+/// - Desenhar pré-visualização de rota (linha no mapa) e marcador de destino.
+/// - Permitir configuração de filtros de rota (modos de transporte, tipos de transit, distância máxima a pé).
+/// - Ao confirmar, devolve via [onConfirmOptions] os argumentos necessários
+///   para abrir o overlay de opções de rota (`RouteOptionsOverlay`).
 class RouteSearchOverlay extends StatefulWidget {
+  /// Instância de [MapboxMap] usada para desenhar anotações e ajustar a câmara.
   final mbx.MapboxMap mapboxMap;
+
+  /// Localização atual do utilizador, em coordenadas Mapbox.
+  ///
+  /// Usada como contexto de proximidade para:
+  /// - Sugestões por perto (nearby).
+  /// - Pesquisa (proximity / origin).
+  /// - Origem padrão da rota (quando "De" é a localização atual).
   final mbx.Point userLocation;
+
+  /// Callback para fechar o overlay (ex.: fechar bottom sheet).
   final VoidCallback onClose;
 
-  /// devolve os argumentos para abrir as opções
+  /// Callback que devolve os argumentos necessários para abrir o overlay
+  /// de opções de rota (`RouteOptionsOverlay`).
+  ///
+  /// Contém:
+  /// - [RouteOptionsArgs.mapboxMap]: o mapa atual
+  /// - [RouteOptionsArgs.from]: origem selecionada (ou localização atual)
+  /// - [RouteOptionsArgs.to]: destino selecionado
+  /// - [RouteOptionsArgs.filters]: filtros ativos
   final ValueChanged<RouteOptionsArgs> onConfirmOptions;
 
   const RouteSearchOverlay({
@@ -30,63 +56,137 @@ class RouteSearchOverlay extends StatefulWidget {
   State<RouteSearchOverlay> createState() => _RouteSearchOverlayState();
 }
 
+/// Campo atualmente ativo (em edição) no formulário.
+///
+/// Usado para decidir:
+/// - Que sugestões carregar (baseado em origem ou destino).
+/// - Que campo deve ser atualizado ao escolher uma sugestão.
 enum _ActiveField { from, to }
 
+/// Estado interno do [RouteSearchOverlay].
+///
+/// Mantém:
+/// - Controladores e focus nodes dos campos "De"/"Para".
+/// - Estado das sugestões (searchbox, nearby).
+/// - Filtros de rota ativos.
+/// - Anotações do mapa (círculo de destino, linha da rota).
+/// - Pré-visualização de distância e duração do preview da rota.
 class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
-  // ⬇️ sem heightFactor / drag – o pai controla a altura
+  // Controladores e focus dos campos de texto
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final FocusNode _fromFocus = FocusNode();
   final FocusNode _toFocus = FocusNode();
+
+  /// Campo atualmente selecionado para edição.
   _ActiveField _active = _ActiveField.to;
 
+  /// Cores de design
   static const _ecoMint = Color(0xFF3CD4A0);
   static const _offWhiteSand = Color(0xFFF8F7F4);
   static const _destRed = Color(0xFFE53935);
 
+  /// Token de sessão para Mapbox Searchbox (permite agrupar requests).
   String _sessionToken = 's_${DateTime.now().millisecondsSinceEpoch}';
 
+  /// Lista de sugestões devolvidas pelo Searchbox (modo "search").
   final List<SearchboxSuggestion> _sbSuggestions = [];
+
+  /// Cache de detalhes de lugares (por mapboxId), enriquecidos com distância.
   final Map<String, SearchboxPlace> _sbCache = {};
+
+  /// Lista de POIs/lugares próximos (modo "nearby").
   final List<SearchboxPlace> _nearby = [];
 
+  /// Lugar de destino selecionado (campo "Para").
   SearchboxPlace? _selectedTo;
+
+  /// Lugar de origem selecionado (caso o utilizador mude a partir da localização atual).
   SearchboxPlace? _selectedFrom;
+
+  /// Indica se está a decorrer uma pesquisa (autocomplete) no Searchbox.
   bool _isSearching = false;
+
+  /// Indica se estamos a carregar sugestões "nearby".
   bool _isLoadingNearby = false;
+
+  /// Mensagem informativa quando não há resultados ou há erros.
   String? _emptyMsg;
+
+  /// Timer de debounce para evitar chamadas excessivas à API enquanto o
+  /// utilizador escreve.
   Timer? _debounce;
+
+  /// Geração atual de pedidos "nearby" (para evitar race conditions).
+  ///
+  /// Cada novo load incrementa o contador; respostas antigas são ignoradas
+  /// se o valor não coincidir.
   int _nearbyGen = 0;
 
-  // Filter state
+  /// Filtros de rota ativos (modos, transitTypes, maxWalkDistance).
   RouteFilters? _activeFilters;
 
+  /// Gerente de anotações de círculos (para o marcador de destino).
   mbx.CircleAnnotationManager? _circleMgr;
+
+  /// Gerente de anotações de polylines (para a pré-visualização da rota).
   mbx.PolylineAnnotationManager? _lineMgr;
+
+  /// Anotação do círculo do destino atual (se existir).
   mbx.CircleAnnotation? _destCircle;
+
+  /// Anotação da polyline da rota atual (se existir).
   mbx.PolylineAnnotation? _routeLine;
 
+  /// Distância da pré-visualização da rota (metros).
   double? _distance;
+
+  /// Duração da pré-visualização da rota (segundos).
   double? _duration;
+
+  /// Perfil de modo da rota preview (usado no Mapbox Directions).
+  ///
+  /// - 'walking', 'cycling', etc.
+  /// - Caso seja 'scooter', adaptamos para 'cycling' no pedido.
   String _mode = 'walking';
 
+  /// Indica se o campo "De" representa a localização atual.
   bool _fromIsCurrent = true;
 
+  /// Regex para detetar códigos postais isolados (sem mais contexto),
+  /// que tendem a ser maus nomes de exibição.
   final RegExp _zipOnly = RegExp(r'^\d{4}-\d{3}$', caseSensitive: false);
+
+  /// Determina se um nome é “mau” para exibição (vazio ou apenas código postal).
   bool _badName(String s) => s.trim().isEmpty || _zipOnly.hasMatch(s.trim());
 
+  /// Verifica se uma posição está dentro de bounding box aproximada de Portugal.
+  ///
+  /// Ajuda a definir o `countryIso2` para a pesquisa (PT ou global).
   bool _isInPortugalBounds(mbx.Position p) {
     const minLon = -32.0, maxLon = -6.0, minLat = 31.5, maxLat = 42.6;
     final lon = p.lng.toDouble(), lat = p.lat.toDouble();
     return lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat;
   }
 
+  /// Devolve 'pt' se a posição estiver dentro de Portugal, caso contrário `null`.
   String? _countryIsoFor(mbx.Position p) =>
       _isInPortugalBounds(p) ? 'pt' : null;
 
+  /// Formata o campo "Para" a partir de um [SearchboxPlace] para algo mais
+  /// legível, removendo:
+  /// - Códigos postais que vêm isolados.
+  /// - Prefixos como "Distrito de".
+  /// - Repetições de "Portugal".
+  ///
+  /// Preferimos:
+  /// - Nome do POI/rua
+  /// - Cidade / localidade
+  /// - País (quando ± útil)
   String _formatToField(SearchboxPlace p) {
     final name = p.name.trim();
     final zipAtStart = RegExp(r'^\d{4}-\d{3}\s*', caseSensitive: false);
+
     String _cleanSeg(String s) {
       var x = s.trim();
       if (_zipOnly.hasMatch(x)) return '';
@@ -141,7 +241,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     super.initState();
     _resetSession();
 
-    // Validate userLocation before using it
+    // Validação inicial da posição do utilizador para debug
     final p = widget.userLocation.coordinates;
     print(
       '[RouteSearchOverlay] Initializing with userLocation: lat=${p.lat}, lng=${p.lng}',
@@ -153,16 +253,20 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       );
     }
 
+    // Preenche o campo "De" com localização atual (reverse geocoding)
     _initFromAddress();
+
     _fromFocus.addListener(_onFocusChange);
     _toFocus.addListener(_onFocusChange);
     _active = _ActiveField.to;
 
+    // Debug do contexto de Searchbox (proximidade/GPS)
     MapboxSearchBoxService.instance.debugCheck(
       lon: p.lng.toDouble(),
       lat: p.lat.toDouble(),
     );
 
+    // Carrega sugestões "nearby" iniciais para o campo ativo
     _loadNearbyForActive();
   }
 
@@ -180,10 +284,20 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     super.dispose();
   }
 
+  /// Gera um novo token de sessão para Mapbox Searchbox.
+  ///
+  /// Idealmente chamado sempre que se muda o campo ativo (De/Para).
   void _resetSession() {
     _sessionToken = 's_${DateTime.now().millisecondsSinceEpoch}';
   }
 
+  /// Handler para mudanças de foco entre campos "De" e "Para".
+  ///
+  /// Atualiza:
+  /// - `_active` (campo ativo).
+  /// - Limpa sugestões/estado de erro.
+  /// - Reinicia token de sessão.
+  /// - Carrega sugestões "nearby" adequadas ao campo ativo.
   void _onFocusChange() {
     final newActive = _fromFocus.hasFocus
         ? _ActiveField.from
@@ -200,6 +314,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     }
   }
 
+  /// Inicializa o campo "De" com a morada da localização atual (reverse geocoding).
+  ///
+  /// Em caso de erro, preenche com o texto "Localização atual".
   Future<void> _initFromAddress() async {
     try {
       final pos = widget.userLocation.coordinates;
@@ -230,6 +347,11 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     }
   }
 
+  /// Carrega sugestões "nearby" (POIs/ruas por perto) para o campo ativo.
+  ///
+  /// A posição base depende:
+  /// - Se o campo ativo é "De" e não estamos na localização atual, usa a origem selecionada.
+  /// - Caso contrário, usa a localização atual do utilizador.
   Future<void> _loadNearbyForActive() async {
     final myGen = ++_nearbyGen;
     setState(() {
@@ -265,7 +387,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       if (!mounted || myGen != _nearbyGen) return;
       setState(() {
         _nearby.addAll(sb);
-        if (_nearby.isEmpty) _emptyMsg = 'Não encontrei POIs/ruas por perto 😕';
+        if (_nearby.isEmpty) {
+          _emptyMsg = 'Não encontrei POIs/ruas por perto 😕';
+        }
       });
     } catch (e) {
       print('[RouteSearchOverlay] Error loading nearby places: $e');
@@ -279,6 +403,13 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     }
   }
 
+  /// Handler genérico de `onChanged` para o campo atualmente ativo (De/Para).
+  ///
+  /// Implementa:
+  /// - Debounce de 250ms antes de chamar a API.
+  /// - Limpeza de sugestões se o texto for demasiado curto (< 2 chars).
+  /// - Contexto de pesquisa (proximity/origin + país).
+  /// - Gestão de estado de loading e mensagens de erro/vazio.
   void _onChangedActive(String value) {
     _debounce?.cancel();
     setState(() => _emptyMsg = null);
@@ -347,6 +478,12 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     });
   }
 
+  /// Enriquecer sugestões [results] com detalhes e distância ao contexto (oLat/oLon).
+  ///
+  /// Faz um `retrieveManyParallel` e:
+  /// - Corrige nomes "maus" (apenas ZIP) com o nome da sugestão.
+  /// - Calcula distância haversine entre contexto e cada lugar.
+  /// - Preenche o cache [_sbCache] com [SearchboxPlace] completos.
   Future<void> _enrichDistances(
     List<SearchboxSuggestion> results,
     double oLon,
@@ -389,6 +526,12 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     });
   }
 
+  /// Devolve a posição base a usar como contexto de pesquisa (proximity/origin).
+  ///
+  /// Regras:
+  /// - Campo "De": se está na localização atual ou não há origem selecionada,
+  ///   usa a localização atual; caso contrário, usa a origem escolhida.
+  /// - Campo "Para": usa sempre a localização atual do utilizador.
   mbx.Position _effectiveContextForSearch() {
     if (_active == _ActiveField.from) {
       if (_fromIsCurrent || _selectedFrom == null) {
@@ -402,6 +545,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     }
   }
 
+  /// Aplica uma sugestão [SearchboxSuggestion] ao campo ativo.
+  ///
+  /// Se ainda não tivermos detalhes em cache, faz um `retrieve` primeiro.
   Future<void> _applySuggestion(SearchboxSuggestion s) async {
     var p = _sbCache[s.mapboxId];
     if (p == null) {
@@ -427,15 +573,22 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     await _applySelection(p);
   }
 
+  /// Aplica a seleção de um [SearchboxPlace] ao campo ativo (De/Para).
+  ///
+  /// Efeitos:
+  /// - Atualiza controllers e flags (`_fromIsCurrent`, `_selectedFrom`, `_selectedTo`).
+  /// - Limpa sugestões ativas.
+  /// - Para o destino:
+  ///   - Regista no histórico de pesquisa.
+  ///   - Atualiza mapa com destino/preview da rota via [_setDestination].
   Future<void> _applySelection(SearchboxPlace place) async {
     _fromFocus.unfocus();
     _toFocus.unfocus();
 
     if (_active == _ActiveField.from) {
       setState(() {
-        _fromController.text = place.name.isNotEmpty
-            ? place.name
-            : place.placeName;
+        _fromController.text =
+            place.name.isNotEmpty ? place.name : place.placeName;
         _fromIsCurrent = false;
         _selectedFrom = place;
         _sbSuggestions.clear();
@@ -445,7 +598,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         _toController.text = _formatToField(place);
         _sbSuggestions.clear();
       });
-      // Save to search history when destination is selected
+      // Guardar em histórico quando o destino é selecionado
       await SearchHistoryService.instance.addDestination(
         address: place.placeName,
         name: place.name.isNotEmpty ? place.name : place.placeName,
@@ -456,6 +609,15 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     }
   }
 
+  /// Atualiza o destino no mapa e carrega a pré-visualização da rota.
+  ///
+  /// Passos:
+  /// 1. Guarda [_selectedTo] e desenha marcador de destino (círculo vermelho).
+  /// 2. Determina origem efetiva ([fromPos]).
+  /// 3. Chama Mapbox Directions para obter rota preliminar.
+  /// 4. Desenha polyline com cor eco (_ecoMint).
+  /// 5. Atualiza [_distance] e [_duration] para preview textual.
+  /// 6. Ajusta a câmara ([_fitFromTo]) para enquadrar origem e destino.
   Future<void> _setDestination(SearchboxPlace place) async {
     if (!mounted) return;
 
@@ -464,16 +626,18 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       coordinates: mbx.Position(place.longitude, place.latitude),
     );
 
-    // círculos
+    // Gestor de círculos
     _circleMgr ??= await widget.mapboxMap.annotations
         .createCircleAnnotationManager();
     if (!mounted) return;
 
+    // Remove círculo anterior, se existir
     if (_destCircle != null) {
       await _circleMgr!.delete(_destCircle!);
       if (!mounted) return;
     }
 
+    // Cria novo círculo para destino
     _destCircle = await _circleMgr!.create(
       mbx.CircleAnnotationOptions(
         geometry: destPoint,
@@ -488,7 +652,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     final fromPos = _effectiveFromPosition();
     if (fromPos == null) return;
 
-    // rota preview (Mapbox Directions)
+    // Rota preview (Mapbox Directions)
     final route = await MapboxDirectionsService.instance.getRoute(
       fromLon: fromPos.lng.toDouble(),
       fromLat: fromPos.lat.toDouble(),
@@ -498,15 +662,18 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     );
     if (!mounted || route == null) return;
 
+    // Gestor de polylines
     _lineMgr ??= await widget.mapboxMap.annotations
         .createPolylineAnnotationManager();
     if (!mounted) return;
 
+    // Remove polyline anterior se existir
     if (_routeLine != null) {
       await _lineMgr!.delete(_routeLine!);
       if (!mounted) return;
     }
 
+    // Desenha nova polyline
     _routeLine = await _lineMgr!.create(
       mbx.PolylineAnnotationOptions(
         geometry: mbx.LineString(
@@ -525,11 +692,14 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       _duration = route.duration.toDouble();
     });
 
-    // aqui já não mexe no estado, só na câmara → é seguro mesmo depois do dispose,
-    // mas se quiseres ser ultra-safe podes meter outro `if (!mounted) return;` antes.
+    // Ajuste da câmara para enquadrar origem e destino
     await _fitFromTo(fromPos, mbx.Position(place.longitude, place.latitude));
   }
 
+  /// Ajusta a câmara do mapa para enquadrar dois pontos [a] e [b]
+  /// com um zoom aproximado baseado na distância entre eles.
+  ///
+  /// Usa uma função haversine simplificada em km para determinar o zoom.
   Future<void> _fitFromTo(mbx.Position a, mbx.Position b) async {
     final center = mbx.Position((a.lng + b.lng) / 2, (a.lat + b.lat) / 2);
 
@@ -556,20 +726,21 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     final km = _haversineKm(a.lat, a.lng, b.lat, b.lng);
 
     double zoom;
-    if (km < 0.5)
+    if (km < 0.5) {
       zoom = 15.5;
-    else if (km < 1)
+    } else if (km < 1) {
       zoom = 15.0;
-    else if (km < 2)
+    } else if (km < 2) {
       zoom = 14.5;
-    else if (km < 5)
+    } else if (km < 5) {
       zoom = 13.5;
-    else if (km < 10)
+    } else if (km < 10) {
       zoom = 12.5;
-    else if (km < 20)
+    } else if (km < 20) {
       zoom = 11.5;
-    else
+    } else {
       zoom = 10.5;
+    }
 
     await widget.mapboxMap.flyTo(
       mbx.CameraOptions(
@@ -580,6 +751,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     );
   }
 
+  /// Devolve a posição efetiva da origem:
+  /// - Se `from` é "Localização atual" → usa [userLocation].
+  /// - Se o utilizador escolheu outra origem → usa as coordenadas dessa seleção.
   mbx.Position? _effectiveFromPosition() {
     if (_fromIsCurrent || _selectedFrom == null) {
       final p = widget.userLocation.coordinates;
@@ -588,8 +762,19 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     return mbx.Position(_selectedFrom!.longitude, _selectedFrom!.latitude);
   }
 
+  /// Mostra o diálogo de filtros de rota (modos de transporte, transitTypes,
+  /// distância máxima a pé).
+  ///
+  /// Cria localmente um estado interno (via [StatefulBuilder]) que controla:
+  /// - Conjunto de modos selecionados.
+  /// - Tipos de transporte público (quando TRANSIT está ativo).
+  /// - Campo de texto para distância máxima a pé (em km).
+  ///
+  /// No final:
+  /// - Se o utilizador clicar em "Aplicar", devolve [RouteFilters] (ou null se vazio).
+  /// - Se clicar em "Limpar", o resultado é null e o estado local é limpo.
   Future<void> _showFilterDialog(BuildContext context) async {
-    // Available OTP transport modes
+    // Modos de transporte disponíveis no OTP
     final availableModes = [
       {'value': 'WALK', 'label': 'Caminhar', 'icon': Icons.directions_walk},
       {'value': 'BICYCLE', 'label': 'Bicicleta', 'icon': Icons.directions_bike},
@@ -601,7 +786,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       {'value': 'CAR', 'label': 'Carro', 'icon': Icons.directions_car},
     ];
 
-    // Granular transit types (shown when TRANSIT is selected)
+    // Tipos de transporte público granulares (usados quando TRANSIT está selecionado)
     final transitTypes = [
       {'value': 'BUS', 'label': 'Autocarro', 'icon': Icons.directions_bus},
       {'value': 'RAIL', 'label': 'Comboio', 'icon': Icons.train},
@@ -619,11 +804,14 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       },
     ];
 
+    // Estado inicial baseado nos filtros atualmente ativos
     Set<String> selectedModes = Set.from(_activeFilters?.modes ?? []);
     Set<String> selectedTransitTypes = Set.from(
       _activeFilters?.transitTypes ?? [],
     );
     int? maxWalk = _activeFilters?.maxWalkDistanceMeters;
+
+    // Controlador para o campo de distância máxima a pé (km)
     final TextEditingController walkController = TextEditingController(
       text: maxWalk != null ? (maxWalk / 1000).toStringAsFixed(1) : '',
     );
@@ -633,7 +821,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            // Calculate inside StatefulBuilder so it updates reactively
+            // Recalcular dinamicamente se TRANSIT está selecionado
             final isTransitSelected = selectedModes.contains('TRANSIT');
 
             return AlertDialog(
@@ -653,6 +841,8 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     const SizedBox(height: 8),
+
+                    // Lista de modos de transporte principais
                     ...availableModes.map((mode) {
                       final isSelected = selectedModes.contains(
                         mode['value'] as String,
@@ -676,7 +866,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                               selectedModes.add(mode['value'] as String);
                             } else {
                               selectedModes.remove(mode['value'] as String);
-                              // If TRANSIT is deselected, clear transit types
+                              // Se desligarmos TRANSIT, limpamos tipos de transit
                               if (mode['value'] == 'TRANSIT') {
                                 selectedTransitTypes.clear();
                               }
@@ -687,7 +877,8 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                         activeColor: _ecoMint,
                       );
                     }).toList(),
-                    // Show granular transit types when TRANSIT is selected
+
+                    // Tipos de transporte público detalhados
                     if (isTransitSelected) ...[
                       const SizedBox(height: 16),
                       const Divider(),
@@ -718,7 +909,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                               Expanded(
                                 child: Text(
                                   type['label'] as String,
-                                  style: TextStyle(fontSize: 13),
+                                  style: const TextStyle(fontSize: 13),
                                 ),
                               ),
                             ],
@@ -745,6 +936,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                         );
                       }).toList(),
                     ],
+
                     const SizedBox(height: 16),
                     const Text(
                       'Distância máxima a pé (km):',
@@ -765,10 +957,12 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                 ),
               ),
               actions: [
+                // Limpa filtros e fecha com null
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(null),
                   child: const Text('Limpar'),
                 ),
+                // Aplica filtros escolhidos
                 TextButton(
                   onPressed: () {
                     final filters = RouteFilters(
@@ -797,18 +991,26 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
       },
     );
 
+    // Resultado do diálogo: actualiza `_activeFilters` com o que vier
     if (result != null) {
       setState(() {
         _activeFilters = result;
       });
     } else if (result == null && _activeFilters != null) {
-      // User clicked "Limpar" - clear filters
+      // Utilizador clicou "Limpar" – remove filtros ativos
       setState(() {
         _activeFilters = null;
       });
     }
   }
 
+  /// Handler do botão "Confirmar".
+  ///
+  /// Verifica se existe destino selecionado e:
+  /// - Remove a polyline de pré-visualização (se existir).
+  /// - Determina lugar de origem (Localização atual vs. origem selecionada).
+  /// - Chama [onConfirmOptions] com [RouteOptionsArgs], para abrir o
+  ///   ecrã de opções de rota/navegação.
   void _onConfirm() async {
     if (_selectedTo == null) return;
 
@@ -856,7 +1058,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
 
     final showingResults = _sbSuggestions.isNotEmpty;
 
-    // ⬇️ sem Transform/drag – o pai (bottom sheet route) decide a altura
+    // Layout principal do overlay – o pai (bottom sheet route) controla a altura
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -875,8 +1077,9 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
         padding: EdgeInsets.only(bottom: bottomInset + 12),
         child: Column(
           children: [
-            SizedBox(height: 40),
-            // inputs "De" / "Para"
+            const SizedBox(height: 40),
+
+            // ===== Inputs "De" / "Para" =====
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -928,7 +1131,8 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
               ),
             ),
             const SizedBox(height: 12),
-            // Filter chip
+
+            // ===== Chip de Filtros =====
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -1012,6 +1216,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
             ),
             const SizedBox(height: 16),
 
+            // ===== Lista de resultados / nearby + botões de ação =====
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1037,6 +1242,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                     const SizedBox(height: 8),
                     Expanded(
                       child: showingResults
+                          // Lista de resultados da pesquisa
                           ? ListView.builder(
                               itemCount: _sbSuggestions.length,
                               itemBuilder: (context, i) {
@@ -1076,6 +1282,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                                 );
                               },
                             )
+                          // Lista de nearby / loading / vazio
                           : (_isLoadingNearby
                                 ? const Center(
                                     child: CircularProgressIndicator(),
@@ -1104,6 +1311,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                     ),
                     const SizedBox(height: 8),
 
+                    // Preview de distância/duração da rota
                     if (_distance != null && _duration != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
@@ -1117,6 +1325,8 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
                           ),
                         ),
                       ),
+
+                    // Botões "Cancelar" / "Confirmar"
                     Row(
                       children: [
                         Expanded(
@@ -1172,6 +1382,12 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     );
   }
 
+  /// Constrói o subtítulo de um [SearchboxPlace] para apresentação na lista.
+  ///
+  /// Junta:
+  /// - Place name.
+  /// - Tipo de feature (POI / Rua / Morada / outro).
+  /// - Categoria, se existir.
   String _formatSubtitleSB(SearchboxPlace p) {
     final bits = <String>[];
     switch ((p.featureType ?? '').toLowerCase()) {
@@ -1192,6 +1408,7 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
     return meta.isEmpty ? p.placeName : '${p.placeName} • $meta';
   }
 
+  /// Formata uma distância em metros [d] para uma string legível (m ou km).
   String? _formatDistance(double? d) {
     if (d == null) return null;
     if (d < 1000) return '${d.round()} m';
@@ -1199,16 +1416,39 @@ class _RouteSearchOverlayState extends State<RouteSearchOverlay> {
   }
 }
 
-// AUX – iguais aos teus
+/// Linha reutilizável para os inputs de localização ("De" / "Para").
+///
+/// Contém:
+/// - Ícone à esquerda.
+/// - Label pequeno (De/Para).
+/// - TextField principal.
+/// - Badge opcional (ex.: "Atual").
 class _LocationRow extends StatelessWidget {
+  /// Label pequeno sobre o campo (ex.: "De", "Para").
   final String label;
+
+  /// Controller do campo de texto.
   final TextEditingController controller;
+
+  /// Ícone principal à esquerda.
   final IconData icon;
+
+  /// Texto de placeholder/hint.
   final String? hintText;
+
+  /// Texto do badge à direita (ex.: "Atual").
   final String? badgeText;
+
+  /// Indica se o campo é apenas leitura.
   final bool readOnly;
+
+  /// FocusNode opcional para controlar foco a partir do exterior.
   final FocusNode? focusNode;
+
+  /// Callback opcional ao tocar no campo.
   final VoidCallback? onTap;
+
+  /// Callback opcional para mudanças no texto.
   final ValueChanged<String>? onChanged;
 
   const _LocationRow({
@@ -1235,6 +1475,7 @@ class _LocationRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Label pequeno (De/Para)
               Text(
                 label,
                 style: TextStyle(
@@ -1243,6 +1484,7 @@ class _LocationRow extends StatelessWidget {
                   color: t.colorScheme.onSurface.withOpacity(.6),
                 ),
               ),
+              // Campo de texto principal
               TextField(
                 controller: controller,
                 focusNode: focusNode,
@@ -1272,7 +1514,7 @@ class _LocationRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Color(0xFF3CD4A0),
+              color: const Color(0xFF3CD4A0),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -1290,10 +1532,24 @@ class _LocationRow extends StatelessWidget {
   }
 }
 
+/// Tile genérico para cada sugestão / resultado exibido na lista.
+///
+/// Mostra:
+/// - Título (nome do POI/rua).
+/// - Subtítulo (morada + meta).
+/// - Distância opcional à direita.
+/// - Ícone de localização à esquerda.
 class _ResultTile extends StatelessWidget {
+  /// Título principal da linha (nome do lugar).
   final String title;
+
+  /// Subtítulo (placeName + tipo, categoria, etc.).
   final String subtitle;
+
+  /// Texto de distância (ex.: "300 m", "2.1 km"), opcional.
   final String? trailing;
+
+  /// Callback acionado ao tocar na tile.
   final VoidCallback onTap;
 
   const _ResultTile({
@@ -1324,6 +1580,7 @@ class _ResultTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Título (nome do local)
                       Text(
                         title,
                         style: const TextStyle(
@@ -1331,6 +1588,7 @@ class _ResultTile extends StatelessWidget {
                           fontSize: 15,
                         ),
                       ),
+                      // Subtítulo (placeName + meta)
                       Text(
                         subtitle,
                         style: TextStyle(

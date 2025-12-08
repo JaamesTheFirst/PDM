@@ -19,6 +19,9 @@ import {
 
 // ===== Tipos internos OTP GraphQL =====
 
+/**
+ * Agência tal como devolvida pelo OTP GraphQL.
+ */
 interface OtpAgency {
   id: string;
   name: string;
@@ -28,6 +31,9 @@ interface OtpAgency {
   phone?: string | null;
 }
 
+/**
+ * Rota/linha tal como devolvida pelo OTP GraphQL.
+ */
 interface OtpRoute {
   id: string;
   shortName?: string | null;
@@ -38,6 +44,9 @@ interface OtpRoute {
   agency?: OtpAgency | null;
 }
 
+/**
+ * Paragem tal como devolvida pelo OTP GraphQL.
+ */
 interface OtpStop {
   id: string;
   code?: string | null;
@@ -50,6 +59,9 @@ interface OtpStop {
   parentStation?: { id: string } | null;
 }
 
+/**
+ * Informação de horário (stoptime) tal como devolvida pelo OTP GraphQL.
+ */
 interface OtpStoptime {
   serviceDay: number;
   scheduledDeparture: number;
@@ -62,6 +74,9 @@ interface OtpStoptime {
   };
 }
 
+/**
+ * Estrutura de stoptimes agrupados por padrão de linha (pattern).
+ */
 interface OtpStopStoptimesForPatterns {
   pattern: {
     route: OtpRoute;
@@ -69,6 +84,9 @@ interface OtpStopStoptimesForPatterns {
   stoptimes: OtpStoptime[];
 }
 
+/**
+ * Stop enriquecida com stoptimes, devolvida por queries específicas.
+ */
 interface OtpStopWithStoptimes {
   id: string;
   name: string;
@@ -77,6 +95,9 @@ interface OtpStopWithStoptimes {
   stoptimesForPatterns: OtpStopStoptimesForPatterns[];
 }
 
+/**
+ * Estrutura base para respostas GraphQL do OTP.
+ */
 interface GraphQlResponse<T> {
   data?: T;
   errors?: Array<{ message: string }>;
@@ -84,6 +105,9 @@ interface GraphQlResponse<T> {
 
 // ----- QUERY para SEARCH de stops por nome -----
 
+/**
+ * Query GraphQL para pesquisa de stops por nome (autocomplete).
+ */
 const STOPS_SEARCH_QUERY = `
   query CarrisStopsSearch($name: String!) {
     stops(name: $name) {
@@ -102,9 +126,20 @@ const STOPS_SEARCH_QUERY = `
 
 // ----- Service -----
 
+/**
+ * Serviço responsável por integrar com o OTP GraphQL e
+ * expor dados normalizados da Carris para o resto da aplicação.
+ *
+ * Principais responsabilidades:
+ *  - chamar o endpoint GraphQL do OTP
+ *  - filtrar apenas rotas/paragens relevantes para Carris
+ *  - mapear respostas para DTOs (CarrisAgencyDto, CarrisRouteDto, etc.)
+ */
 @Injectable()
 export class CarrisService {
+  /** Logger scoped ao serviço Carris */
   private readonly logger = new Logger(CarrisService.name);
+  /** URL do endpoint GraphQL do OTP (router default) */
   private readonly graphqlUrl: string;
 
   constructor(
@@ -113,11 +148,24 @@ export class CarrisService {
   ) {
     const otpBase =
       this.config.get<string>('OTP_BASE_URL') || 'http://localhost:8080/otp';
+
+    // Garante que não há double slash no final
     this.graphqlUrl = `${otpBase.replace(/\/$/, '')}/routers/default/index/graphql`;
   }
 
   // ---------- Helpers internos ----------
 
+  /**
+   * Helper genérico para efetuar pedidos GraphQL ao OTP.
+   *
+   * - faz POST para `this.graphqlUrl`
+   * - trata erros de rede e erros GraphQL (campo `errors`)
+   * - devolve apenas a propriedade `data` tipada como `TData`
+   *
+   * @param query String da query GraphQL
+   * @param variables Variáveis da query (opcional)
+   * @throws BadGatewayException em caso de falha de comunicação ou erro do OTP
+   */
   private async graphqlRequest<TData>(
     query: string,
     variables?: Record<string, any>,
@@ -158,6 +206,12 @@ export class CarrisService {
     }
   }
 
+  /**
+   * Verifica se uma agência do OTP corresponde à Carris.
+   *
+   * @param agency Agência devolvida pelo OTP
+   * @returns `true` se o nome da agência contiver "carris" (case-insensitive)
+   */
   private isCarrisAgency(agency?: OtpAgency | null): boolean {
     const n = agency?.name?.toLowerCase() ?? '';
     // Ajusta aqui se o agency.name no teu GTFS for diferente
@@ -166,6 +220,11 @@ export class CarrisService {
 
   // ---------- Agência ----------
 
+  /**
+   * Obtém informação da agência Carris a partir do OTP.
+   *
+   * @returns `CarrisAgencyDto` ou `null` se não for encontrada
+   */
   async getAgencyInfo(): Promise<CarrisAgencyDto | null> {
     const query = `
       query CarrisAgencies {
@@ -198,6 +257,11 @@ export class CarrisService {
 
   // ---------- Routes ----------
 
+  /**
+   * Lista todas as rotas pertencentes à Carris (modo BUS) presentes no grafo.
+   *
+   * @returns Array de `CarrisRouteDto`
+   */
   async getRoutes(): Promise<CarrisRouteDto[]> {
     const query = `
       query CarrisRoutes {
@@ -222,11 +286,13 @@ export class CarrisService {
 
     const result = await this.graphqlRequest<{ routes: OtpRoute[] }>(query);
 
+    // Filtra para BUS + Carris
     const routes = result.routes.filter((r) => {
       const isBus = (r.mode ?? '').toUpperCase() === 'BUS';
       return isBus && this.isCarrisAgency(r.agency || undefined);
     });
 
+    // Mapeia para DTO simplificado
     return routes.map((r) => ({
       id: r.id,
       shortName: r.shortName ?? null,
@@ -248,6 +314,12 @@ export class CarrisService {
     }));
   }
 
+  /**
+   * Obtém detalhes de uma rota específica da Carris.
+   *
+   * @param routeId ID da rota no grafo OTP
+   * @returns `CarrisRouteDto` ou `null` se a rota não for da Carris ou não existir
+   */
   async getRoute(routeId: string): Promise<CarrisRouteDto | null> {
     const query = `
       query CarrisRouteByNode($id: ID!) {
@@ -280,11 +352,11 @@ export class CarrisService {
     const node = result.node;
     if (!node || node.__typename !== 'Route') return null;
 
+    // Valida se é BUS + Carris
     if (
       (node.mode ?? '').toUpperCase() !== 'BUS' ||
       !this.isCarrisAgency(node.agency || undefined)
     ) {
-      // Não é Carris, ignora
       return null;
     }
 
@@ -311,6 +383,13 @@ export class CarrisService {
 
   // ---------- Stops ----------
 
+  /**
+   * Lista todas as paragens presentes no grafo OTP.
+   *
+   * Nota: aqui não há filtro explícito para Carris, porque o OTP
+   * nem sempre liga stops diretamente à agência. Se necessário,
+   * o filtro pode ser refinado com base em `zoneId`, `code`, etc.
+   */
   async getStops(): Promise<CarrisStopDto[]> {
     const query = `
       query CarrisStops {
@@ -330,8 +409,6 @@ export class CarrisService {
 
     const result = await this.graphqlRequest<{ stops: OtpStop[] }>(query);
 
-    // Aqui não filtramos por Carris, porque o OTP nem sempre indica agência no nível da stop.
-    // Se precisares, podes filtrar por zoneId ou prefixos de code.
     return result.stops.map((s) => ({
       id: s.id,
       code: s.code ?? null,
@@ -346,8 +423,10 @@ export class CarrisService {
   }
 
   /**
-   * Pesquisa por nome de paragem (para autocomplete).
-   * Não é 100% filtrado só Carris — depende do grafo.
+   * Pesquisa de paragens por nome, para uso em autocomplete.
+   *
+   * @param q Termo de pesquisa (nome parcial da paragem)
+   * @param limit Máximo de resultados a devolver
    */
   async searchStops(q: string, limit = 10): Promise<CarrisStopDto[]> {
     const term = (q ?? '').trim();
@@ -374,6 +453,12 @@ export class CarrisService {
     }));
   }
 
+  /**
+   * Obtém detalhes de uma paragem específica pelo ID.
+   *
+   * @param stopId ID da paragem no grafo OTP
+   * @returns `CarrisStopDto` ou `null` se não existir
+   */
   async getStop(stopId: string): Promise<CarrisStopDto | null> {
     const query = `
       query CarrisStopByNode($id: ID!) {
@@ -414,6 +499,14 @@ export class CarrisService {
     };
   }
 
+  /**
+   * Lista paragens associadas a uma rota Carris específica.
+   *
+   * A query usa `patterns.stops` para obter as paragens da linha
+   * e depois faz deduplicação por ID.
+   *
+   * @param routeId ID da rota
+   */
   async getStopsByRoute(routeId: string): Promise<CarrisStopDto[]> {
     const query = `
       query CarrisRouteStopsByNode($id: ID!) {
@@ -453,6 +546,7 @@ export class CarrisService {
     const routeNode = result.node;
     if (!routeNode || routeNode.__typename !== 'Route') return [];
 
+    // Garante que é uma rota BUS da Carris
     if (
       (routeNode.mode ?? '').toUpperCase() !== 'BUS' ||
       !this.isCarrisAgency(routeNode.agency || undefined)
@@ -460,11 +554,13 @@ export class CarrisService {
       return [];
     }
 
+    // Junta todas as paragens de todos os patterns
     const allStops: OtpStop[] = [];
     for (const p of routeNode.patterns || []) {
       allStops.push(...p.stops);
     }
 
+    // Dedup por ID
     const byId = new Map<string, OtpStop>();
     allStops.forEach((s) => byId.set(s.id, s));
 
@@ -483,6 +579,13 @@ export class CarrisService {
 
   // ---------- Próximas partidas numa paragem ----------
 
+  /**
+   * Obtém as próximas partidas (stoptimes) para uma paragem específica,
+   * já filtradas para rotas da Carris (modo BUS) e ordenadas por hora.
+   *
+   * @param stopId ID da paragem
+   * @param limit Máximo de partidas a devolver
+   */
   async getUpcomingDeparturesByStop(
     stopId: string,
     limit = 10,
@@ -551,7 +654,7 @@ export class CarrisService {
     for (const patternEntry of node.stoptimesForPatterns || []) {
       const route = patternEntry.pattern.route;
 
-      // Só queremos BUS Carris
+      // Só queremos partidas de rotas BUS da Carris
       if (
         (route.mode ?? '').toUpperCase() !== 'BUS' ||
         !this.isCarrisAgency(route.agency || undefined)
@@ -602,13 +705,14 @@ export class CarrisService {
       }
     }
 
-    // ordenar pelas partidas reais: serviceDay + realtimeDeparture
+    // Ordena por tempo real de partida: serviceDay + realtimeDeparture
     departures.sort((a, b) => {
       const at = a.stopTime.serviceDay + a.stopTime.realtimeDeparture;
       const bt = b.stopTime.serviceDay + b.stopTime.realtimeDeparture;
       return at - bt;
     });
 
+    // Respeita o limite pedido
     return departures.slice(0, limit);
   }
 }

@@ -1,22 +1,34 @@
+// lib/features/map/pages/map_page.dart
+
 import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart' show Position;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
-
 import 'package:provider/provider.dart';
 
 import '../../../services/location_service.dart';
 import '../../../services/mapbox_searchbox_service.dart';
-
-// screens + bottom-sheet route + tipos
 import '../nav/bottom_sheet_route.dart';
 import '../screens/route_search_screen.dart'; // RouteSearchScreen + RouteSearchScreenArgs
-// import '../screens/route_options_screen.dart';  // <- DEIXA DE SER USADO
 import '../widgets/route_options_overlay.dart'; // RouteOptionsArgs (tipo)
 import '../state/otp_routes_controller.dart';
 
+/// Página principal do mapa.
+///
+/// - Mostra o mapa Mapbox.
+/// - Desenha a posição atual do utilizador.
+/// - Abre o fluxo de pesquisa de rotas (bottom sheet full-screen).
+/// - Mostra as opções de rota num overlay em meia-altura.
 class MapPage extends StatefulWidget {
+  /// Controla se o mapa está em “modo fullscreen” (sem botão "Para onde?").
   static final ValueNotifier<bool> fullscreenNotifier = ValueNotifier(false);
+
+  /// Pedidos pendentes de pesquisa vindos de outros ecrãs (ex.: HistoryPage).
+  ///
+  /// Quando recebe um valor, o [MapPage] tenta abrir diretamente o fluxo
+  /// de rotas com base nesse destino.
   static final ValueNotifier<Map<String, dynamic>?> pendingRouteSearch =
       ValueNotifier<Map<String, dynamic>?>(null);
 
@@ -39,83 +51,90 @@ class _MapPageState extends State<MapPage> {
   static const _ecoMint = Color(0xFF3CD4A0);
   bool _isMapAlive = false;
 
-  // novos: para mostrar a RouteOptionsOverlay dentro do MapPage
+  /// Args para o overlay de opções de rota (meia altura).
   RouteOptionsArgs? _routeOptionsArgs;
 
   @override
   void initState() {
     super.initState();
     _init();
-    // listen for pending route search from HistoryPage
+    // Ouve pedidos de pesquisa vindos de páginas externas (ex.: HistoryPage).
     MapPage.pendingRouteSearch.addListener(_handlePendingRouteSearch);
   }
 
-  void _handlePendingRouteSearch() async {
+  /// Trata pedidos em [pendingRouteSearch] para abrir pesquisa diretamente.
+  Future<void> _handlePendingRouteSearch() async {
     final data = MapPage.pendingRouteSearch.value;
-    if (data != null && mapboxMap != null && _isMapAlive) {
-      // Clear the pending search
-      MapPage.pendingRouteSearch.value = null;
+    if (data == null || mapboxMap == null || !_isMapAlive) return;
 
-      // Get origin - use provided from or current location
-      SearchboxPlace fromPlace;
-      if (data.containsKey('fromId') && data.containsKey('fromLat') && data.containsKey('fromLon')) {
-        fromPlace = SearchboxPlace(
-          id: data['fromId'] as String,
-          name: data['fromName'] as String? ?? 'Origem',
-          placeName: data['fromName'] as String? ?? 'Origem',
-          longitude: data['fromLon'] as double,
-          latitude: data['fromLat'] as double,
-        );
-      } else {
-        // Use current location as origin
-        if (_currentLocation == null) {
-          // Try to get current location
-          final pos = await LocationService.instance.getCurrentLocation();
-          if (!mounted) return; // Check mounted after async call
-          if (pos == null) {
-            print('[MapPage] Cannot handle pending route search: no current location');
-            return;
-          }
-          setState(() {
-            _currentLocation = mbx.Point(
-              coordinates: mbx.Position(pos.longitude, pos.latitude),
-            );
-          });
-        }
-        if (!mounted) return; // Check mounted before using _currentLocation
-        fromPlace = SearchboxPlace(
-          id: 'current_location',
-          name: 'Localização atual',
-          placeName: 'Localização atual',
-          longitude: _currentLocation!.coordinates.lng.toDouble(),
-          latitude: _currentLocation!.coordinates.lat.toDouble(),
-        );
+    // Limpa o pedido para não repetir.
+    MapPage.pendingRouteSearch.value = null;
+
+    // ==== ORIGEM ====
+    SearchboxPlace fromPlace;
+
+    if (data.containsKey('fromId') &&
+        data.containsKey('fromLat') &&
+        data.containsKey('fromLon')) {
+      // Origem explícita no payload.
+      fromPlace = SearchboxPlace(
+        id: data['fromId'] as String,
+        name: (data['fromName'] as String?) ?? 'Origem',
+        placeName: (data['fromName'] as String?) ?? 'Origem',
+        longitude: data['fromLon'] as double,
+        latitude: data['fromLat'] as double,
+      );
+    } else {
+      // Usa localização atual como origem.
+      if (_currentLocation == null) {
+        final pos = await LocationService.instance.getCurrentLocation();
+        if (!mounted) return;
+        if (pos == null) return;
+
+        setState(() {
+          _currentLocation = mbx.Point(
+            coordinates: mbx.Position(pos.longitude, pos.latitude),
+          );
+        });
       }
 
-      if (!mounted) return; // Check mounted before creating RouteOptionsArgs
+      if (!mounted || _currentLocation == null) return;
 
-      final toPlace = SearchboxPlace(
-        id: data['toId'] as String,
-        name: data['toName'] as String,
-        placeName: data['toAddress'] as String? ?? data['toName'] as String, // Use address if available
-        longitude: data['toLon'] as double,
-        latitude: data['toLat'] as double,
+      fromPlace = SearchboxPlace(
+        id: 'current_location',
+        name: 'Localização atual',
+        placeName: 'Localização atual',
+        longitude: _currentLocation!.coordinates.lng.toDouble(),
+        latitude: _currentLocation!.coordinates.lat.toDouble(),
       );
-
-      // Create RouteOptionsArgs and set it
-      final args = RouteOptionsArgs(
-        mapboxMap: mapboxMap!,
-        from: fromPlace,
-        to: toPlace,
-      );
-
-      setState(() {
-        _routeOptionsArgs = args;
-      });
-      MapPage.fullscreenNotifier.value = true;
     }
+
+    if (!mounted) return;
+
+    // ==== DESTINO ====
+    final toPlace = SearchboxPlace(
+      id: data['toId'] as String,
+      name: data['toName'] as String,
+      placeName:
+          (data['toAddress'] as String?) ?? (data['toName'] as String),
+      longitude: data['toLon'] as double,
+      latitude: data['toLat'] as double,
+    );
+
+    // Cria RouteOptionsArgs e ativa o overlay.
+    final args = RouteOptionsArgs(
+      mapboxMap: mapboxMap!,
+      from: fromPlace,
+      to: toPlace,
+    );
+
+    setState(() {
+      _routeOptionsArgs = args;
+    });
+    MapPage.fullscreenNotifier.value = true;
   }
 
+  /// Inicializa permissões e obtém a localização atual (uma vez).
   Future<void> _init() async {
     final ok = await LocationService.instance.checkPermissions();
     if (!mounted) return;
@@ -139,6 +158,7 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
+  /// Callback de criação do [MapWidget].
   Future<void> _onMapCreated(mbx.MapboxMap map) async {
     mapboxMap = map;
     _isMapAlive = true;
@@ -166,6 +186,7 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
+  /// Garante que o marcador de posição do utilizador está criado.
   Future<void> _ensureUserIndicator() async {
     if (!_isMapAlive || mapboxMap == null || _currentLocation == null) return;
 
@@ -177,7 +198,7 @@ class _MapPageState extends State<MapPage> {
         mbx.CircleAnnotationOptions(
           geometry: _currentLocation!,
           circleRadius: 22.0,
-          circleColor: _ecoMint.withOpacity(0.25).value,
+          circleColor: _ecoMint.withValues(alpha: 0.25).value,
         ),
       );
 
@@ -193,6 +214,7 @@ class _MapPageState extends State<MapPage> {
     } catch (_) {}
   }
 
+  /// Atualiza a posição do marcador do utilizador.
   Future<void> _updateUserIndicator(mbx.Point pt) async {
     if (!_isMapAlive) return;
 
@@ -213,6 +235,7 @@ class _MapPageState extends State<MapPage> {
     } catch (_) {}
   }
 
+  /// Move a câmara para um [target] específico.
   Future<void> _moveCameraTo(
     mbx.Point target, {
     bool animated = true,
@@ -237,6 +260,7 @@ class _MapPageState extends State<MapPage> {
     } catch (_) {}
   }
 
+  /// Recentra a câmara na posição atual do utilizador.
   Future<void> _goToUser() async {
     final ok = await LocationService.instance.checkPermissions();
     if (!ok) return;
@@ -252,30 +276,38 @@ class _MapPageState extends State<MapPage> {
     await _moveCameraTo(target, animated: true);
   }
 
-  // === flow: Search (FULL) -> Options (overlay 50%) ===
+  // === fluxo: Search (full-screen) → Options (overlay 50%) ===
+
+  /// Abre o fluxo de pesquisa de rotas como bottom sheet full-screen.
   Future<void> _openSearchAsScreens() async {
     if (!_isMapAlive || mapboxMap == null) {
-      print('[MapPage] Cannot open search: map not ready');
+      debugPrint('[MapPage] Cannot open search: map not ready');
       return;
     }
-    
+
     if (_currentLocation == null) {
-      print('[MapPage] Cannot open search: current location is null');
-      // Try to get location again
+      debugPrint('[MapPage] Cannot open search: current location is null');
+
+      // Tenta obter localização novamente.
       final pos = await LocationService.instance.getCurrentLocation();
+      if (!mounted) return;
+
       if (pos == null) {
-        print('[MapPage] Failed to get current location');
-        // Show error to user
+        debugPrint('[MapPage] Failed to get current location');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Não foi possível obter a tua localização. Verifica as permissões de GPS.'),
+              content: Text(
+                'Não foi possível obter a tua localização. '
+                'Verifica as permissões de GPS.',
+              ),
               duration: Duration(seconds: 3),
             ),
           );
         }
         return;
       }
+
       setState(() {
         _currentLocation = mbx.Point(
           coordinates: mbx.Position(pos.longitude, pos.latitude),
@@ -284,17 +316,22 @@ class _MapPageState extends State<MapPage> {
     }
 
     final coords = _currentLocation!.coordinates;
-    print('[MapPage] Opening search screen with location: lat=${coords.lat}, lng=${coords.lng}');
-    
+    debugPrint(
+      '[MapPage] Opening search screen with location: '
+      'lat=${coords.lat}, lng=${coords.lng}',
+    );
+
     if (coords.lat == 0.0 && coords.lng == 0.0) {
-      print('[MapPage] WARNING: Location appears to be invalid (0,0)');
+      debugPrint(
+        '[MapPage] WARNING: Location appears to be invalid (0,0)',
+      );
     }
 
-    // enquanto o fluxo de rotas está ativo, escondemos o botão "Para onde?"
+    // Enquanto o fluxo de rotas está ativo, escondemos o botão "Para onde?".
     MapPage.fullscreenNotifier.value = true;
 
     try {
-      // 1) SEARCH (full-screen bottom sheet) — devolve RouteOptionsArgs
+      // 1) SEARCH (full-screen bottom sheet) — devolve RouteOptionsArgs.
       final args = await Navigator.of(context).push<RouteOptionsArgs>(
         BottomSheetPageRoute(
           heightFactor: 1.0,
@@ -308,30 +345,28 @@ class _MapPageState extends State<MapPage> {
       );
 
       if (!mounted || args == null) {
-        // user cancelou
+        // Utilizador cancelou ou widget desmontado.
         MapPage.fullscreenNotifier.value = false;
         return;
       }
 
-      // 2) OPTIONS como overlay dentro do MapPage (meia altura)
-      // Clear previous routes before showing new ones
+      // 2) OPTIONS como overlay dentro do MapPage (meia altura).
       final otpController = context.read<OtpRoutesController>();
       otpController.clear();
-      
+
       setState(() {
         _routeOptionsArgs = args;
       });
     } finally {
-      // NÃO voltamos a pôr fullscreenNotifier a false aqui,
-      // só quando fecharmos o overlay de opções.
+      // fullscreenNotifier volta a false quando fecharmos o overlay.
     }
   }
 
+  /// Fecha o overlay de opções de rota.
   void _closeOptionsOverlay() {
     setState(() {
       _routeOptionsArgs = null;
     });
-    // volta a mostrar o botão "Para onde?"
     MapPage.fullscreenNotifier.value = false;
   }
 
@@ -348,7 +383,7 @@ class _MapPageState extends State<MapPage> {
 
     return Stack(
       children: [
-        // MAPA
+        // ===== MAPA =====
         Positioned.fill(
           child: mbx.MapWidget(
             onMapCreated: _onMapCreated,
@@ -359,7 +394,7 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
 
-        // Botão "Para onde?" (esconde quando fullscreenNotifier = true)
+        // ===== Botão "Para onde?" (esconde em fullscreen) =====
         Positioned(
           left: 16,
           right: 16,
@@ -368,8 +403,6 @@ class _MapPageState extends State<MapPage> {
             valueListenable: MapPage.fullscreenNotifier,
             builder: (context, isFullscreen, _) {
               if (isFullscreen) {
-                // Quando o fluxo de rotas está aberto (search OU options),
-                // não mostra este botão
                 return const SizedBox.shrink();
               }
 
@@ -379,7 +412,7 @@ class _MapPageState extends State<MapPage> {
                   height: 52,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: t.cardColor.withOpacity(.92),
+                    color: t.cardColor.withValues(alpha: .92),
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: const [
                       BoxShadow(
@@ -405,12 +438,12 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
 
-        // FAB "minha localização"
+        // ===== FAB "minha localização" =====
         Positioned(
           right: 16,
           bottom: 16 + safeBottom,
           child: FloatingActionButton(
-            heroTag: 'my-location',
+            heroTag: 'map-my-location',
             onPressed: _goToUser,
             backgroundColor: t.cardColor,
             foregroundColor: _ecoMint,
@@ -419,9 +452,8 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
 
-        // OVERLAY DE OPÇÕES (meia altura)
+        // ===== OVERLAY DE OPÇÕES (meia altura) =====
         if (_routeOptionsArgs != null)
-          // Remove FractionallySizedBox constraint to allow full-screen expansion
           Align(
             alignment: Alignment.bottomCenter,
             child: RouteOptionsOverlay(

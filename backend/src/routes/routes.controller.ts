@@ -20,19 +20,27 @@ import { JwtPayload } from '../auth/types/jwt-payload.type';
 export class RoutesController {
   constructor(private readonly routesService: RoutesService) {}
 
-  // 1) Planeamento + filtro tudo no backend
+  /**
+   * 1) Planeamento de itinerário "simples":
+   *    chama OTP e aplica filtros (filterMode, maxWalkDistanceMeters) no backend.
+   */
   @Post('plan')
   planTrip(@Body() dto: PlanItineraryDto): Promise<PlannedRoutesResponse> {
     return this.routesService.planAndFilter(dto);
   }
 
-  // 2) Planeamento granular com seleção específica de tipos de transporte
+  /**
+   * 2) Planeamento granular:
+   *    permite selecionar tipos de transporte específicos (BUS, RAIL, etc.).
+   */
   @Post('plan-granular')
   planGranular(@Body() dto: PlanGranularDto): Promise<PlannedRoutesResponse> {
     return this.routesService.planGranular(dto);
   }
 
-  // 3) Guardar itinerary escolhido no histórico
+  /**
+   * 3) Guardar o itinerary escolhido no histórico do utilizador autenticado.
+   */
   @UseGuards(JwtAuthGuard)
   @Post('history')
   saveRoute(
@@ -42,7 +50,9 @@ export class RoutesController {
     return this.routesService.saveItineraryForUser(user.sub, dto);
   }
 
-  // 4) Listar histórico
+  /**
+   * 4) Listar histórico de rotas do utilizador autenticado.
+   */
   @UseGuards(JwtAuthGuard)
   @Get('history')
   listHistory(
@@ -52,7 +62,9 @@ export class RoutesController {
     return this.routesService.listHistoryForUser(user.sub, query);
   }
 
-  // 5) Detalhe de uma rota
+  /**
+   * 5) Obter detalhe de uma rota específica do histórico do utilizador.
+   */
   @UseGuards(JwtAuthGuard)
   @Get('history/:id')
   getHistoryItem(

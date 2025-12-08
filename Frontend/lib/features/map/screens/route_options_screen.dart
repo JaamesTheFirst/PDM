@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+
 import '../widgets/route_options_overlay.dart';
 
+/// Ecrã “casca” que mostra o [RouteOptionsOverlay] em full-screen.
+///
+/// Útil quando queremos apresentar as opções de rota como uma página
+/// completa em vez de overlay dentro do [MapPage].
 class RouteOptionsScreen extends StatelessWidget {
   final RouteOptionsArgs args;
-  const RouteOptionsScreen({super.key, required this.args});
+
+  const RouteOptionsScreen({
+    super.key,
+    required this.args,
+  });
 
   @override
   Widget build(BuildContext context) {

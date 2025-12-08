@@ -5,11 +5,20 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-/// Resultado de pesquisa de paragens Carris (GET /carris/stops/search)
+import '../../../services/api_client.dart';
+
+/// Resultado de pesquisa de paragens Carris (GET `/carris/stops/search`).
 class CarrisStopSearchResult {
-  final String gtfsId; // id do OTP/GTFS (node id)
+  /// ID GTFS (nodeId) usado pelo OTP/GTFS.
+  final String gtfsId;
+
+  /// Nome da paragem (human-readable).
   final String name;
+
+  /// Latitude aproximada da paragem (se existir).
   final double? lat;
+
+  /// Longitude aproximada da paragem (se existir).
   final double? lon;
 
   CarrisStopSearchResult({
@@ -29,7 +38,7 @@ class CarrisStopSearchResult {
   }
 }
 
-/// Route básica Carris (parte da resposta de partidas)
+/// Representa uma linha/rota Carris (parte da resposta de partidas).
 class CarrisRoute {
   final String id;
   final String? shortName;
@@ -53,7 +62,7 @@ class CarrisRoute {
   }
 }
 
-/// Stop básica Carris (parte da resposta de partidas)
+/// Informação básica de uma paragem Carris (usada nas partidas).
 class CarrisStop {
   final String id;
   final String name;
@@ -77,12 +86,20 @@ class CarrisStop {
   }
 }
 
-/// Dados brutos do stoptime OTP
+/// Dados brutos de um stopTime OTP (serviceDay + departure, etc.).
 class CarrisStopTime {
-  final int serviceDay;          // epoch seconds
-  final int scheduledDeparture;  // secs desde serviceDay
-  final int realtimeDeparture;   // secs desde serviceDay
-  final int departureDelay;      // secs
+  /// Dia de serviço em epoch seconds (UTC).
+  final int serviceDay;
+
+  /// Partida programada (segundos desde [serviceDay]).
+  final int scheduledDeparture;
+
+  /// Partida em tempo real (segundos desde [serviceDay]).
+  final int realtimeDeparture;
+
+  /// Atraso em segundos (pode ser negativo).
+  final int departureDelay;
+
   final String? stopHeadsign;
   final String? tripHeadsign;
   final String? routeId;
@@ -116,7 +133,7 @@ class CarrisStopTime {
   }
 }
 
-/// Partida futura Carris (GET /carris/stops/:id/departures)
+/// Partida futura Carris (GET `/carris/stops/:id/departures`).
 class CarrisUpcomingDeparture {
   final CarrisStop stop;
   final CarrisRoute route;
@@ -137,7 +154,7 @@ class CarrisUpcomingDeparture {
     );
   }
 
-  /// Converte serviceDay + realtimeDeparture num "HH:MM" local.
+  /// Hora “bonita” em formato `HH:MM` em hora local.
   String get timeLabel {
     final seconds = stopTime.serviceDay + stopTime.realtimeDeparture;
     final dt = DateTime.fromMillisecondsSinceEpoch(
@@ -149,7 +166,7 @@ class CarrisUpcomingDeparture {
     return '$hh:$mm';
   }
 
-  /// Destino para mostrar no UI
+  /// Destino preferido para mostrar no UI.
   String get destinationLabel {
     return stopTime.tripHeadsign ??
         stopTime.stopHeadsign ??
@@ -157,30 +174,32 @@ class CarrisUpcomingDeparture {
         stop.name;
   }
 
-  /// Nome de linha (curta se existir)
+  /// Nome de linha (shortName se existir).
   String get lineLabel {
     return route.shortName ?? route.longName ?? '';
   }
 
-  /// Atraso em minutos (pode ser negativo)
+  /// Atraso em minutos (pode ser negativo).
   int get delayMinutes {
     return (stopTime.departureDelay / 60).round();
   }
 
-  /// Marca simples para saber se há realtime
+  /// Indica se existe dado em tempo real (vs apenas horário programado).
   bool get isRealtime {
-    // se houver diferença entre scheduled e realtime, assume realtime
+    // Se há diferença entre scheduled e realtime, assumimos realtime.
     return stopTime.departureDelay != 0;
   }
 }
 
+/// Cliente HTTP para endpoints Carris expostos pelo teu backend.
 class CarrisApiClient {
-  CarrisApiClient({http.Client? client}) : _client = client ?? http.Client();
+  CarrisApiClient({http.Client? client, String? baseUrl})
+      : _client = client ?? http.Client(),
+        _baseUrl = baseUrl ?? kBaseUrl;
 
   final http.Client _client;
+  final String _baseUrl;
 
-  // mesmo esquema do CP
-  static const String _baseUrl = String.fromEnvironment('BASE_URL');
   static const Duration _timeout = Duration(seconds: 8);
 
   Uri _buildUri(String path, [Map<String, dynamic>? query]) {
@@ -249,6 +268,11 @@ class CarrisApiClient {
 
   // ================== SEARCH STOPS ==================
 
+  /// Pesquisa paragens Carris (autocomplete).
+  ///
+  /// Faz duas tentativas:
+  /// 1. Texto original
+  /// 2. Versão normalizada sem acentos (se for diferente)
   Future<List<CarrisStopSearchResult>> searchStops(
     String query, {
     int limit = 5,
@@ -259,10 +283,10 @@ class CarrisApiClient {
     if (trimmed.length < 2) return [];
 
     final normalized = _normalizeForSearch(trimmed);
-    final Set<String> seenIds = {};
-    final List<CarrisStopSearchResult> allResults = [];
+    final seenIds = <String>{};
+    final allResults = <CarrisStopSearchResult>[];
 
-    Future<void> _fetch(String q, {String tag = 'orig'}) async {
+    Future<void> fetch(String q, {String tag = 'orig'}) async {
       if (allResults.length >= limit) return;
 
       final uri = _buildUri('/carris/stops/search', {
@@ -275,7 +299,8 @@ class CarrisApiClient {
       try {
         final resp = await _client.get(uri).timeout(_timeout);
         debugPrint(
-          '[CARRIS API] searchStops($tag) status=${resp.statusCode} bodyLen=${resp.body.length}',
+          '[CARRIS API] searchStops($tag) status=${resp.statusCode} '
+          'bodyLen=${resp.body.length}',
         );
 
         if (resp.statusCode != 200) {
@@ -285,15 +310,15 @@ class CarrisApiClient {
           return;
         }
 
-        final json = jsonDecode(resp.body);
-        if (json is! List) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is! List) {
           debugPrint(
             '[CARRIS API] searchStops($tag) resposta inesperada (não é array)',
           );
           return;
         }
 
-        for (final item in json) {
+        for (final item in decoded) {
           if (allResults.length >= limit) break;
           final stop = CarrisStopSearchResult.fromJson(
             item as Map<String, dynamic>,
@@ -309,10 +334,10 @@ class CarrisApiClient {
       }
     }
 
-    await _fetch(trimmed, tag: 'orig');
+    await fetch(trimmed, tag: 'orig');
 
     if (allResults.length < limit && normalized != trimmed.toLowerCase()) {
-      await _fetch(normalized, tag: 'norm');
+      await fetch(normalized, tag: 'norm');
     }
 
     debugPrint(
@@ -323,6 +348,9 @@ class CarrisApiClient {
 
   // =========== PARTIDAS PRÓXIMAS (hoje / próximos minutos) ===========
 
+  /// Lista partidas futuras para uma paragem Carris.
+  ///
+  /// Backend: `GET /carris/stops/:id/departures?limit=`.
   Future<List<CarrisUpcomingDeparture>> getUpcomingDepartures({
     required String stopGtfsId,
     int limit = 20,
@@ -337,7 +365,8 @@ class CarrisApiClient {
     try {
       final resp = await _client.get(uri).timeout(_timeout);
       debugPrint(
-        '[CARRIS API] getUpcomingDepartures status=${resp.statusCode} bodyLen=${resp.body.length}',
+        '[CARRIS API] getUpcomingDepartures status=${resp.statusCode} '
+        'bodyLen=${resp.body.length}',
       );
 
       if (resp.statusCode != 200) {
@@ -346,14 +375,14 @@ class CarrisApiClient {
         );
       }
 
-      final json = jsonDecode(resp.body);
-      if (json is! List) {
+      final decoded = jsonDecode(resp.body);
+      if (decoded is! List) {
         throw Exception(
           'Resposta inesperada do servidor Carris (não é lista).',
         );
       }
 
-      final deps = json
+      final deps = decoded
           .map(
             (e) => CarrisUpcomingDeparture.fromJson(
               e as Map<String, dynamic>,

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/auth_controller.dart';
 
-/// === ECO THEME (igual ao do login) ===
+/// Conjunto de tokens de UI usados no ecrã de registo.
+///
+/// É compatível com o tema definido no ecrã de login, partilhando
+/// a mesma paleta de cores e tipografia base.
 class EcoTheme {
   static const ecoMint = Color(0xFF3CD4A0);
   static const vibrantCoral = Color(0xFFFF6B6B);
@@ -13,6 +16,7 @@ class EcoTheme {
 
   static const radius = 16.0;
 
+  /// Título principal usado no ecrã de registo.
   static const h1 = TextStyle(
     fontFamily: 'Poppins',
     fontWeight: FontWeight.w700,
@@ -21,18 +25,31 @@ class EcoTheme {
     color: deepCharcoal,
   );
 
+  /// Texto auxiliar pequeno.
   static const small = TextStyle(
     fontFamily: 'Inter',
     fontSize: 12,
     color: coolGrey,
   );
 
+  /// Tema base para campos de texto (TextFormField) no registo.
   static InputDecorationTheme get inputTheme => InputDecorationTheme(
-        labelStyle: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: deepCharcoal),
-        hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: coolGrey),
+        labelStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          color: deepCharcoal,
+        ),
+        hintStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          color: coolGrey,
+        ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radius),
           borderSide: const BorderSide(color: coolGrey),
@@ -52,21 +69,37 @@ class EcoTheme {
       );
 }
 
+/// Ecrã de criação de conta.
+///
+/// Permite registar um novo utilizador com:
+/// - Nome próprio e apelido (opcionais)
+/// - Username
+/// - Email
+/// - Password e confirmação
+///
+/// Em caso de sucesso, navega para `/home` limpando o histórico de navegação.
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
+
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  /// Chave do formulário para validação.
   final _formKey = GlobalKey<FormState>();
+
   final _firstName = TextEditingController();
   final _lastName = TextEditingController();
   final _username = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
+
+  /// Controla se a password está visível ou não.
   bool _obscure = true;
+
+  /// Mensagem de erro apresentada abaixo dos campos, se existir.
   String? _error;
 
   @override
@@ -80,21 +113,39 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
+  /// Tenta registar o utilizador com os dados do formulário.
+  ///
+  /// - Valida o formulário.
+  /// - Chama [AuthController.register].
+  /// - Se correr bem, navega para `/home` e remove todas as rotas anteriores.
+  /// - Caso contrário, mostra mensagem de erro genérica.
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
     final ok = await context.read<AuthController>().register(
           username: _username.text.trim(),
           email: _email.text.trim(),
           password: _password.text,
-          firstName: _firstName.text.trim().isEmpty ? null : _firstName.text.trim(),
-          lastName: _lastName.text.trim().isEmpty ? null : _lastName.text.trim(),
+          firstName: _firstName.text.trim().isEmpty
+              ? null
+              : _firstName.text.trim(),
+          lastName: _lastName.text.trim().isEmpty
+              ? null
+              : _lastName.text.trim(),
         );
-    if (!context.mounted) return;
+
+    if (!mounted) return;
+
     if (ok) {
-      // Navigate to AppShell (main app with map) and clear navigation stack
-      Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
+      // Navega para AppShell e limpa a stack de navegação.
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/home',
+        (_) => false,
+      );
     } else {
-      setState(() => _error = 'Não foi possível criar a conta agora.');
+      setState(() {
+        _error = 'Não foi possível criar a conta agora.';
+      });
     }
   }
 
@@ -107,7 +158,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       appBar: AppBar(
         backgroundColor: EcoTheme.offWhiteSand,
         elevation: 0,
-        title: const Text('Criar conta', style: TextStyle(color: EcoTheme.deepCharcoal)),
+        title: const Text(
+          'Criar conta',
+          style: TextStyle(color: EcoTheme.deepCharcoal),
+        ),
         iconTheme: const IconThemeData(color: EcoTheme.deepCharcoal),
       ),
       body: Center(
@@ -116,7 +170,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Theme(
-              data: Theme.of(context).copyWith(inputDecorationTheme: EcoTheme.inputTheme),
+              data: Theme.of(context).copyWith(
+                inputDecorationTheme: EcoTheme.inputTheme,
+              ),
               child: Form(
                 key: _formKey,
                 child: ListView(
@@ -124,16 +180,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   children: [
                     const Text('Bem-vindo!', style: EcoTheme.h1),
                     const SizedBox(height: 8),
-                    const Text('Cria a tua conta para começares já a poupar CO₂.', style: EcoTheme.small),
+                    const Text(
+                      'Cria a tua conta para começares já a poupar CO₂.',
+                      style: EcoTheme.small,
+                    ),
                     const SizedBox(height: 24),
 
+                    // Nome próprio e apelido (opcionais).
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: _firstName,
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
-                            decoration: const InputDecoration(labelText: 'Primeiro nome (opcional)'),
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16,
+                              color: EcoTheme.deepCharcoal,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Primeiro nome (opcional)',
+                            ),
                             textCapitalization: TextCapitalization.words,
                           ),
                         ),
@@ -141,8 +207,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _lastName,
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
-                            decoration: const InputDecoration(labelText: 'Último nome (opcional)'),
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16,
+                              color: EcoTheme.deepCharcoal,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Último nome (opcional)',
+                            ),
                             textCapitalization: TextCapitalization.words,
                           ),
                         ),
@@ -150,64 +222,120 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: 12),
 
+                    // Username.
                     TextFormField(
                       controller: _username,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
-                      decoration: const InputDecoration(labelText: 'Username'),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Escolhe um username' : null,
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _email,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.username, AutofillHints.email],
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Insere o email';
-                        final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v);
-                        return ok ? null : 'Email inválido';
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _password,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        suffixIcon: IconButton(
-                          tooltip: _obscure ? 'Mostrar' : 'Esconder',
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off, color: EcoTheme.coolGrey),
-                        ),
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: EcoTheme.deepCharcoal,
                       ),
-                      obscureText: _obscure,
-                      autofillHints: const [AutofillHints.newPassword],
+                      decoration:
+                          const InputDecoration(labelText: 'Username'),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Insere a password';
-                        if (v.length < 6) return 'Mínimo 6 caracteres';
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Escolhe um username';
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 12),
 
+                    // Email.
+                    TextFormField(
+                      controller: _email,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: EcoTheme.deepCharcoal,
+                      ),
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [
+                        AutofillHints.username,
+                        AutofillHints.email,
+                      ],
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Insere o email';
+                        }
+                        final ok = RegExp(
+                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                        ).hasMatch(v);
+                        return ok ? null : 'Email inválido';
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Password.
+                    TextFormField(
+                      controller: _password,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: EcoTheme.deepCharcoal,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        suffixIcon: IconButton(
+                          tooltip: _obscure ? 'Mostrar' : 'Esconder',
+                          onPressed: () =>
+                              setState(() => _obscure = !_obscure),
+                          icon: Icon(
+                            _obscure
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: EcoTheme.coolGrey,
+                          ),
+                        ),
+                      ),
+                      obscureText: _obscure,
+                      autofillHints: const [AutofillHints.newPassword],
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Insere a password';
+                        }
+                        if (v.length < 6) {
+                          return 'Mínimo 6 caracteres';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Confirmar password.
                     TextFormField(
                       controller: _confirm,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: EcoTheme.deepCharcoal),
-                      decoration: const InputDecoration(labelText: 'Confirmar password'),
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: EcoTheme.deepCharcoal,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Confirmar password',
+                      ),
                       obscureText: true,
-                      validator: (v) => (v != _password.text) ? 'As passwords não coincidem' : null,
+                      validator: (v) =>
+                          (v != _password.text) ? 'As passwords não coincidem' : null,
                     ),
 
                     if (_error != null) ...[
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          const Icon(Icons.error_outline, color: EcoTheme.vibrantCoral),
+                          const Icon(
+                            Icons.error_outline,
+                            color: EcoTheme.vibrantCoral,
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(_error!, style: const TextStyle(color: EcoTheme.vibrantCoral))),
+                          Expanded(
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(
+                                color: EcoTheme.vibrantCoral,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -219,14 +347,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: EcoTheme.ecoMint,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
                           elevation: 0,
                         ),
                         onPressed: isLoading ? null : _submit,
                         child: isLoading
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Text('Criar conta',
-                                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 16)),
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Criar conta',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
+                              ),
                       ),
                     ),
                   ],

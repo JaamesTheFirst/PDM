@@ -1,3 +1,6 @@
+// Barrel file para expor todos os DTOs relacionados com rotas.
+// Facilita imports do tipo `from './dto'`.
+
 export * from './plan-itinerary.dto';
 export * from './plan-granular.dto';
 export * from './create-route-history.dto';

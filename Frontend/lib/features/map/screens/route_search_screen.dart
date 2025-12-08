@@ -3,15 +3,28 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 
 import '../widgets/route_search_overlay.dart';
 
+/// Argumentos necessários para abrir o [RouteSearchScreen].
 class RouteSearchScreenArgs {
   final mbx.MapboxMap mapboxMap;
   final mbx.Point userLocation;
-  RouteSearchScreenArgs({required this.mapboxMap, required this.userLocation});
+
+  RouteSearchScreenArgs({
+    required this.mapboxMap,
+    required this.userLocation,
+  });
 }
 
+/// Ecrã “casca” que mostra o [RouteSearchOverlay] em full-screen.
+///
+/// Devolve um [RouteOptionsArgs] (via `Navigator.pop`) quando o utilizador
+/// confirma uma rota, ou `null` se cancelar.
 class RouteSearchScreen extends StatelessWidget {
   final RouteSearchScreenArgs args;
-  const RouteSearchScreen({super.key, required this.args});
+
+  const RouteSearchScreen({
+    super.key,
+    required this.args,
+  });
 
   @override
   Widget build(BuildContext context) {

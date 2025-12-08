@@ -11,6 +11,14 @@ import {
 } from './dto/impact-summary.dto';
 import { EcoPeriodType, RouteStatus, TransportMode } from '@prisma/client';
 
+/**
+ * Serviço de cálculo e agregação de impacto ecológico.
+ *
+ * Responsabilidades principais:
+ *  - calcular resumos de impacto (CO2, distâncias, ecoScore) a partir de RouteHistory
+ *  - manter a tabela EcoStatsAggregate (períodos DAY/MONTH/YEAR)
+ *  - fornecer timelines de agregados para gráficos.
+ */
 @Injectable()
 export class ImpactService {
   // mesmo baseline que usas no EcoScoreService do frontend (kg CO2 / km)
@@ -22,7 +30,9 @@ export class ImpactService {
   // ========= PUBLIC API: RESUMOS =========
 
   /**
-   * Últimos 7 dias (inclui hoje).
+   * Resumo dos últimos 7 dias (inclui hoje).
+   *
+   * Usa `startedAt` das viagens para delimitar o intervalo.
    */
   async getWeeklySummary(userId: string): Promise<ImpactSummaryDto> {
     const now = new Date();
@@ -37,7 +47,9 @@ export class ImpactService {
   }
 
   /**
-   * Últimos N dias (ex: 30).
+   * Resumo dos últimos N dias (ex: 30).
+   *
+   * Protegido para [1, 365] dias.
    */
   async getSummaryForLastDays(
     userId: string,
@@ -58,7 +70,9 @@ export class ImpactService {
   }
 
   /**
-   * Resumo num intervalo arbitrário.
+   * Resumo num intervalo de datas arbitrário [from, to].
+   *
+   * Se `from > to`, lança BadRequestException.
    */
   async getSummaryForRange(
     userId: string,
@@ -77,7 +91,9 @@ export class ImpactService {
   }
 
   /**
-   * Resumo all-time (desde a primeira viagem do utilizador até agora).
+   * Resumo all-time: desde a primeira viagem do utilizador até agora.
+   *
+   * Se o utilizador nunca fez viagens, devolve summary vazio com o dia atual.
    */
   async getAllTimeSummary(userId: string): Promise<ImpactSummaryDto> {
     const firstTrip = await this.prisma.routeHistory.findFirst({
@@ -104,7 +120,9 @@ export class ImpactService {
 
   /**
    * Atualiza agregados EcoStatsAggregate para uma viagem específica.
-   * Deves chamar isto quando crias/alteras um RouteHistory.
+   *
+   * Deve ser chamado quando uma RouteHistory é criada ou atualizada,
+   * de forma a manter os agregados coerentes.
    */
   async updateAggregatesForTrip(tripId: string): Promise<void> {
     const trip = await this.prisma.routeHistory.findUnique({
@@ -115,7 +133,7 @@ export class ImpactService {
       throw new NotFoundException('RouteHistory não encontrado');
     }
 
-    // viagem cancelada não conta
+    // viagem cancelada não conta para estatísticas
     if (trip.status === RouteStatus.CANCELLED) {
       return;
     }
@@ -127,7 +145,7 @@ export class ImpactService {
     const distanceKm = distanceMeters / 1000;
     const baselineCarKg = this.baselineCo2PerKm * distanceKm;
 
-    // 👇 se co2SavedVsCarKg não existir ou for <= 0, recalculamos
+    // se co2SavedVsCarKg não existir ou for <= 0, recalculamos
     let co2Saved: number;
     if (
       typeof trip.co2SavedVsCarKg === 'number' &&
@@ -139,9 +157,10 @@ export class ImpactService {
     }
     if (co2Saved < 0) co2Saved = 0;
 
-    // 🔥 ecoScore calculado a partir dos dados da viagem
+    // ecoScore calculado a partir dos dados da viagem
     const ecoScore = this.computeEcoScoreForTrip(trip);
 
+    // referência temporal para buckets DAY/MONTH/YEAR
     const refDate = trip.createdAt ?? trip.finishedAt ?? trip.startedAt;
 
     for (const type of [
@@ -183,7 +202,10 @@ export class ImpactService {
   }
 
   /**
-   * Rebuild total dos agregados de um user (caso mudes lógica ou faças reset).
+   * Reconstrói todos os agregados EcoStatsAggregate de um utilizador.
+   *
+   * Útil se mudares a lógica de ecoScore ou se quiseres fazer um reset
+   * completo de estatísticas a partir do histórico de viagens.
    */
   async rebuildAggregatesForUser(userId: string): Promise<void> {
     // apaga agregados atuais
@@ -259,7 +281,8 @@ export class ImpactService {
   }
 
   /**
-   * Timeline de EcoStatsAggregate (para gráficos, etc.)
+   * Devolve a timeline de EcoStatsAggregate para um determinado tipo
+   * (DAY / MONTH / YEAR), limitada a `limit` registos.
    */
   async getEcoStatsTimeline(
     userId: string,
@@ -299,6 +322,15 @@ export class ImpactService {
     return copy;
   }
 
+  /**
+   * Calcula a chave de período (string) para EcoStatsAggregate,
+   * em função do tipo (DAY, MONTH, YEAR).
+   *
+   * Exemplos:
+   *  - DAY   → "2025-12-03"
+   *  - MONTH → "2025-12"
+   *  - YEAR  → "2025"
+   */
   private getPeriodKey(date: Date, type: EcoPeriodType): string {
     const y = date.getUTCFullYear();
     const m = date.getUTCMonth() + 1;
@@ -326,8 +358,8 @@ export class ImpactService {
   }
 
   /**
-   * Lê RouteHistory no intervalo [start, end], usando startedAt.
-   * Ignora viagens CANCELLED.
+   * Lê RouteHistory no intervalo [start, end], usando `startedAt` como filtro.
+   * Ignora viagens com status CANCELLED e ordena por `createdAt` ascendente.
    */
   private async loadHistories(
     userId: string,
@@ -349,6 +381,9 @@ export class ImpactService {
     });
   }
 
+  /**
+   * Constrói um resumo vazio (sem viagens) para o período indicado.
+   */
   private buildEmptySummary(
     periodStart: Date,
     periodEnd: Date,
@@ -375,7 +410,8 @@ export class ImpactService {
   }
 
   /**
-   * Faz toda a lógica de agregação em memória e devolve o ImpactSummaryDto.
+   * Agrega uma lista de RouteHistory num ImpactSummaryDto,
+   * calculando totais, rácios e buckets diários.
    */
   private buildSummaryFromHistories(
     histories: any[],
@@ -395,7 +431,7 @@ export class ImpactService {
     let ecoTrips = 0;
     let activeTrips = 0;
 
-    // 🔥 para média de ecoScore
+    // acumulador para média de ecoScore
     let totalEcoScore = 0;
 
     for (const trip of histories) {
@@ -421,12 +457,12 @@ export class ImpactService {
       totalCo2Kg += co2Kg;
       totalCo2SavedKg += co2Saved;
 
-      // rota é “eco” se emitir menos que o baseline do carro
+      // viagem “eco” se emitir menos que o baseline de carro
       if (co2Kg < baselineCarKg) {
         ecoTrips += 1;
       }
 
-      // rota “ativa” se tiver pelo menos um modo físico
+      // viagem “ativa” se tiver pelo menos um modo físico
       const modes = (trip.modes ?? []) as TransportMode[];
       const hasActive = modes.some((m) =>
         ['WALKING', 'BIKE', 'BIKE_SHARE', 'SCOOTER', 'SCOOTER_SHARE'].includes(
@@ -437,11 +473,11 @@ export class ImpactService {
         activeTrips += 1;
       }
 
-      // ecoScore para esta viagem
+      // ecoScore individual da viagem
       const ecoScore = this.computeEcoScoreForTrip(trip);
       totalEcoScore += ecoScore;
 
-      // bucket diário
+      // bucket diário: usamos uma data de referência (createdAt/finishedAt/startedAt)
       const refDate: Date = trip.createdAt ?? trip.finishedAt ?? trip.startedAt;
       const dateKey = refDate.toISOString().slice(0, 10); // YYYY-MM-DD
 
@@ -493,8 +529,15 @@ export class ImpactService {
   }
 
   /**
-   * Versão backend simplificada da lógica do EcoScore.
-   * Usa co2Kg + distanceMeters + modes para aproximar o score 0-100.
+   * Lógica simplificada de EcoScore para uma RouteHistory.
+   *
+   * Usa apenas os campos disponíveis no histórico:
+   *  - distanceMeters
+   *  - co2Kg
+   *  - modes
+   *
+   * O objetivo é aproximar o score do frontend sem precisar de todas
+   * as pernas/legs da viagem.
    */
   private computeEcoScoreForTrip(trip: any): number {
     const distanceMeters: number = trip.distanceMeters ?? 0;

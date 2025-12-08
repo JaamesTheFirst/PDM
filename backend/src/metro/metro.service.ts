@@ -1,3 +1,9 @@
+// src/metro/metro.service.ts
+//
+// Serviço para consumir a API oficial do Metro de Lisboa.
+// Faz gestão de autenticação (API key ou OAuth token) e expõe métodos
+// de alto nível para tempos de espera, estados de linha, destinos, etc.
+
 import { Injectable, BadGatewayException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -26,6 +32,13 @@ export class MetroService {
     private readonly tokenService: MetroTokenService,
   ) {}
 
+  /**
+   * Chamada genérica à API do Metro.
+   *
+   * Usa credenciais de uma de duas formas:
+   *  - legado: METRO_LISBOA_API_KEY (Bearer direto)
+   *  - novo: OAuth2 via MetroTokenService
+   */
   private async callMetroApi<T>(path: string): Promise<T> {
     const legacyApiKey = this.config.get<string>('METRO_LISBOA_API_KEY');
 
@@ -51,6 +64,8 @@ export class MetroService {
     }
   }
 
+  // ===== Tempos de espera =====
+
   getAllStationWaitingTimes(): Promise<MetroWaitingTimeDto[]> {
     return this.callMetroApi<MetroWaitingTimeDto[]>(
       '/tempoEspera/Estacao/todos',
@@ -69,6 +84,8 @@ export class MetroService {
     );
   }
 
+  // ===== Informação de estações =====
+
   getStationInfo(stationId: string): Promise<MetroStationInfoDto[]> {
     return this.callMetroApi<MetroStationInfoDto[]>(
       `/infoEstacao/${stationId}`,
@@ -78,6 +95,8 @@ export class MetroService {
   getAllStationsInfo(): Promise<MetroStationInfoDto[]> {
     return this.callMetroApi<MetroStationInfoDto[]>('/infoEstacao/todos');
   }
+
+  // ===== Estados de linha =====
 
   getAllLineStatus(): Promise<MetroLineStatusSummaryDto> {
     return this.callMetroApi<MetroLineStatusSummaryDto>('/estadoLinha/todos');
@@ -89,9 +108,13 @@ export class MetroService {
     );
   }
 
+  // ===== Destinos =====
+
   getDestinations(): Promise<MetroDestinationDto[]> {
     return this.callMetroApi<MetroDestinationDto[]>('/infoDestinos/todos');
   }
+
+  // ===== Intervalos de circulação =====
 
   getIntervalsByLine(
     lineId: string,

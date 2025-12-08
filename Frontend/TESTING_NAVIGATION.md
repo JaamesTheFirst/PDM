@@ -1,0 +1,130 @@
+# Testing Live Navigation with Mock Location
+
+This guide explains how to test the live navigation feature without physically moving around.
+
+## Quick Start
+
+### Enable Mock Location Mode
+
+Run the Flutter app with mock location enabled:
+
+```bash
+flutter run --dart-define=MOCK_LOCATION=true --dart-define=ROUTES_BASE_URL=http://172.30.176.1:3000
+```
+
+**Note:** Replace `172.30.176.1` with your actual Windows IP address if needed.
+
+### What Mock Mode Does
+
+- ✅ Automatically simulates movement along the selected route
+- ✅ Updates location every 1 second
+- ✅ Moves at ~5 meters per second (walking speed)
+- ✅ Follows the exact route polyline from start to finish
+- ✅ Tests all navigation features: progress, instructions, camera follow
+
+## Testing Steps
+
+1. **Start the app** with mock location enabled (command above)
+
+2. **Plan a route:**
+   - Tap "Para onde?" button
+   - Select origin and destination
+   - Choose a route from the options
+
+3. **Start navigation:**
+   - Tap "Iniciar Navegação" button
+   - Navigation overlay will appear
+   - Location will automatically simulate movement along the route
+
+4. **Observe:**
+   - Progress bar updates as you "move"
+   - Next instruction changes as you progress through legs
+   - Distance remaining decreases
+   - Camera follows the simulated location
+   - Map updates in real-time
+
+5. **Stop navigation:**
+   - Tap "Parar Navegação" button
+   - Mock location stops automatically
+
+## Adjusting Mock Speed
+
+To change the simulation speed, edit `Frontend/lib/features/map/state/navigation_controller.dart`:
+
+```dart
+// In startNavigation() method, find:
+LocationService.instance.setMockRoute(allRoutePoints, speed: 5.0);
+
+// Change speed value:
+// 5.0 = walking speed (~18 km/h)
+// 10.0 = faster walking (~36 km/h)
+// 15.0 = running speed (~54 km/h)
+```
+
+## Testing Route Recalculation
+
+To test deviation detection and route recalculation:
+
+1. Start navigation with mock location
+2. The system checks for deviation every 5 seconds
+3. If you want to test recalculation, you can:
+   - Temporarily lower the deviation threshold in `navigation_controller.dart`:
+     ```dart
+     static const double _deviationThreshold = 50.0; // Lower = more sensitive
+     ```
+   - Or modify the mock route to include a deviation point
+
+## Alternative: Using Emulator/Simulator Location Tools
+
+### Android Emulator
+
+1. Open Android Studio
+2. In the emulator, click the "..." menu (three dots)
+3. Go to **Location** tab
+4. Manually set coordinates or use "GPX/KML" to load a route file
+5. Use "Play Route" to simulate movement
+
+### iOS Simulator
+
+1. In Xcode Simulator: **Features → Location**
+2. Choose:
+   - **Custom Location** - Set specific coordinates
+   - **City Run** - Simulates running through a city
+   - **Freeway Drive** - Continuous movement
+
+## Troubleshooting
+
+### Mock location not working?
+
+- Make sure `MOCK_LOCATION=true` is set in the command
+- Check console logs for: `[NavigationController] Mock location enabled with X points`
+- Verify the route has polyline data (check route options overlay)
+
+### Location not updating?
+
+- Check that navigation actually started (overlay should be visible)
+- Look for errors in console
+- Try restarting the app
+
+### Route recalculation not triggering?
+
+- Default threshold is 100 meters
+- Make sure you're actually deviating from the route
+- Check console for: `[NavigationController] Deviation detected: Xm from route`
+
+## Full Command with All Options
+
+```bash
+flutter run \
+  --dart-define=MOCK_LOCATION=true \
+  --dart-define=ROUTES_BASE_URL=http://172.30.176.1:3000 \
+  --dart-define=BASE_URL=http://172.30.176.1:3000
+```
+
+## Notes
+
+- Mock location only works when navigation is active
+- It automatically stops when navigation ends
+- The simulation follows the exact route polyline
+- All navigation features work the same as real GPS
+

@@ -1,3 +1,8 @@
+// src/metro/metro-token.service.ts
+//
+// Serviço responsável por obter e cachear o access token OAuth2
+// da API do Metro de Lisboa (quando não é usado o legacy API key).
+
 import { Injectable, BadGatewayException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -15,12 +20,18 @@ interface MetroTokenResponse {
 @Injectable()
 export class MetroTokenService {
   private readonly logger = new Logger(MetroTokenService.name);
+
+  /** Token atual em cache (se existir). */
   private accessToken?: string;
+
+  /** Epoch millis em que o token expira. */
   private expiresAt = 0;
 
+  /** Configuração base para o pedido de token. */
   private readonly tokenHttpConfig: AxiosRequestConfig = {
     baseURL: 'https://api.metrolisboa.pt:8243',
     httpsAgent: new https.Agent({
+      // a API usa certificado algo peculiar; por isso esta flag está desligada
       rejectUnauthorized: false,
     }),
     headers: {
@@ -33,9 +44,14 @@ export class MetroTokenService {
     private readonly config: ConfigService,
   ) {}
 
+  /**
+   * Devolve um access token válido.
+   * Se o token em cache ainda for válido, reutiliza-o.
+   */
   async getAccessToken(): Promise<string> {
     const now = Date.now();
     if (this.accessToken && now < this.expiresAt - 60_000) {
+      // ainda válido (com margem de 60s)
       return this.accessToken;
     }
 

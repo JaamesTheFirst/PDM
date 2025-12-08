@@ -1,6 +1,9 @@
-// lib/data/gbfs_api.dart
+// lib/features/schedules/data/gbfs_api.dart
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
+import '../../../services/api_client.dart';
 
 /// Disponibilidade agregada de uma estação GBFS.
 class GbfsStationAvailability {
@@ -38,7 +41,7 @@ class GbfsStationAvailability {
       return double.tryParse(v.toString());
     }
 
-    // alguns sistemas usam bikes, outros vehicles
+    // Alguns sistemas usam bikes, outros vehicles.
     final numBikes = asInt(json['num_bikes_available']);
     final numVehicles = asInt(json['num_vehicles_available']);
     final numDocks = asInt(json['num_docks_available']);
@@ -64,7 +67,7 @@ class GbfsStationAvailability {
   }
 }
 
-/// Veículo solto (free_bike_status)
+/// Veículo solto (endpoint `free_bike_status`).
 class GbfsFreeBike {
   final String id;
   final double? latitude;
@@ -108,7 +111,7 @@ class GbfsFreeBike {
   }
 }
 
-/// Resposta do endpoint /gbfs/:systemId/availability
+/// Resposta do endpoint `/gbfs/:systemId/availability`.
 class GbfsAvailabilityResponse {
   final String systemId;
   final int lastUpdated;
@@ -131,8 +134,7 @@ class GbfsAvailabilityResponse {
 
     final data = json['data'] as Map<String, dynamic>? ?? {};
 
-    final stationsJson =
-        (data['stations'] as List<dynamic>? ?? const []);
+    final stationsJson = (data['stations'] as List<dynamic>? ?? const []);
     final stations = stationsJson
         .map(
           (e) => GbfsStationAvailability.fromJson(
@@ -161,7 +163,7 @@ class GbfsAvailabilityResponse {
   }
 }
 
-/// Sistema GBFS guardado na BD (tabela gbfsSystem)
+/// Sistema GBFS (registo vindo da BD / tabela `gbfsSystem`).
 class GbfsSystem {
   final int id;
   final String systemId;
@@ -188,14 +190,14 @@ class GbfsSystem {
   }
 }
 
-/// Cliente para falar com o teu backend GBFS
+/// Cliente para endpoints GBFS do teu backend.
 class GbfsApiClient {
-  /// Ajusta isto ao IP/porta do teu backend Nest
+  /// URL base do backend Nest (vem do `ApiClient` por defeito).
   final String baseUrl;
 
-  const GbfsApiClient({
-    this.baseUrl = 'http://192.168.1.244:3000',
-  });
+  GbfsApiClient({
+    String? baseUrl,
+  }) : baseUrl = baseUrl ?? kBaseUrl;
 
   Uri _uri(String path, [Map<String, dynamic>? query]) {
     return Uri.parse(baseUrl).replace(
@@ -206,7 +208,7 @@ class GbfsApiClient {
     );
   }
 
-  /// GET /gbfs/systems
+  /// GET `/gbfs/systems`
   Future<List<GbfsSystem>> listSystems() async {
     final uri = _uri('/gbfs/systems');
     final resp = await http.get(uri);
@@ -227,14 +229,17 @@ class GbfsApiClient {
         .toList();
   }
 
-  /// GET /gbfs/:systemId/availability?lang=pt
+  /// GET `/gbfs/:systemId/availability?lang=pt`
   Future<GbfsAvailabilityResponse> getAvailability(
     String systemId, {
     String? lang,
   }) async {
-    final uri = _uri('/gbfs/$systemId/availability', {
-      if (lang != null) 'lang': lang,
-    });
+    final uri = _uri(
+      '/gbfs/$systemId/availability',
+      {
+        if (lang != null) 'lang': lang,
+      },
+    );
 
     final resp = await http.get(uri);
 

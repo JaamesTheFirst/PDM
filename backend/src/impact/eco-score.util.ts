@@ -1,10 +1,24 @@
 // src/impact/eco-score.util.ts
+//
+// Utilitários de cálculo de EcoScore no backend.
+//
+// A ideia é manter a lógica o mais próxima possível do que existe
+// no frontend (Flutter), para que o score apresentado ao utilizador
+// seja consistente em todas as plataformas.
 
+/**
+ * Resultado completo do cálculo de EcoScore no backend.
+ */
 export interface EcoScoreResultBackend {
+  /** Emissões totais de CO2 da viagem (kg). */
   co2Kg: number;
+  /** Emissões por km (kg/km). */
   co2PerKm: number;
+  /** Score final de sustentabilidade (0–100). */
   score: number; // 0-100
+  /** Indica se houve atividade física (walk/bike/scooter). */
   hasPhysicalActivity: boolean;
+  /** Modo principal inferido da viagem (caso exista). */
   primaryMode?: string | null;
 }
 
@@ -49,14 +63,26 @@ const defaultOccupancyRates: Record<string, number> = {
 const BASELINE_CO2_PER_KM = 0.12;
 const MAX_CO2_PER_KM = 0.2;
 
+/**
+ * Input simplificado de uma perna/leg da viagem para o cálculo do ecoScore.
+ */
 export interface EcoScoreLegInput {
+  /** Modo da perna (ex: "BUS", "RAIL", "WALK"). */
   mode: string;
+  /** Distância da perna em metros. */
   distanceMeters: number;
 }
 
 /**
  * Lógica de EcoScore equivalente à do Flutter,
  * mas recebendo só (mode, distanceMeters) por perna.
+ *
+ * Faz:
+ *  - normalização de modos
+ *  - cálculo de CO2 com fatores + ocupação
+ *  - deteção de atividade física
+ *  - heurísticas para viagens zero-emissão e car-only
+ *  - mapeamento final para score 0–100
  */
 export function calculateEcoScoreFromLegs(
   legs: EcoScoreLegInput[],
@@ -71,8 +97,10 @@ export function calculateEcoScoreFromLegs(
     const distanceKm = (leg.distanceMeters ?? 0) / 1000;
     totalDistanceKm += distanceKm;
 
+    // 1) fator de emissão base
     let emissionFactor = defaultEmissionFactors[mode] ?? 0;
 
+    // fallback: tentar deduzir categoria pelo nome do modo
     if (emissionFactor === 0 && mode !== 'WALK' && mode !== 'WALKING') {
       if (
         mode.includes('RAIL') ||
@@ -90,6 +118,7 @@ export function calculateEcoScoreFromLegs(
       }
     }
 
+    // 2) taxa de ocupação (passageiros/veículo)
     let occupancy = defaultOccupancyRates[mode];
 
     if (occupancy == null && mode !== 'WALK' && mode !== 'WALKING') {
@@ -109,6 +138,7 @@ export function calculateEcoScoreFromLegs(
       }
     }
 
+    // 3) CO2 por perna: ou por veículo, ou por passageiro usando ocupação
     let legCo2Kg: number;
     if (occupancy != null && occupancy > 0) {
       legCo2Kg = (emissionFactor * distanceKm) / occupancy;
@@ -118,6 +148,7 @@ export function calculateEcoScoreFromLegs(
 
     totalCo2Kg += legCo2Kg;
 
+    // detetar atividade física
     if (
       mode === 'WALK' ||
       mode === 'WALKING' ||
@@ -130,6 +161,7 @@ export function calculateEcoScoreFromLegs(
       hasPhysicalActivity = true;
     }
 
+    // modo principal = primeiro modo não-walk encontrado
     if (primaryMode == null && mode !== 'WALK' && mode !== 'WALKING') {
       primaryMode = mode;
     }
@@ -142,7 +174,7 @@ export function calculateEcoScoreFromLegs(
   const co2PerKm =
     totalDistanceKm > 0 ? totalCo2Kg / totalDistanceKm : 0;
 
-  // check zero-emission
+  // ------------- detetar viagem zero-emissão -------------
   let isOnlyZeroEmission = true;
   for (const leg of legs) {
     const mode = (leg.mode || '').toUpperCase();
@@ -173,7 +205,7 @@ export function calculateEcoScoreFromLegs(
     }
   }
 
-  // car-only?
+  // ------------- detetar “car-only” -------------
   let isCarOnly = true;
   for (const leg of legs) {
     const mode = (leg.mode || '').toUpperCase();
@@ -196,7 +228,7 @@ export function calculateEcoScoreFromLegs(
     isCarOnly = false;
   }
 
-  // fossil buses?
+  // ------------- detetar autocarros a combustíveis fósseis -------------
   let hasFossilBus = false;
   for (const leg of legs) {
     const mode = (leg.mode || '').toUpperCase();
@@ -210,12 +242,14 @@ export function calculateEcoScoreFromLegs(
     }
   }
 
-  // score
+  // ------------- mapeamento para score 0–100 -------------
   let baseScore = 0;
 
   if (isOnlyZeroEmission && co2PerKm <= 0.0001) {
+    // viagens 100% zero-emissão recebem score máximo
     baseScore = 100;
   } else if (isCarOnly) {
+    // curva específica para viagens apenas de carro
     const co2PerKmGram = co2PerKm * 1000;
     if (co2PerKmGram >= 120) {
       baseScore = 0;
@@ -249,11 +283,13 @@ export function calculateEcoScoreFromLegs(
         20 - ((co2PerKmGram - 50) / 150) * 20;
     }
 
+    // penalização se usar autocarros fósseis
     if (hasFossilBus) {
       baseScore = Math.max(0, baseScore - 18);
     }
   }
 
+  // bónus por atividade física
   if (hasPhysicalActivity && baseScore < 100) {
     baseScore = Math.min(100, baseScore + 10);
   }
@@ -268,9 +304,16 @@ export function calculateEcoScoreFromLegs(
 }
 
 /**
- * Versão “agregada” para um período inteiro:
- * recebe totalCo2Kg, totalDistanceKm, se há viagens ativas e se é zero-emissão.
- * Usa a mesma escala de score mas sem car-only / fossil bus (não temos legs).
+ * Versão agregada para um período inteiro.
+ *
+ * Em vez de receber legs individuais, trabalha só com:
+ *  - emissões totais
+ *  - distância total
+ *  - flag de viagem ativa
+ *  - flag se é apenas zero-emissão
+ *
+ * Usa a mesma escala, mas sem heurísticas de car-only / fossil bus,
+ * porque não temos detalhe por leg.
  */
 export function calculateEcoScoreForPeriod(params: {
   totalCo2Kg: number;
@@ -298,6 +341,7 @@ export function calculateEcoScoreForPeriod(params: {
     baseScore = 100 * (1 - ratio);
   }
 
+  // pequeno bónus se houve pelo menos uma viagem ativa no período
   if (hasAnyActiveTrip && baseScore < 100) {
     baseScore = Math.min(100, baseScore + 10);
   }

@@ -3,6 +3,16 @@ import 'package:flutter/material.dart';
 import '../data/metro_porto_api.dart';
 import '../widgets/departure_card.dart';
 
+/// Página de horários do Metro do Porto.
+///
+/// Permite:
+/// - Pesquisar uma estação.
+/// - Selecionar um dia (por enquanto apenas usado para UI).
+/// - Ver as partidas próximas devolvidas pelo backend MetroPortoApiClient.
+///
+/// A página consome:
+/// - [MetroPortoApiClient.searchStops] para encontrar estações.
+/// - [MetroPortoApiClient.getUpcomingDepartures] para obter partidas.
 class MetroPortoSchedulesPage extends StatefulWidget {
   const MetroPortoSchedulesPage({super.key});
 
@@ -11,22 +21,41 @@ class MetroPortoSchedulesPage extends StatefulWidget {
       _MetroPortoSchedulesPageState();
 }
 
-class _MetroPortoSchedulesPageState
-    extends State<MetroPortoSchedulesPage> {
+class _MetroPortoSchedulesPageState extends State<MetroPortoSchedulesPage> {
+  /// Cor base associada ao Metro do Porto.
   static const _metroPurple = Color(0xFF5A2A82);
 
-  final TextEditingController _searchController =
-      TextEditingController();
+  /// Campo de pesquisa por nome de estação.
+  final TextEditingController _searchController = TextEditingController();
+
+  /// Cliente de API para interagir com o backend do Metro do Porto.
   final MetroPortoApiClient _api = MetroPortoApiClient();
 
+  /// Indicador de carregamento para a pesquisa de estações.
   bool _loadingSearch = false;
+
+  /// Indicador de carregamento para a lista de partidas.
   bool _loadingDepartures = false;
+
+  /// Controla se o calendário está expandido/visível.
   bool _showCalendar = false;
+
+  /// Mensagem de erro (se existir).
   String? _error;
 
+  /// Dia actualmente seleccionado no selector de data.
+  ///
+  /// Nota: neste momento serve apenas para UI; o backend ainda não recebe
+  /// o dia como parâmetro (ver comentário em [_loadDepartures]).
   DateTime _selectedDay = DateTime.now();
+
+  /// Lista de resultados de pesquisa de estações.
   List<MetroPortoStop> _searchResults = [];
+
+  /// Estação actualmente seleccionada.
   MetroPortoStop? _selectedStop;
+
+  /// Lista de partidas para a estação seleccionada.
   List<MetroPortoDepartureRow> _departures = [];
 
   @override
@@ -37,6 +66,10 @@ class _MetroPortoSchedulesPageState
 
   // ==================== SEARCH STOPS ====================
 
+  /// Executa a pesquisa de estações com base no texto introduzido.
+  ///
+  /// - Ignora queries com menos de 2 caracteres.
+  /// - Actualiza [_searchResults] com os resultados devolvidos pelo backend.
   Future<void> _performSearch() async {
     final q = _searchController.text.trim();
     debugPrint('[METRO PAGE] _performSearch("$q")');
@@ -74,9 +107,13 @@ class _MetroPortoSchedulesPageState
     }
   }
 
+  /// Handler chamado quando o utilizador escolhe uma estação da lista.
+  ///
+  /// Actualiza [_selectedStop], limpa os resultados de pesquisa e prepara
+  /// o campo de texto com o nome da estação, disparando depois o carregamento
+  /// das partidas via [_loadDepartures].
   void _onSelectStop(MetroPortoStop stop) {
-    debugPrint(
-        '[METRO PAGE] _onSelectStop -> ${stop.name} (${stop.id})');
+    debugPrint('[METRO PAGE] _onSelectStop -> ${stop.name} (${stop.id})');
     setState(() {
       _selectedStop = stop;
       _searchResults = [];
@@ -87,15 +124,25 @@ class _MetroPortoSchedulesPageState
 
   // ===================== LOAD DEPARTURES =====================
 
+  /// Carrega as partidas para a estação actualmente seleccionada.
+  ///
+  /// Actualmente:
+  /// - Ignora o dia [_selectedDay] do ponto de vista do backend.
+  /// - Usa apenas o [stopId] da estação seleccionada.
+  ///
+  /// Para suportar horários por dia, é necessário adaptar o endpoint
+  /// (ex.: parâmetros como startTime/timeRange no OTP, à semelhança da CP).
   Future<void> _loadDepartures() async {
     if (_selectedStop == null) {
       debugPrint(
-          '[METRO PAGE] _loadDepartures chamado sem stop selecionada');
+        '[METRO PAGE] _loadDepartures chamado sem stop selecionada',
+      );
       return;
     }
 
     debugPrint(
-        '[METRO PAGE] _loadDepartures stop=${_selectedStop!.id} day=$_selectedDay');
+      '[METRO PAGE] _loadDepartures stop=${_selectedStop!.id} day=$_selectedDay',
+    );
 
     setState(() {
       _loadingDepartures = true;
@@ -103,9 +150,6 @@ class _MetroPortoSchedulesPageState
     });
 
     try {
-      // Nota: neste momento o dia NÃO é passado para o backend.
-      // Se quiseres mesmo filtrar por dia no OTP, tens de adaptar
-      // o endpoint como na CP (startTime/timeRange).
       final rows = await _api.getUpcomingDepartures(
         stopId: _selectedStop!.id,
       );
@@ -113,7 +157,8 @@ class _MetroPortoSchedulesPageState
         _departures = rows;
       });
       debugPrint(
-          '[METRO PAGE] _loadDepartures -> ${rows.length} partidas');
+        '[METRO PAGE] _loadDepartures -> ${rows.length} partidas',
+      );
     } catch (e) {
       debugPrint('[METRO PAGE] _loadDepartures ERROR: $e');
       setState(() {
@@ -129,6 +174,8 @@ class _MetroPortoSchedulesPageState
 
   // ======================= UI HELPERS =======================
 
+  /// Devolve a representação textual “completa” de um [DateTime]
+  /// respeitando as localizações definidas em [MaterialApp].
   String _formatDay(BuildContext context, DateTime day) {
     final localizations = MaterialLocalizations.of(context);
     return localizations.formatFullDate(day);
@@ -173,8 +220,8 @@ class _MetroPortoSchedulesPageState
                         onPressed: _performSearch,
                       ),
                 filled: true,
-                fillColor: t.colorScheme.surfaceVariant
-                    .withOpacity(0.25),
+                fillColor:
+                    t.colorScheme.surfaceVariant.withOpacity(0.25),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -202,8 +249,7 @@ class _MetroPortoSchedulesPageState
                 ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color:
-                      _metroPurple.withOpacity(0.10), // roxinho suave
+                  color: _metroPurple.withOpacity(0.10), // roxinho suave
                   border: Border.all(
                     color: _metroPurple.withOpacity(0.6),
                   ),
@@ -233,8 +279,7 @@ class _MetroPortoSchedulesPageState
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Theme(
                 data: t.copyWith(
                   colorScheme: t.colorScheme.copyWith(
@@ -246,10 +291,10 @@ class _MetroPortoSchedulesPageState
                 ),
                 child: CalendarDatePicker(
                   initialDate: _selectedDay,
-                  firstDate: DateTime.now()
-                      .subtract(const Duration(days: 1)),
-                  lastDate: DateTime.now()
-                      .add(const Duration(days: 60)),
+                  firstDate:
+                      DateTime.now().subtract(const Duration(days: 1)),
+                  lastDate:
+                      DateTime.now().add(const Duration(days: 60)),
                   onDateChanged: (date) {
                     setState(() {
                       _selectedDay = date;
@@ -269,16 +314,14 @@ class _MetroPortoSchedulesPageState
           if (_searchResults.isNotEmpty) ...[
             const SizedBox(height: 8),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
                 decoration: BoxDecoration(
                   color: t.colorScheme.surface,
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color:
-                          Colors.black.withOpacity(0.08),
+                      color: Colors.black.withOpacity(0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -286,23 +329,19 @@ class _MetroPortoSchedulesPageState
                 ),
                 child: ListView.separated(
                   shrinkWrap: true,
-                  physics:
-                      const NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: _searchResults.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final stop = _searchResults[index];
                     return ListTile(
                       dense: true,
                       title: Text(stop.name),
-                      subtitle: (stop.lat != null &&
-                              stop.lon != null)
+                      subtitle: (stop.lat != null && stop.lon != null)
                           ? Text(
                               '(${stop.lat!.toStringAsFixed(4)}, ${stop.lon!.toStringAsFixed(4)})',
                               style: t.textTheme.bodySmall
-                                  ?.copyWith(
-                                      color: t.hintColor),
+                                  ?.copyWith(color: t.hintColor),
                             )
                           : null,
                       onTap: () => _onSelectStop(stop),
@@ -324,14 +363,15 @@ class _MetroPortoSchedulesPageState
     );
   }
 
+  /// Constrói o corpo principal com a lista de partidas ou mensagens
+  /// de estado (erro, sem estação seleccionada, sem partidas, etc.).
   Widget _buildDeparturesContent(BuildContext context) {
     final t = Theme.of(context);
 
     if (_error != null) {
       return Center(
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
             _error!,
             textAlign: TextAlign.center,
@@ -346,8 +386,7 @@ class _MetroPortoSchedulesPageState
     if (_selectedStop == null) {
       return Center(
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
             'Procura uma estação do Metro do Porto e seleciona-a para veres as próximas partidas.',
             textAlign: TextAlign.center,
@@ -377,16 +416,14 @@ class _MetroPortoSchedulesPageState
 
             final departure = Departure(
               time: row.time,
-              destination:
-                  row.destination.isEmpty ? '—' : row.destination,
+              destination: row.destination.isEmpty ? '—' : row.destination,
               line: row.line,
               platform: '—',
               operator: 'Metro do Porto',
             );
 
             return Padding(
-              padding:
-                  const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.only(bottom: 10),
               child: DepartureCard(
                 departure: departure,
                 accentColor: _metroPurple,

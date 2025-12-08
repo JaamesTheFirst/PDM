@@ -1,3 +1,4 @@
+// src/gira/gira.service.ts
 import {
   Injectable,
   Logger,
@@ -14,6 +15,12 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { GiraStation } from '@prisma/client';
 
+/**
+ * Serviço responsável por:
+ *  - carregar ficheiros de estações GIRA (XLSX/CSV)
+ *  - sincronizar esses dados com a tabela `gira_stations` (Prisma)
+ *  - expor leitura/pesquisa sobre esses dados
+ */
 @Injectable()
 export class GiraService implements OnModuleInit {
   private readonly logger = new Logger(GiraService.name);
@@ -24,10 +31,10 @@ export class GiraService implements OnModuleInit {
   ) {}
 
   /**
-   * Ao arrancar:
+   * Ao arrancar o módulo:
    *  - se a tabela estiver vazia → carrega do ficheiro
-   *  - senão → não faz nada (one‑time seed)
-   *  - podes forçar com env GIRA_FORCE_RELOAD=true
+   *  - se tiver dados → não faz nada (seed one-time)
+   *  - podes forçar reload com env `GIRA_FORCE_RELOAD=true`
    */
   async onModuleInit() {
     const forceReload = this.config.get<string>('GIRA_FORCE_RELOAD') === 'true';
@@ -54,7 +61,13 @@ export class GiraService implements OnModuleInit {
 
   /**
    * Lê o ficheiro XLSX/CSV de estações GIRA e sincroniza com a BD.
-   * NÃO é chamado sempre – só quando onModuleInit decide ou via POST /gira/stations/reload.
+   *
+   * NÃO é chamado sempre:
+   *  - é usado no `onModuleInit` (seed inicial / force reload)
+   *  - pode ser chamado manualmente via `POST /gira/stations/reload`
+   *
+   * @param filePathOverride Caminho explícito para o ficheiro (opcional).
+   *                         Se omitido, usa `GIRA_STATIONS_FILE` do .env.
    */
   async loadStationsFromFile(filePathOverride?: string) {
     const filePath =
@@ -88,12 +101,16 @@ export class GiraService implements OnModuleInit {
   }
 
   /**
-   * Sincroniza as estações lidas do ficheiro com a tabela Prisma GiraStation.
-   * Faz delete total + insert em CHUNKS para não rebentar a heap.
+   * Sincroniza as estações lidas do ficheiro com a tabela Prisma `GiraStation`.
+   *
+   * Estratégia: delete total + insert em CHUNKS para não estourar a heap.
+   * Não há upsert porque assumimos que o ficheiro é a fonte da verdade
+   * e queremos reescrever tudo de forma limpa.
    */
   private async syncStationsToDatabase(rows: GiraStationRecordDto[]) {
     this.logger.log('Syncing GIRA stations into database...');
 
+    // limpa a tabela antes de re-inserir
     await this.prisma.giraStation.deleteMany();
 
     if (!rows.length) {
@@ -102,6 +119,8 @@ export class GiraService implements OnModuleInit {
     }
 
     const chunkSize = 5000; // ajusta se quiseres
+
+    // Helpers para extrair string/number de forma segura
     const getString = (row: GiraStationRecordDto, key: string): string | null => {
       const v = row[key];
       if (v === null || v === undefined || v === '') return null;
@@ -120,7 +139,8 @@ export class GiraService implements OnModuleInit {
 
       await this.prisma.giraStation.createMany({
         data: chunk.map((r) => ({
-          // adapta estes nomes às colunas reais do teu ficheiro GIRA
+          // mapeamento das colunas do ficheiro para os campos do modelo Prisma
+          // (adapta estes nomes às colunas reais do teu ficheiro GIRA)
           externalId:
             getString(r, 'ID') ??
             getString(r, 'Station ID') ??
@@ -150,6 +170,7 @@ export class GiraService implements OnModuleInit {
             getNumber(r, 'Docks') ??
             getNumber(r, 'Capacidade'),
 
+          // guarda o registo original para não perder colunas
           raw: r as any,
         })),
         skipDuplicates: true,
@@ -167,8 +188,11 @@ export class GiraService implements OnModuleInit {
   }
 
   /**
-   * Converte um registo Prisma num "GiraStationRecordDto" para manter
-   * compatibilidade com o resto do código.
+   * Converte um registo Prisma `GiraStation` de volta para
+   * um `GiraStationRecordDto` compatível com o layout original.
+   *
+   * Caso exista `raw`, devolve esse blob; caso contrário,
+   * reconstrói um objeto mínimo a partir dos campos normalizados.
    */
   private toRecordDto(dbRow: GiraStation): GiraStationRecordDto {
     if (dbRow.raw) {
@@ -187,12 +211,15 @@ export class GiraService implements OnModuleInit {
   }
 
   /**
-   * Paginação – tudo a vir da BD.
+   * Devolve uma fatia paginada de estações GIRA.
+   *
+   * Todos os dados vêm da BD, não do ficheiro original.
    */
   async getStationsSlice(
     limit = 100,
     offset = 0,
   ): Promise<GiraStationsSliceDto> {
+    // proteção mínima contra limites abusivos
     const safeLimit = Math.min(Math.max(limit, 1), 1000);
     const safeOffset = Math.max(offset, 0);
 
@@ -212,8 +239,16 @@ export class GiraService implements OnModuleInit {
   }
 
   /**
-   * Search: em vez de carregar 900k linhas e filtrar à mão,
-   * usamos campos específicos no Prisma.
+   * Pesquisa de estações GIRA por campo específico.
+   *
+   * Em vez de ler todas as linhas e filtrar em memória,
+   * faz um `LIKE` / `contains` diretamente em colunas Prisma.
+   *
+   * Campos suportados (case-insensitive):
+   *  - name
+   *  - externalId
+   *  - address
+   *  - parish
    */
   async searchStations(field: string, value: string): Promise<GiraStationRecordDto[]> {
     if (!field || !value) {
@@ -248,7 +283,7 @@ export class GiraService implements OnModuleInit {
         } as any,
       },
       orderBy: { id: 'asc' },
-      take: 500, // safety limit
+      take: 500, // safety limit para não rebentar a resposta
     });
 
     return rows.map((r) => this.toRecordDto(r));

@@ -5,8 +5,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../services/api_client.dart';
+
 /// ====================== ROUTES / LINHAS ======================
 
+/// Linha FlixBus (GTFS route).
 class FlixbusRoute {
   final String gtfsId;
   final String? shortName;
@@ -36,6 +39,7 @@ class FlixbusRoute {
   }
 }
 
+/// Paragem básica FlixBus (usada em detalhes de linhas).
 class FlixbusStopBasic {
   final String gtfsId;
   final String name;
@@ -59,6 +63,7 @@ class FlixbusStopBasic {
   }
 }
 
+/// Detalhe de uma rota FlixBus (inclui stops).
 class FlixbusRouteDetail {
   final String gtfsId;
   final String? shortName;
@@ -88,7 +93,9 @@ class FlixbusRouteDetail {
       agencyName: json['agencyName'] as String?,
       agencyGtfsId: json['agencyGtfsId'] as String?,
       stops: stopsJson
-          .map((e) => FlixbusStopBasic.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => FlixbusStopBasic.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
@@ -96,7 +103,7 @@ class FlixbusRouteDetail {
 
 /// ====================== SEARCH STOPS / BOARD ======================
 
-/// Resultado de pesquisa de paragens FlixBus (GET /flixbus/stops/search)
+/// Resultado de pesquisa de paragens FlixBus.
 class FlixbusStopSearchResult {
   final String gtfsId;
   final String name;
@@ -120,7 +127,7 @@ class FlixbusStopSearchResult {
   }
 }
 
-/// Linha da “board” de partidas FlixBus
+/// Linha da board de partidas FlixBus.
 class FlixbusStopBoardRow {
   final String time; // "HH:MM"
   final String? destination;
@@ -153,7 +160,7 @@ class FlixbusStopBoardRow {
   }
 }
 
-/// Board completa de partidas de uma paragem (GET /flixbus/stops/:id/departures/board)
+/// Board completa de partidas de uma paragem FlixBus.
 class FlixbusStopBoard {
   final String stopId;
   final String stopName;
@@ -177,8 +184,9 @@ class FlixbusStopBoard {
       lat: (json['lat'] as num?)?.toDouble(),
       lon: (json['lon'] as num?)?.toDouble(),
       departures: depsJson
-          .map((e) =>
-              FlixbusStopBoardRow.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => FlixbusStopBoardRow.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
@@ -186,14 +194,15 @@ class FlixbusStopBoard {
 
 /// ====================== CLIENT ======================
 
+/// Cliente HTTP para endpoints FlixBus no backend.
 class FlixbusApiClient {
-  FlixbusApiClient({http.Client? client})
-      : _client = client ?? http.Client();
+  FlixbusApiClient({http.Client? client, String? baseUrl})
+      : _client = client ?? http.Client(),
+        _baseUrl = baseUrl ?? kBaseUrl;
 
   final http.Client _client;
+  final String _baseUrl;
 
-  // ⚠️ METE AQUI O IP DA TUA MÁQUINA (igual ao da CP_API)
-  static const String _baseUrl = String.fromEnvironment('BASE_URL');
   static const Duration _timeout = Duration(seconds: 8);
 
   Uri _buildUri(String path, [Map<String, dynamic>? query]) {
@@ -204,8 +213,7 @@ class FlixbusApiClient {
     );
   }
 
-  int _toEpochSeconds(DateTime dt) =>
-      dt.millisecondsSinceEpoch ~/ 1000; // local time
+  int _toEpochSeconds(DateTime dt) => dt.millisecondsSinceEpoch ~/ 1000;
 
   // ===== Normalização sem acentos + lowercase =====
 
@@ -265,6 +273,7 @@ class FlixbusApiClient {
 
   // ================== ROUTES (LINHAS FLIXBUS) ==================
 
+  /// Lista todas as rotas FlixBus disponíveis.
   Future<List<FlixbusRoute>> getRoutes() async {
     final uri = _buildUri('/flixbus/routes/graph');
     debugPrint('[FLIXBUS API] getRoutes -> GET $uri');
@@ -272,21 +281,27 @@ class FlixbusApiClient {
     try {
       final resp = await _client.get(uri).timeout(_timeout);
       debugPrint(
-          '[FLIXBUS API] getRoutes status=${resp.statusCode} bodyLen=${resp.body.length}');
+        '[FLIXBUS API] getRoutes status=${resp.statusCode} '
+        'bodyLen=${resp.body.length}',
+      );
 
       if (resp.statusCode != 200) {
         throw Exception(
-            'Erro ${resp.statusCode} ao carregar linhas FlixBus.');
+          'Erro ${resp.statusCode} ao carregar linhas FlixBus.',
+        );
       }
 
-      final json = jsonDecode(resp.body);
-      if (json is! List) {
+      final decoded = jsonDecode(resp.body);
+      if (decoded is! List) {
         throw Exception(
-            'Resposta inesperada em getRoutes (não é array).');
+          'Resposta inesperada em getRoutes (não é array).',
+        );
       }
 
-      final routes = json
-          .map((e) => FlixbusRoute.fromJson(e as Map<String, dynamic>))
+      final routes = decoded
+          .map(
+            (e) => FlixbusRoute.fromJson(e as Map<String, dynamic>),
+          )
           .toList()
           .cast<FlixbusRoute>();
 
@@ -295,13 +310,15 @@ class FlixbusApiClient {
     } on TimeoutException {
       debugPrint('[FLIXBUS API] getRoutes TIMEOUT');
       throw Exception(
-          'Timeout ao contactar o servidor FlixBus (getRoutes).');
+        'Timeout ao contactar o servidor FlixBus (getRoutes).',
+      );
     } catch (e) {
       debugPrint('[FLIXBUS API] getRoutes ERROR: $e');
       rethrow;
     }
   }
 
+  /// Detalhe de uma rota FlixBus (inclui lista de paragens).
   Future<FlixbusRouteDetail> getRouteDetail(String routeGtfsId) async {
     final uri = _buildUri('/flixbus/routes/graph/$routeGtfsId');
     debugPrint('[FLIXBUS API] getRouteDetail($routeGtfsId) -> GET $uri');
@@ -309,30 +326,37 @@ class FlixbusApiClient {
     try {
       final resp = await _client.get(uri).timeout(_timeout);
       debugPrint(
-          '[FLIXBUS API] getRouteDetail status=${resp.statusCode} bodyLen=${resp.body.length}');
+        '[FLIXBUS API] getRouteDetail status=${resp.statusCode} '
+        'bodyLen=${resp.body.length}',
+      );
 
       if (resp.statusCode != 200) {
         throw Exception(
-            'Erro ${resp.statusCode} ao carregar detalhe da linha FlixBus.');
+          'Erro ${resp.statusCode} ao carregar detalhe da linha FlixBus.',
+        );
       }
 
-      final json = jsonDecode(resp.body) as Map<String, dynamic>;
-      final detail = FlixbusRouteDetail.fromJson(json);
+      final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+      final detail = FlixbusRouteDetail.fromJson(decoded);
+
       debugPrint(
-          '[FLIXBUS API] getRouteDetail -> ${detail.stops.length} paragens.');
+        '[FLIXBUS API] getRouteDetail -> ${detail.stops.length} paragens.',
+      );
       return detail;
     } on TimeoutException {
       debugPrint('[FLIXBUS API] getRouteDetail TIMEOUT');
       throw Exception(
-          'Timeout ao contactar o servidor FlixBus (getRouteDetail).');
+        'Timeout ao contactar o servidor FlixBus (getRouteDetail).',
+      );
     } catch (e) {
       debugPrint('[FLIXBUS API] getRouteDetail ERROR: $e');
       rethrow;
     }
   }
 
-  // ================== SEARCH STOPS (mantemos, se precisares) ==================
+  // ================== SEARCH STOPS ==================
 
+  /// Pesquisa paragens FlixBus com fallback normalizado.
   Future<List<FlixbusStopSearchResult>> searchStops(
     String query, {
     int limit = 5,
@@ -343,10 +367,10 @@ class FlixbusApiClient {
     if (trimmed.length < 2) return [];
 
     final normalized = _normalizeForSearch(trimmed);
-    final Set<String> seenIds = {};
-    final List<FlixbusStopSearchResult> allResults = [];
+    final seenIds = <String>{};
+    final allResults = <FlixbusStopSearchResult>[];
 
-    Future<void> _fetch(String q, {String tag = 'orig'}) async {
+    Future<void> fetch(String q, {String tag = 'orig'}) async {
       if (allResults.length >= limit) return;
 
       final uri = _buildUri('/flixbus/stops/search', {
@@ -359,25 +383,30 @@ class FlixbusApiClient {
       try {
         final resp = await _client.get(uri).timeout(_timeout);
         debugPrint(
-            '[FLIXBUS API] searchStops($tag) status=${resp.statusCode} bodyLen=${resp.body.length}');
+          '[FLIXBUS API] searchStops($tag) status=${resp.statusCode} '
+          'bodyLen=${resp.body.length}',
+        );
 
         if (resp.statusCode != 200) {
           debugPrint(
-              '[FLIXBUS API] searchStops($tag) HTTP error ${resp.statusCode}');
+            '[FLIXBUS API] searchStops($tag) HTTP error ${resp.statusCode}',
+          );
           return;
         }
 
-        final json = jsonDecode(resp.body);
-        if (json is! List) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is! List) {
           debugPrint(
-              '[FLIXBUS API] searchStops($tag) resposta inesperada (não é array)');
+            '[FLIXBUS API] searchStops($tag) resposta inesperada (não é array)',
+          );
           return;
         }
 
-        for (final item in json) {
+        for (final item in decoded) {
           if (allResults.length >= limit) break;
           final stop = FlixbusStopSearchResult.fromJson(
-              item as Map<String, dynamic>);
+            item as Map<String, dynamic>,
+          );
           if (seenIds.add(stop.gtfsId)) {
             allResults.add(stop);
           }
@@ -389,22 +418,21 @@ class FlixbusApiClient {
       }
     }
 
-    // 1. texto original
-    await _fetch(trimmed, tag: 'orig');
+    await fetch(trimmed, tag: 'orig');
 
-    // 2. versão normalizada
-    if (allResults.length < limit &&
-        normalized != trimmed.toLowerCase()) {
-      await _fetch(normalized, tag: 'norm');
+    if (allResults.length < limit && normalized != trimmed.toLowerCase()) {
+      await fetch(normalized, tag: 'norm');
     }
 
     debugPrint(
-        '[FLIXBUS API] searchStops -> ${allResults.length} resultados finais.');
+      '[FLIXBUS API] searchStops -> ${allResults.length} resultados finais.',
+    );
     return allResults;
   }
 
-  // ===================== STOP BOARD (resto do dia / dia inteiro) =====================
+  // ===================== STOP BOARD =====================
 
+  /// Board de partidas FlixBus para um dia (hoje = resto do dia).
   Future<FlixbusStopBoard> getStopBoard({
     required String stopGtfsId,
     required DateTime day,
@@ -417,15 +445,11 @@ class FlixbusApiClient {
     late int timeRange;
 
     if (isToday) {
-      // Hoje: a partir de agora até ao fim do dia
       startTime = _toEpochSeconds(now);
-
-      final endOfDay =
-          DateTime(now.year, now.month, now.day, 23, 59, 59);
+      final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
       timeRange = endOfDay.difference(now).inSeconds;
       if (timeRange < 0) timeRange = 0;
     } else {
-      // Outro dia: dia inteiro
       final startOfDay = DateTime(day.year, day.month, day.day);
       startTime = _toEpochSeconds(startOfDay);
       timeRange = 24 * 3600;
@@ -447,22 +471,28 @@ class FlixbusApiClient {
     try {
       final resp = await _client.get(uri).timeout(_timeout);
       debugPrint(
-          '[FLIXBUS API] getStopBoard status=${resp.statusCode} bodyLen=${resp.body.length}');
+        '[FLIXBUS API] getStopBoard status=${resp.statusCode} '
+        'bodyLen=${resp.body.length}',
+      );
 
       if (resp.statusCode != 200) {
         throw Exception(
-            'Erro ${resp.statusCode} ao carregar board de partidas FlixBus.');
+          'Erro ${resp.statusCode} ao carregar board de partidas FlixBus.',
+        );
       }
 
-      final json = jsonDecode(resp.body) as Map<String, dynamic>;
-      final board = FlixbusStopBoard.fromJson(json);
+      final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+      final board = FlixbusStopBoard.fromJson(decoded);
+
       debugPrint(
-          '[FLIXBUS API] getStopBoard -> ${board.departures.length} partidas.');
+        '[FLIXBUS API] getStopBoard -> ${board.departures.length} partidas.',
+      );
       return board;
     } on TimeoutException {
       debugPrint('[FLIXBUS API] getStopBoard TIMEOUT');
       throw Exception(
-          'Timeout ao contactar o servidor FlixBus (getStopBoard).');
+        'Timeout ao contactar o servidor FlixBus (getStopBoard).',
+      );
     } catch (e) {
       debugPrint('[FLIXBUS API] getStopBoard ERROR: $e');
       rethrow;

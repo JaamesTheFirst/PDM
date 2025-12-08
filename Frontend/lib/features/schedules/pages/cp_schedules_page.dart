@@ -4,6 +4,13 @@ import 'package:flutter/foundation.dart';
 import '../widgets/departure_card.dart';
 import '../data/cp_api.dart';
 
+/// Página de horários da CP (Comboios de Portugal).
+///
+/// Funcionalidades:
+/// - Pesquisar estações CP.
+/// - Selecionar dia (com calendário inline).
+/// - Carregar e apresentar `stop board` com as partidas da estação e dia.
+/// - Mostrar estados de carregamento/erro de forma amigável.
 class CpSchedulesPage extends StatefulWidget {
   const CpSchedulesPage({super.key});
 
@@ -12,20 +19,40 @@ class CpSchedulesPage extends StatefulWidget {
 }
 
 class _CpSchedulesPageState extends State<CpSchedulesPage> {
+  /// Cor institucional aproximada da CP.
   static const _cpBlue = Color(0xFF00549A);
 
+  /// Campo de pesquisa de estação CP.
   final TextEditingController _searchController = TextEditingController();
+
+  /// Cliente de API para interagir com o backend CP.
   final CpApiClient _api = CpApiClient();
 
+  /// Query de pesquisa actual.
   String _searchQuery = '';
+
+  /// Flag de carregamento durante pesquisa de estações.
   bool _loadingSearch = false;
+
+  /// Flag de carregamento durante obtenção de board.
   bool _loadingBoard = false;
+
+  /// Controla a visibilidade do calendário inline.
   bool _showCalendar = false;
+
+  /// Mensagem de erro global, se existir.
   String? _error;
 
+  /// Dia seleccionado (usado ao pedir o board).
   DateTime _selectedDay = DateTime.now();
+
+  /// Estação actualmente seleccionada (para o board).
   CpStopSearchResult? _selectedStop;
+
+  /// Lista de resultados de pesquisa de estações.
   List<CpStopSearchResult> _searchResults = [];
+
+  /// Stop board actual com partidas.
   CpStopBoard? _board;
 
   @override
@@ -36,6 +63,10 @@ class _CpSchedulesPageState extends State<CpSchedulesPage> {
 
   // ==================== SEARCH STOPS ====================
 
+  /// Pesquisa estações CP com base na query do utilizador.
+  ///
+  /// - Ignora queries com menos de 2 caracteres.
+  /// - Actualiza [_searchResults] com o resultado do backend.
   Future<void> _performSearch() async {
     final q = _searchController.text.trim();
     debugPrint('[CP PAGE] _performSearch("$q")');
@@ -76,6 +107,11 @@ class _CpSchedulesPageState extends State<CpSchedulesPage> {
     }
   }
 
+  /// Handler quando o utilizador escolhe uma estação dos resultados.
+  ///
+  /// - Guarda a estação em [_selectedStop].
+  /// - Preenche o campo de texto com o nome da estação.
+  /// - Dispara o carregamento do board para o dia seleccionado.
   void _onSelectStop(CpStopSearchResult stop) {
     debugPrint('[CP PAGE] _onSelectStop -> ${stop.name} (${stop.gtfsId})');
     setState(() {
@@ -88,6 +124,7 @@ class _CpSchedulesPageState extends State<CpSchedulesPage> {
 
   // ===================== LOAD BOARD =====================
 
+  /// Carrega o stop board (partidas) para a estação e dia seleccionados.
   Future<void> _loadBoard() async {
     if (_selectedStop == null) {
       debugPrint('[CP PAGE] _loadBoard chamado sem estação selecionada');
@@ -129,6 +166,7 @@ class _CpSchedulesPageState extends State<CpSchedulesPage> {
 
   // ======================= UI HELPERS =======================
 
+  /// Formata a data seleccionada, adicionando "(hoje)" se coincidir com hoje.
   String _formatDay(BuildContext context, DateTime day) {
     final localizations = MaterialLocalizations.of(context);
     final today = DateUtils.dateOnly(DateTime.now());
@@ -196,7 +234,7 @@ class _CpSchedulesPageState extends State<CpSchedulesPage> {
                                 ),
                           filled: true,
                           fillColor:
-                              t.colorScheme.surfaceVariant.withOpacity(0.25),
+                              t.colorScheme.surfaceVariant.withValues(alpha: 0.25),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
@@ -355,6 +393,12 @@ class _CpSchedulesPageState extends State<CpSchedulesPage> {
     );
   }
 
+  /// Constrói a secção do board (partidas) para a estação seleccionada,
+  /// lidando com estados de:
+  /// - erro
+  /// - sem estação seleccionada
+  /// - sem partidas
+  /// - carregamento com/sem dados
   Widget _buildBoardSection(BuildContext context) {
     final t = Theme.of(context);
 

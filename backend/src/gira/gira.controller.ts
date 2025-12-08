@@ -1,3 +1,4 @@
+// src/gira/gira.controller.ts
 import {
   Body,
   Controller,
@@ -9,10 +10,24 @@ import {
 } from '@nestjs/common';
 import { GiraService } from './gira.service';
 
+/**
+ * Controller para endpoints relacionados com dados GIRA
+ * (estações carregadas a partir de ficheiro para a tabela `gira_stations`).
+ *
+ * Nota: isto é *dados brutos* da GIRA, não o feed GBFS.
+ */
 @Controller('gira')
 export class GiraController {
   constructor(private readonly giraService: GiraService) {}
 
+  /**
+   * Devolve uma lista paginada de estações GIRA vindas da BD.
+   *
+   * GET /gira/stations?limit=100&offset=0
+   *
+   * @param limit  Número máximo de registos a devolver (default: 100)
+   * @param offset Offset para paginação (default: 0)
+   */
   @Get('stations')
   async getStations(
     @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
@@ -31,6 +46,17 @@ export class GiraController {
     };
   }
 
+  /**
+   * Pesquisa simples de estações GIRA por campo+valor.
+   *
+   * GET /gira/stations/search?field=name&value=Alvalade
+   *
+   * Campos suportados (ver `GiraService.searchStations`):
+   *  - name
+   *  - externalId
+   *  - address
+   *  - parish
+   */
   @Get('stations/search')
   async searchStations(
     @Query('field') field: string,
@@ -43,6 +69,14 @@ export class GiraController {
     };
   }
 
+  /**
+   * Força o reload do ficheiro de estações GIRA para a BD.
+   *
+   * POST /gira/stations/reload
+   * Body opcional: `{ "filePath": "/caminho/para/ficheiro.xlsx" }`
+   *
+   * Se `filePath` não for fornecido, usa `GIRA_STATIONS_FILE` do .env.
+   */
   @Post('stations/reload')
   async reloadStations(@Body('filePath') filePath?: string) {
     await this.giraService.loadStationsFromFile(filePath);

@@ -16,17 +16,38 @@ import {
   FlixbusStopBoardDto,
 } from './dto';
 
+/**
+ * Controller responsável pela API FlixBus.
+ *
+ * Expõe endpoints REST para:
+ *  - listar rotas FlixBus do grafo OTP
+ *  - obter detalhe de linha + paragens
+ *  - pesquisar paragens por nome
+ *  - obter partidas por paragem (raw GTFS e formato de "board" para UI)
+ */
 @Controller('flixbus')
 export class FlixbusController {
   constructor(private readonly flixbusService: FlixbusService) {}
 
   // ===== OTP – LINHAS FLIXBUS =====
 
+  /**
+   * Lista todas as rotas FlixBus presentes no grafo OTP.
+   *
+   * GET /flixbus/routes/graph
+   */
   @Get('routes/graph')
   getFlixbusRoutesFromGraph(): Promise<FlixbusGraphRouteDto[]> {
     return this.flixbusService.getFlixbusRoutesFromGraph();
   }
 
+  /**
+   * Detalhe de uma rota FlixBus específica (inclui lista de paragens).
+   *
+   * GET /flixbus/routes/graph/:routeGtfsId
+   *
+   * @param routeGtfsId ID GTFS da rota
+   */
   @Get('routes/graph/:routeGtfsId')
   getFlixbusRouteDetail(
     @Param('routeGtfsId') routeGtfsId: string,
@@ -34,6 +55,11 @@ export class FlixbusController {
     return this.flixbusService.getFlixbusRouteDetail(routeGtfsId);
   }
 
+  /**
+   * Wrapper para devolver `{ route: detail }`, mais conveniente para o frontend.
+   *
+   * GET /flixbus/routes/graph/:routeGtfsId/stops
+   */
   @Get('routes/graph/:routeGtfsId/stops')
   async getFlixbusRouteStops(
     @Param('routeGtfsId') routeGtfsId: string,
@@ -44,6 +70,14 @@ export class FlixbusController {
 
   // ===== OTP – SEARCH DE STOPS =====
 
+  /**
+   * Pesquisa de paragens pelo nome (autocomplete).
+   *
+   * GET /flixbus/stops/search?q=...&limit=10
+   *
+   * @param q Termo de pesquisa
+   * @param limit Máximo de resultados (default: 10)
+   */
   @Get('stops/search')
   searchStops(
     @Query('q') q: string,
@@ -55,6 +89,16 @@ export class FlixbusController {
 
   // ===== OTP – PARTIDAS BRUTAS (GTFS) =====
 
+  /**
+   * Partidas brutas (GTFS) para uma determinada paragem FlixBus.
+   *
+   * GET /flixbus/stops/:gtfsId/departures
+   *
+   * @param gtfsId ID GTFS da paragem
+   * @param startTime Epoch seconds opcional para início da janela; se omitido usa "agora"
+   * @param timeRange Janela temporal em segundos (default: 3600)
+   * @param numberOfDepartures Máximo de partidas (default: 20)
+   */
   @Get('stops/:gtfsId/departures')
   getStopDepartures(
     @Param('gtfsId') gtfsId: string,
@@ -75,6 +119,13 @@ export class FlixbusController {
 
   // ===== OTP – BOARD PARA UI (HORÁRIOS FORMATADOS) =====
 
+  /**
+   * Quadro de partidas formatado para UI para uma paragem FlixBus.
+   *
+   * GET /flixbus/stops/:gtfsId/departures/board
+   *
+   * Os parâmetros de query são os mesmos de `/stops/:gtfsId/departures`.
+   */
   @Get('stops/:gtfsId/departures/board')
   getStopBoard(
     @Param('gtfsId') gtfsId: string,

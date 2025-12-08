@@ -1,3 +1,4 @@
+// backend/src/gbfs/gbfs.controller.ts
 import {
   Controller,
   Get,
@@ -10,6 +11,16 @@ import { GbfsSystemDto } from './dto/gbfs-system.dto';
 import { GbfsFeedMeta } from './dto/gbfs-index.dto';
 import { GetGbfsFeedQueryDto } from './dto/get-gbfs-feed.dto';
 
+/**
+ * Controller responsável por expor a API GBFS do backend.
+ *
+ * Este controller não implementa o protocolo GBFS público,
+ * mas fornece endpoints de conveniência em cima dos feeds reais:
+ *  - gestão e lookup de sistemas registados na BD
+ *  - proxy para `gbfs.json` e feeds individuais
+ *  - agregados como `stations` + `availability`
+ *  - sync de estações para a tabela `stations` (Prisma)
+ */
 @Controller('gbfs')
 export class GbfsController {
   constructor(private readonly gbfsService: GbfsService) {}
@@ -18,13 +29,21 @@ export class GbfsController {
   //  SISTEMAS (BD)
   // =========================
 
-  // GET /gbfs/systems
+  /**
+   * Lista todos os sistemas GBFS registados na base de dados.
+   *
+   * GET /gbfs/systems
+   */
   @Get('systems')
   async listSystems(): Promise<GbfsSystemDto[]> {
     return this.gbfsService.findAllSystems();
   }
 
-  // GET /gbfs/systems/:systemId
+  /**
+   * Obtém um sistema GBFS específico pelo `systemId` (campo lógico).
+   *
+   * GET /gbfs/systems/:systemId
+   */
   @Get('systems/:systemId')
   async getSystem(
     @Param('systemId') systemId: string,
@@ -36,13 +55,21 @@ export class GbfsController {
   //  INDEX + FEEDS
   // =========================
 
-  // GET /gbfs/:systemId/index
+  /**
+   * Devolve o índice GBFS (`gbfs.json`) de um sistema.
+   *
+   * GET /gbfs/:systemId/index
+   */
   @Get(':systemId/index')
   async getIndex(@Param('systemId') systemId: string) {
     return this.gbfsService.getGbfsIndex(systemId);
   }
 
-  // GET /gbfs/:systemId/feeds?lang=pt
+  /**
+   * Lista os feeds disponíveis para um idioma específico.
+   *
+   * GET /gbfs/:systemId/feeds?lang=pt
+   */
   @Get(':systemId/feeds')
   async listFeeds(
     @Param('systemId') systemId: string,
@@ -51,7 +78,11 @@ export class GbfsController {
     return this.gbfsService.listFeeds(systemId, lang);
   }
 
-  // GET /gbfs/:systemId/feed?name=station_information&lang=pt
+  /**
+   * Proxy para um feed GBFS arbitrário por nome.
+   *
+   * GET /gbfs/:systemId/feed?name=station_information&lang=pt
+   */
   @Get(':systemId/feed')
   async getFeed(
     @Param('systemId') systemId: string,
@@ -65,7 +96,12 @@ export class GbfsController {
   // =========================
 
   // SYSTEM INFORMATION
-  // GET /gbfs/:systemId/system?lang=pt
+
+  /**
+   * Wrapper para o feed `system_information`.
+   *
+   * GET /gbfs/:systemId/system?lang=pt
+   */
   @Get(':systemId/system')
   async getSystemInfo(
     @Param('systemId') systemId: string,
@@ -75,7 +111,12 @@ export class GbfsController {
   }
 
   // STATION INFORMATION
-  // GET /gbfs/:systemId/stations/info?lang=pt
+
+  /**
+   * Wrapper para o feed `station_information`.
+   *
+   * GET /gbfs/:systemId/stations/info?lang=pt
+   */
   @Get(':systemId/stations/info')
   async getStationInfo(
     @Param('systemId') systemId: string,
@@ -85,7 +126,12 @@ export class GbfsController {
   }
 
   // STATION STATUS
-  // GET /gbfs/:systemId/stations/status?lang=pt
+
+  /**
+   * Wrapper para o feed `station_status`.
+   *
+   * GET /gbfs/:systemId/stations/status?lang=pt
+   */
   @Get(':systemId/stations/status')
   async getStationStatus(
     @Param('systemId') systemId: string,
@@ -95,7 +141,13 @@ export class GbfsController {
   }
 
   // ESTAÇÕES + STATUS (apenas em memória)
-  // GET /gbfs/:systemId/stations?lang=pt
+
+  /**
+   * Devolve `station_information` + `station_status` já mergeados,
+   * sem gravar nada em BD (merge em memória).
+   *
+   * GET /gbfs/:systemId/stations?lang=pt
+   */
   @Get(':systemId/stations')
   async getStations(
     @Param('systemId') systemId: string,
@@ -105,7 +157,14 @@ export class GbfsController {
   }
 
   // AVAILABILITY (stations + free bikes)
-  // GET /gbfs/:systemId/availability?lang=pt
+
+  /**
+   * Devolve um agregado com:
+   *  - stations (info + status)
+   *  - free bikes (bikes/vehicles soltos)
+   *
+   * GET /gbfs/:systemId/availability?lang=pt
+   */
   @Get(':systemId/availability')
   async getAvailability(
     @Param('systemId') systemId: string,
@@ -115,7 +174,12 @@ export class GbfsController {
   }
 
   // FREE BIKE STATUS
-  // GET /gbfs/:systemId/free-bikes?lang=pt
+
+  /**
+   * Wrapper para o feed `free_bike_status`.
+   *
+   * GET /gbfs/:systemId/free-bikes?lang=pt
+   */
   @Get(':systemId/free-bikes')
   async getFreeBikes(
     @Param('systemId') systemId: string,
@@ -125,7 +189,12 @@ export class GbfsController {
   }
 
   // VEHICLE TYPES
-  // GET /gbfs/:systemId/vehicle-types?lang=pt
+
+  /**
+   * Wrapper para o feed `vehicle_types`.
+   *
+   * GET /gbfs/:systemId/vehicle-types?lang=pt
+   */
   @Get(':systemId/vehicle-types')
   async getVehicleTypes(
     @Param('systemId') systemId: string,
@@ -135,7 +204,12 @@ export class GbfsController {
   }
 
   // PRICING PLANS
-  // GET /gbfs/:systemId/pricing-plans?lang=pt
+
+  /**
+   * Wrapper para o feed `system_pricing_plans`.
+   *
+   * GET /gbfs/:systemId/pricing-plans?lang=pt
+   */
   @Get(':systemId/pricing-plans')
   async getPricingPlans(
     @Param('systemId') systemId: string,
@@ -145,7 +219,12 @@ export class GbfsController {
   }
 
   // REGIONS
-  // GET /gbfs/:systemId/regions?lang=pt
+
+  /**
+   * Wrapper para o feed `system_regions`.
+   *
+   * GET /gbfs/:systemId/regions?lang=pt
+   */
   @Get(':systemId/regions')
   async getRegions(
     @Param('systemId') systemId: string,
@@ -155,7 +234,12 @@ export class GbfsController {
   }
 
   // GEOFENCING ZONES
-  // GET /gbfs/:systemId/geofencing-zones?lang=pt
+
+  /**
+   * Wrapper para o feed `geofencing_zones`.
+   *
+   * GET /gbfs/:systemId/geofencing-zones?lang=pt
+   */
   @Get(':systemId/geofencing-zones')
   async getGeofencingZones(
     @Param('systemId') systemId: string,
@@ -165,7 +249,12 @@ export class GbfsController {
   }
 
   // GBFS VERSIONS
-  // GET /gbfs/:systemId/versions?lang=pt
+
+  /**
+   * Wrapper para o feed `gbfs_versions`.
+   *
+   * GET /gbfs/:systemId/versions?lang=pt
+   */
   @Get(':systemId/versions')
   async getGbfsVersions(
     @Param('systemId') systemId: string,
@@ -178,7 +267,14 @@ export class GbfsController {
   //  SYNC ESTAÇÕES -> BD
   // =========================
 
-  // POST /gbfs/:systemId/sync-stations?lang=pt
+  /**
+   * Sincroniza as estações de um sistema GBFS para a tabela `stations`
+   * via upsert, usando `gbfsSystemId + externalId` como chave.
+   *
+   * GET: usa `station_information` (+ `station_status` para métricas).
+   *
+   * POST /gbfs/:systemId/sync-stations?lang=pt
+   */
   @Post(':systemId/sync-stations')
   async syncStationsFromGbfs(
     @Param('systemId') systemId: string,
