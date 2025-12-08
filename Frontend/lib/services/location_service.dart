@@ -1,20 +1,36 @@
 // lib/services/location_service.dart
 
 import 'dart:async';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 
+import 'package:flutter/foundation.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
+
+/// Serviço de localização responsável por:
+/// - Gerir permissões de localização;
+/// - Obter a localização actual;
+/// - Expor um stream de updates;
+/// - Fazer geocoding (endereço ↔ coordenadas).
 class LocationService {
   LocationService._();
+
+  /// Instância singleton do [LocationService].
   static final LocationService _instance = LocationService._();
 
+  /// Acesso público ao singleton.
   static LocationService get instance => _instance;
 
   // ================== PERMISSÕES ==================
 
-  /// Check and request permissions for the location service
+  /// Verifica e solicita permissões de localização ao utilizador.
+  ///
+  /// Devolve `true` se:
+  /// - o serviço de localização estiver activo; e
+  /// - a permissão não for `denied` nem `deniedForever`.
+  ///
+  /// Caso contrário, devolve `false`.
   Future<bool> checkPermissions() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return false;
     }
@@ -36,31 +52,37 @@ class LocationService {
 
   // ================== LOCALIZAÇÃO ÚNICA ==================
 
-  /// Get the current location (com maior precisão possível)
+  /// Obtém a localização actual com a maior precisão possível.
+  ///
+  /// Se as permissões não estiverem concedidas, devolve `null`.
+  /// Em caso de erro (timeout, etc.), devolve igualmente `null`.
   Future<Position?> getCurrentLocation() async {
-    final hasPermission = await checkPermissions();
+    final bool hasPermission = await checkPermissions();
     if (!hasPermission) return null;
 
     try {
-      final pos = await Geolocator.getCurrentPosition(
+      final Position pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.bestForNavigation,
         ),
       );
       return pos;
     } catch (e) {
-      print('Error getting current location: $e');
+      debugPrint('Error getting current location: $e');
       return null;
     }
   }
 
   // ================== STREAM DE LOCALIZAÇÃO ==================
 
-  /// Get location updates stream (sem smoothing, mas com boa accuracy)
+  /// Devolve um stream de updates de localização com boa precisão.
+  ///
+  /// Configuração:
+  /// - [LocationAccuracy.bestForNavigation]
+  /// - `distanceFilter = 3` metros (aprox.), para evitar spam de updates.
   Stream<Position> getLocationUpdates() {
-    const settings = LocationSettings(
+    const LocationSettings settings = LocationSettings(
       accuracy: LocationAccuracy.bestForNavigation,
-      // emite quando se mover ~3m; ajusta se quiseres mais/menos
       distanceFilter: 3,
     );
 
@@ -71,34 +93,41 @@ class LocationService {
 
   // ================== GEOCODING ==================
 
-  /// Get address from coordinates
+  /// Obtém um endereço legível a partir de coordenadas.
+  ///
+  /// Devolve uma string no formato:
+  /// `"rua, localidade, distrito, país"`, ou `null` se não conseguir resolver.
   Future<String?> getAddressFromCoordinates(
     double latitude,
     double longitude,
   ) async {
     try {
-      List<Placemark> placemarks =
+      final List<Placemark> placemarks =
           await placemarkFromCoordinates(latitude, longitude);
       if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        return "${place.street}, ${place.locality}, "
-            "${place.administrativeArea}, ${place.country}";
+        final Placemark place = placemarks.first;
+        return '${place.street}, ${place.locality}, '
+            '${place.administrativeArea}, ${place.country}';
       }
       return null;
     } catch (e) {
-      print('Error getting address from coordinates: $e');
+      debugPrint('Error getting address from coordinates: $e');
       return null;
     }
   }
 
-  /// Get coordinates from address
+  /// Obtém coordenadas aproximadas a partir de um endereço textual.
+  ///
+  /// Devolve um [Position] sintético (com apenas latitude/longitude
+  /// relevantes) ou `null` se não encontrar resultados.
   Future<Position?> getCoordinatesFromAddress(String address) async {
     try {
-      List<Location> locations = await locationFromAddress(address);
+      final List<Location> locations = await locationFromAddress(address);
       if (locations.isNotEmpty) {
+        final Location loc = locations.first;
         return Position(
-          latitude: locations[0].latitude,
-          longitude: locations[0].longitude,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
           timestamp: DateTime.now(),
           accuracy: 0,
           altitude: 0,
@@ -110,7 +139,7 @@ class LocationService {
         );
       }
     } catch (e) {
-      print('Error getting coordinates from address: $e');
+      debugPrint('Error getting coordinates from address: $e');
     }
     return null;
   }

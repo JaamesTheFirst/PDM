@@ -5,12 +5,27 @@ import 'package:geolocator/geolocator.dart';
 import '../state/navigation_controller.dart';
 import '../../../services/routes_service.dart'; // OtpItinerary, OtpLeg
 
+/// Overlay de navegação apresentado sobre o mapa durante a navegação ativa.
+///
+/// Este widget:
+/// - Só é visível quando `NavigationController.isNavigating == true`.
+/// - Mostra um cartão superior com:
+///   - Modo da leg atual (ícone + label).
+///   - Distância restante até ao fim da leg.
+///   - Duração da leg vs. distância.
+///   - Progresso global da rota (barra).
+///   - Distância restante na rota e duração total.
+///   - Coordenadas atuais (lat/lon) em modo debug.
+/// - Mostra um botão inferior para parar a navegação e fechar o ecrã.
+///
+/// A UI é “read-only”: todos os dados vêm do `NavigationController`.
 class NavigationOverlay extends StatelessWidget {
   const NavigationOverlay({super.key});
 
-  // token de verde (se quiseres usar noutros sítios)
+  /// Token de cor verde eco usada noutros componentes (Eco Mint).
   static const _ecoMint = Color(0xFF3CD4A0);
 
+  /// Devolve um ícone representativo para a [leg] atual com base no mode.
   IconData _iconForLeg(OtpLeg? leg) {
     if (leg == null) return Icons.navigation;
     final mode = leg.mode.toUpperCase();
@@ -37,6 +52,7 @@ class NavigationOverlay extends StatelessWidget {
     return Icons.directions_transit;
   }
 
+  /// Devolve um label amigável para o modo de transporte da [leg].
   String _modeLabel(OtpLeg? leg) {
     if (leg == null) return 'A navegar';
     final mode = leg.mode.toUpperCase();
@@ -53,12 +69,19 @@ class NavigationOverlay extends StatelessWidget {
     return 'Transporte';
   }
 
+  /// Formata uma distância em metros para string legível (m ou km).
   String _formatDistance(num meters) {
     final m = meters.toDouble();
     if (m < 1000) return '${m.round()} m';
     return '${(m / 1000).toStringAsFixed(1)} km';
   }
 
+  /// Converte uma duração em segundos para string em minutos/horas.
+  ///
+  /// Exemplos:
+  /// - 300 s → "5 min"
+  /// - 3600 s → "1 h"
+  /// - 3900 s → "1 h 5 min"
   String _formatDurationMinutes(num seconds) {
     final s = seconds.toDouble();
     final totalMin = (s / 60).round();
@@ -69,12 +92,15 @@ class NavigationOverlay extends StatelessWidget {
     return '${h} h ${m} min';
   }
 
+  /// Formata um valor de latitude/longitude com 5 casas decimais.
   String _formatLatLon(num value) => value.toDouble().toStringAsFixed(5);
 
   @override
   Widget build(BuildContext context) {
+    // Obtemos o controlador de navegação da árvore de providers.
     final navController = context.watch<NavigationController>();
 
+    // Se não há navegação ativa, não desenhamos nada.
     if (!navController.isNavigating) {
       return const SizedBox.shrink();
     }
@@ -146,6 +172,7 @@ class NavigationOverlay extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Label do modo (ex.: “Autocarro”, “Caminha”)
                           Text(
                             modeLabel,
                             style: theme.textTheme.titleMedium?.copyWith(
@@ -155,6 +182,7 @@ class NavigationOverlay extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
+                          // Distância até ao fim da leg atual
                           Text(
                             '${_formatDistance(legDistanceRemaining)} até ${leg?.toName ?? 'destino'}',
                             maxLines: 1,
@@ -166,6 +194,7 @@ class NavigationOverlay extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
+                          // Duração + distância da leg atual
                           Text(
                             'Esta etapa: ${_formatDurationMinutes(legDuration)} • ${_formatDistance(leg?.distance ?? 0)}',
                             style: theme.textTheme.bodySmall?.copyWith(
@@ -189,6 +218,7 @@ class NavigationOverlay extends StatelessWidget {
                           const SizedBox(height: 10),
                           Row(
                             children: [
+                              // Distância restante da rota
                               Expanded(
                                 child: Text(
                                   'Rota: ${_formatDistance(routeDistanceRemaining)} restantes',
@@ -198,6 +228,7 @@ class NavigationOverlay extends StatelessWidget {
                                   ),
                                 ),
                               ),
+                              // Duração total da rota
                               Expanded(
                                 child: Text(
                                   'Duração total: ${_formatDurationMinutes(routeDuration)}',
@@ -211,6 +242,7 @@ class NavigationOverlay extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 6),
+                          // Coordenadas atuais (útil para debug)
                           if (pos != null)
                             Text(
                               'Lat: ${_formatLatLon(pos.latitude)}  •  Lon: ${_formatLatLon(pos.longitude)}',
@@ -247,6 +279,7 @@ class NavigationOverlay extends StatelessWidget {
                   ),
                   child: ElevatedButton.icon(
                     onPressed: () async {
+                      // Pára a navegação e regressa ao ecrã anterior.
                       await navController.stopNavigation();
                       if (context.mounted) {
                         Navigator.of(context).pop();

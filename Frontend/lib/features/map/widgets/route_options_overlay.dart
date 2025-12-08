@@ -1,5 +1,6 @@
 // lib/features/map/widgets/route_options_overlay.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx;
 import 'package:provider/provider.dart';
@@ -14,7 +15,14 @@ import '../state/otp_routes_controller.dart';
 import '../state/navigation_controller.dart';
 import '../pages/navigation_map_page.dart';
 
-/// ============= ARGS =============
+/// ================== ARGUMENTOS PÚBLICOS ==================
+
+/// Argumentos para abrir o [RouteOptionsOverlay] / [RouteOptionsScreen].
+///
+/// Contém:
+/// - `mapboxMap`: instância viva do mapa onde as rotas são desenhadas.
+/// - `from` / `to`: pontos de origem/destino vindos do SearchBox.
+/// - `filters`: filtros opcionais para o cálculo de rotas OTP (tempo, modos, etc).
 class RouteOptionsArgs {
   final mbx.MapboxMap mapboxMap;
   final SearchboxPlace from;
@@ -29,6 +37,15 @@ class RouteOptionsArgs {
   });
 }
 
+/// Overlay de opções de rota por cima do mapa.
+///
+/// Responsável por:
+/// - Pedir itinerários OTP (transporte público) para o trajeto.
+/// - Desenhar TODAS as rotas no mapa + destacar a selecionada.
+/// - Mostrar lista de opções (com EcoScore, distância a pé, etc).
+/// - Permitir:
+///   - “Iniciar Navegação” (abre [NavigationMapPage]).
+///   - “Aplicar & fechar” (guardar rota no histórico e fechar).
 class RouteOptionsOverlay extends StatefulWidget {
   final mbx.MapboxMap mapboxMap;
   final SearchboxPlace from;
@@ -49,10 +66,17 @@ class RouteOptionsOverlay extends StatefulWidget {
   State<RouteOptionsOverlay> createState() => _RouteOptionsOverlayState();
 }
 
+/// Pequeno DTO interno para guardar resultados de Mapbox Directions.
 class _RouteData {
+  /// Geometria da rota em lista `[lon, lat]`.
   final List<List<num>> geometry;
-  final double distance; // m
-  final double duration; // s
+
+  /// Distância total em metros.
+  final double distance;
+
+  /// Duração total em segundos.
+  final double duration;
+
   _RouteData({
     required this.geometry,
     required this.distance,
@@ -63,45 +87,60 @@ class _RouteData {
 class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   static const _ecoMint = Color(0xFF3CD4A0);
 
-  // desenho no mapa
+  // ============== ESTADO DE DESENHO NO MAPA ==============
+
   mbx.PolylineAnnotationManager? _lineMgr;
-  mbx.PolylineAnnotation? _routeLine; // Selected route
+  mbx.PolylineAnnotation? _routeLine; // linha da rota selecionada
   final List<mbx.PolylineAnnotation> _allRouteLines = [];
+
   mbx.CircleAnnotationManager? _poiMgr;
   mbx.CircleAnnotation? _fromDot;
   mbx.CircleAnnotation? _toDot;
 
-  // estado de modo (Mapbox directions)
+  // ============== ESTADO DE DIRECTIONS MAPBOX ==============
+
+  /// Modo "rápido" (walking / cycling / driving) usado quando se pede
+  /// rotas ao Mapbox Directions (não OTP).
   String _selected = 'walking';
   bool _loading = false;
 
-  // guardar rota no backend / histórico
+  // ============== ESTADO DE GUARDAR NO HISTÓRICO ==============
+
   bool _saving = false;
 
-  // cache de rotas por modo (Mapbox Directions)
+  /// Cache de rotas Mapbox Directions por modo.
   final Map<String, _RouteData> _cache = {};
+
+  // ============== ESTADO OTP / TRANSPORTE PÚBLICO ==============
+
   late final OtpRoutesController _otpController;
   int? _lastDrawnOtpIndex;
 
-  // ==== PANEL SNAPPING STATE ====
+  bool _requestedOtp = false;
+
+  // ============== ESTADO DO PAINEL (SNAPPING) ==============
+
   double _panelHeight = 0;
   late double _snapFull;
   late double _snapExpanded;
   late double _snapDocked;
-  static const double _minPanelHeight = 285.0; // ALTURA MÍNIMA -> evita overflow
 
-  bool _requestedOtp = false;
+  /// Altura mínima para evitar overflow no conteúdo.
+  static const double _minPanelHeight = 285.0;
 
   @override
   void initState() {
     super.initState();
+
     _otpController = context.read<OtpRoutesController>();
     _otpController.addListener(_handleOtpSelectionChange);
+
+    // Cria pontos de origem/destino e remove linhas anteriores no mapa.
     _ensureDots();
     _selectMode('walking', draw: true);
     _clearPreviousRoutes();
 
-    // calcular alturas do painel depois do layout
+    // Calcula alturas de snapping com base na altura real do ecrã.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final media = MediaQuery.of(context);
       final screenHeight = media.size.height;
@@ -110,17 +149,17 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       _snapExpanded = screenHeight * 0.60;
       _snapDocked = screenHeight * 0.25;
 
-      // garantir que o docked nunca é menor que a altura mínima
       if (_snapDocked < _minPanelHeight) {
         _snapDocked = _minPanelHeight;
       }
 
       setState(() {
-        // começar no estado "expanded", mas nunca abaixo da altura mínima
+        // Começa no estado "expanded" mas nunca abaixo do mínimo.
         _panelHeight = _snapExpanded.clamp(_snapDocked, _snapFull);
       });
     });
 
+    // Pedir itinerários OTP assim que o overlay entra em cena.
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchOtp());
   }
 
@@ -131,6 +170,11 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     super.dispose();
   }
 
+  // ============================================================
+  // MAPA – LIMPEZA / DESENHO
+  // ============================================================
+
+  /// Remove todas as linhas desenhadas anteriormente no mapa.
   Future<void> _clearPreviousRoutes() async {
     if (_lineMgr != null) {
       try {
@@ -154,19 +198,98 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     _requestedOtp = false;
   }
 
+  /// Cria (ou recria) os pontos de origem e destino no mapa.
+  Future<void> _ensureDots() async {
+    _poiMgr ??=
+        await widget.mapboxMap.annotations.createCircleAnnotationManager();
+
+    try {
+      await _poiMgr!.deleteAll();
+    } catch (_) {}
+
+    _fromDot = await _poiMgr!.create(
+      mbx.CircleAnnotationOptions(
+        geometry: mbx.Point(
+          coordinates: mbx.Position(
+            widget.from.longitude,
+            widget.from.latitude,
+          ),
+        ),
+        circleRadius: 7,
+        circleColor: 0xFF1C1C1C,
+        circleStrokeColor: 0xFFFFFFFF,
+        circleStrokeWidth: 2,
+      ),
+    );
+
+    _toDot = await _poiMgr!.create(
+      mbx.CircleAnnotationOptions(
+        geometry: mbx.Point(
+          coordinates: mbx.Position(
+            widget.to.longitude,
+            widget.to.latitude,
+          ),
+        ),
+        circleRadius: 7,
+        circleColor: _ecoMint.value,
+        circleStrokeColor: 0xFFFFFFFF,
+        circleStrokeWidth: 2,
+      ),
+    );
+  }
+
+  /// Ajusta a câmara para caber toda a geometria de uma rota.
+  Future<void> _fitRouteGeometry(List<List<num>> geometry) async {
+    if (geometry.isEmpty) return;
+
+    final points = geometry
+        .map(
+          (c) => mbx.Point(
+            coordinates: mbx.Position((c[0]).toDouble(), (c[1]).toDouble()),
+          ),
+        )
+        .toList();
+
+    final padding =
+        mbx.MbxEdgeInsets(top: 40, left: 40, right: 40, bottom: 40);
+
+    try {
+      final cam = await widget.mapboxMap.cameraForCoordinates(
+        points,
+        padding,
+        0,
+        0,
+      );
+      await widget.mapboxMap
+          .flyTo(cam, mbx.MapAnimationOptions(duration: 900));
+    } catch (_) {}
+  }
+
+  // ============================================================
+  // OTP / TRANSPORTE PÚBLICO
+  // ============================================================
+
+  /// Pede itinerários ao OTP (apenas uma vez) e desenha todos no mapa.
   Future<void> _fetchOtp() async {
     if (_requestedOtp) {
-      debugPrint('[RouteOptionsOverlay] _fetchOtp: Already requested, skipping');
+      debugPrint(
+        '[RouteOptionsOverlay] _fetchOtp: Already requested, skipping',
+      );
       return;
     }
+
     debugPrint('[RouteOptionsOverlay] _fetchOtp: Starting fetch');
     debugPrint(
-      '[RouteOptionsOverlay] From: ${widget.from.latitude}, ${widget.from.longitude}',
+      '[RouteOptionsOverlay] From: ${widget.from.latitude}, '
+      '${widget.from.longitude}',
     );
     debugPrint(
-      '[RouteOptionsOverlay] To: ${widget.to.latitude}, ${widget.to.longitude}',
+      '[RouteOptionsOverlay] To: ${widget.to.latitude}, '
+      '${widget.to.longitude}',
     );
+
     _requestedOtp = true;
+
     await _otpController.fetch(
       fromLat: widget.from.latitude,
       fromLon: widget.from.longitude,
@@ -174,20 +297,23 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       toLon: widget.to.longitude,
       filters: widget.filters,
     );
+
     debugPrint(
       '[RouteOptionsOverlay] _fetchOtp: Fetch complete, drawing all routes',
     );
+
     await _drawAllOtpItineraries();
     await _drawSelectedOtpItinerary();
   }
 
+  /// Listener para quando muda o índice de itinerário selecionado.
   void _handleOtpSelectionChange() {
     final index = _otpController.selectedIndex;
     if (index == null || index == _lastDrawnOtpIndex) return;
     _drawSelectedOtpItinerary();
   }
 
-  /// Desenhar todas as rotas OTP com cores diferentes
+  /// Desenha todas as rotas OTP com cores diferentes (background no mapa).
   Future<void> _drawAllOtpItineraries() async {
     final itineraries = _otpController.itineraries;
     if (itineraries.isEmpty) return;
@@ -195,6 +321,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     _lineMgr ??=
         await widget.mapboxMap.annotations.createPolylineAnnotationManager();
 
+    // Limpa linhas antigas (background).
     for (final line in _allRouteLines) {
       try {
         await _lineMgr!.delete(line);
@@ -204,6 +331,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     }
     _allRouteLines.clear();
 
+    // Paleta de cores para distinguir rotas.
     final routeColors = [
       0xFF00D4FF,
       0xFF0066FF,
@@ -216,9 +344,11 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       final itinerary = itineraries[i];
       final coords = <List<num>>[];
 
+      // Junta todas as legs numa geometria contínua.
       for (var legIdx = 0; legIdx < itinerary.legs.length; legIdx++) {
         final leg = itinerary.legs[legIdx];
         if (leg.polyline == null || leg.polyline!.isEmpty) continue;
+
         final decoded = decodePolyline(leg.polyline!);
         for (var pt = 0; pt < decoded.length; pt++) {
           if (pt == 0 && coords.isNotEmpty) continue;
@@ -254,6 +384,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       }
     }
 
+    // Faz fit a TODAS as rotas para dar visão geral.
     if (_allRouteLines.isNotEmpty) {
       final allCoords = <List<num>>[];
       for (final itinerary in itineraries) {
@@ -273,14 +404,15 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     }
   }
 
-  /// Desenhar rota selecionada com linha mais grossa
+  /// Desenha a rota OTP selecionada com linha branca mais grossa.
   Future<void> _drawSelectedOtpItinerary() async {
     final index = _otpController.selectedIndex;
     if (index == null) return;
+
     final itineraries = _otpController.itineraries;
     if (index < 0 || index >= itineraries.length) return;
 
-    if (_routeLine != null) {
+    if (_routeLine != null && _lineMgr != null) {
       try {
         await _lineMgr!.delete(_routeLine!);
       } catch (e) {
@@ -295,6 +427,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     for (var legIdx = 0; legIdx < itinerary.legs.length; legIdx++) {
       final leg = itinerary.legs[legIdx];
       if (leg.polyline == null || leg.polyline!.isEmpty) continue;
+
       final decoded = decodePolyline(leg.polyline!);
       for (var pt = 0; pt < decoded.length; pt++) {
         if (pt == 0 && coords.isNotEmpty) continue;
@@ -329,66 +462,12 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     _lastDrawnOtpIndex = index;
   }
 
-  Future<void> _ensureDots() async {
-    _poiMgr ??=
-        await widget.mapboxMap.annotations.createCircleAnnotationManager();
-    try {
-      await _poiMgr!.deleteAll();
-    } catch (_) {}
+  // ============================================================
+  // MAPBOX DIRECTIONS (walking / driving) – OPCIONAL
+  // ============================================================
 
-    _fromDot = await _poiMgr!.create(
-      mbx.CircleAnnotationOptions(
-        geometry: mbx.Point(
-          coordinates: mbx.Position(
-            widget.from.longitude,
-            widget.from.latitude,
-          ),
-        ),
-        circleRadius: 7,
-        circleColor: 0xFF1C1C1C,
-        circleStrokeColor: 0xFFFFFFFF,
-        circleStrokeWidth: 2,
-      ),
-    );
-    _toDot = await _poiMgr!.create(
-      mbx.CircleAnnotationOptions(
-        geometry: mbx.Point(
-          coordinates: mbx.Position(widget.to.longitude, widget.to.latitude),
-        ),
-        circleRadius: 7,
-        circleColor: _ecoMint.value,
-        circleStrokeColor: 0xFFFFFFFF,
-        circleStrokeWidth: 2,
-      ),
-    );
-  }
-
-  Future<void> _fitRouteGeometry(List<List<num>> geometry) async {
-    if (geometry.isEmpty) return;
-
-    final points = geometry
-        .map(
-          (c) => mbx.Point(
-            coordinates: mbx.Position((c[0]).toDouble(), (c[1]).toDouble()),
-          ),
-        )
-        .toList();
-
-    final padding =
-        mbx.MbxEdgeInsets(top: 40, left: 40, right: 40, bottom: 40);
-
-    try {
-      final cam = await widget.mapboxMap.cameraForCoordinates(
-        points,
-        padding,
-        0,
-        0,
-      );
-      await widget.mapboxMap
-          .flyTo(cam, mbx.MapAnimationOptions(duration: 900));
-    } catch (_) {}
-  }
-
+  /// Seleciona um modo "rápido" (walking, driving…) e, opcionalmente,
+  /// desenha a rota Mapbox correspondente no mapa.
   Future<void> _selectMode(String mode, {bool draw = false}) async {
     setState(() {
       _selected = mode;
@@ -396,13 +475,16 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     });
 
     _RouteData data;
+
     if (_cache.containsKey(mode)) {
       data = _cache[mode]!;
     } else {
+      // Converte alguns modos internos para perfis Mapbox.
       final profile =
           (mode == 'scooter' || mode == 'bike_share' || mode == 'scooter_share')
               ? 'cycling'
               : (mode == 'taxi' ? 'driving' : mode);
+
       final r = await MapboxDirectionsService.instance.getRoute(
         fromLon: widget.from.longitude,
         fromLat: widget.from.latitude,
@@ -410,11 +492,13 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
         toLat: widget.to.latitude,
         profile: profile,
       );
+
       if (r == null) {
         if (!mounted) return;
         setState(() => _loading = false);
         return;
       }
+
       data = _RouteData(
         geometry: r.geometry,
         distance: r.distance.toDouble(),
@@ -432,6 +516,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     setState(() => _loading = false);
   }
 
+  /// Desenha UMA rota Mapbox Directions (substitui as OTP de background).
   Future<void> _drawRoute(_RouteData route) async {
     _lineMgr ??=
         await widget.mapboxMap.annotations.createPolylineAnnotationManager();
@@ -446,7 +531,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
           await _lineMgr!.delete(line);
         } catch (e) {
           debugPrint(
-              '[RouteOptionsOverlay] Error deleting OTP route line: $e');
+            '[RouteOptionsOverlay] Error deleting OTP route line: $e',
+          );
         }
       }
       _allRouteLines.clear();
@@ -471,11 +557,21 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     }
   }
 
+  // ============================================================
+  // AÇÕES – NAVEGAÇÃO / GUARDAR
+  // ============================================================
+
   String _fmt(double meters) =>
       meters < 1000 ? '${meters.round()} m' : '${(meters / 1000).toStringAsFixed(1)} km';
+
   String _fmtDur(double seconds) => '${(seconds / 60).round()} min';
 
-  /// ====== BOTÃO "INICIAR NAVEGAÇÃO" ======
+  /// Handler do botão "Iniciar Navegação".
+  ///
+  /// - Usa o itinerário selecionado (ou o primeiro).
+  /// - Inicializa o [NavigationController].
+  /// - Fecha o overlay.
+  /// - Navega para a [NavigationMapPage].
   Future<void> _onStartNavigation(BuildContext context) async {
     final controller = context.read<OtpRoutesController>();
     final navController = context.read<NavigationController>();
@@ -494,16 +590,21 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       destinationLon: widget.to.longitude,
     );
 
+    if (!mounted) return;
+
     widget.onClose();
 
-    if (context.mounted) {
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const NavigationMapPage()));
-    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const NavigationMapPage()),
+    );
   }
 
-  /// ====== BOTÃO "APLICAR & FECHAR" ======
+  /// Handler do botão "Aplicar & fechar".
+  ///
+  /// - Constrói um payload compatível com o backend de histórico.
+  /// - Usa o itinerário selecionado (ou o primeiro).
+  /// - Chama [HistoryService.saveRouteFromItinerary].
+  /// - Fecha o overlay no final (com feedback em caso de erro).
   Future<void> _onApplyAndSave(BuildContext context) async {
     final controller = context.read<OtpRoutesController>();
     final itineraries = controller.itineraries;
@@ -518,6 +619,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
     final itinerary = itineraries[index];
 
+    // Serialização simplificada das legs para o backend.
     final legsJson = itinerary.legs.map((leg) {
       double? fromLat;
       double? fromLon;
@@ -547,21 +649,19 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       };
     }).toList();
 
-    final itineraryJson = {
-      'duration': itinerary.duration,
-      'startTime': itinerary.startTime.toIso8601String(),
-      'endTime': itinerary.endTime.toIso8601String(),
-      'walkDistance': itinerary.walkDistance,
-      'legs': legsJson,
-    };
-
     final originLabel =
         widget.from.name.isNotEmpty ? widget.from.name : widget.from.placeName;
     final destinationLabel =
         widget.to.name.isNotEmpty ? widget.to.name : widget.to.placeName;
 
     final payload = {
-      'itinerary': itineraryJson,
+      'itinerary': {
+        'duration': itinerary.duration,
+        'startTime': itinerary.startTime.toIso8601String(),
+        'endTime': itinerary.endTime.toIso8601String(),
+        'walkDistance': itinerary.walkDistance,
+        'legs': legsJson,
+      },
       'originName': originLabel,
       'originLatitude': widget.from.latitude,
       'originLongitude': widget.from.longitude,
@@ -577,16 +677,21 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
       debugPrint('[RouteOptionsOverlay] Error saving itinerary: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível guardar esta rota.')),
+          const SnackBar(
+            content: Text('Não foi possível guardar esta rota.'),
+          ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _saving = false);
-      }
+      if (!mounted) return;
+      setState(() => _saving = false);
       widget.onClose();
     }
   }
+
+  // ============================================================
+  // UI DO PAINEL / LAYOUT
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -595,14 +700,17 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
     final bottomInset = media.padding.bottom;
     final screenHeight = media.size.height;
 
+    final clampedHeight =
+        _panelHeight == 0 ? 1.0 : _panelHeight.clamp(0.0, screenHeight);
+
     return SizedBox(
-      height: _panelHeight == 0 ? 1 : _panelHeight.clamp(0.0, screenHeight),
+      height: clampedHeight,
       child: Align(
         alignment: Alignment.bottomCenter,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          height: _panelHeight == 0 ? 1 : _panelHeight.clamp(0.0, screenHeight),
+          height: clampedHeight,
           width: double.infinity,
           decoration: BoxDecoration(
             color: t.colorScheme.surface,
@@ -610,7 +718,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                 ? BorderRadius.zero
                 : const BorderRadius.vertical(top: Radius.circular(24)),
             boxShadow: _panelHeight >= _snapFull * 0.95
-                ? []
+                ? const []
                 : const [
                     BoxShadow(
                       blurRadius: 24,
@@ -623,13 +731,16 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
             padding: EdgeInsets.only(bottom: bottomInset + 12),
             child: Column(
               children: [
-                // handle + drag
+                // ========= HANDLE + DRAG =========
                 GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onVerticalDragUpdate: (details) {
                     setState(() {
                       _panelHeight -= details.delta.dy;
-                      _panelHeight = _panelHeight.clamp(_snapDocked, _snapFull);
+                      _panelHeight = _panelHeight.clamp(
+                        _snapDocked,
+                        _snapFull,
+                      );
                     });
                   },
                   onVerticalDragEnd: (_) {
@@ -649,7 +760,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                         width: 48,
                         height: 5,
                         decoration: BoxDecoration(
-                          color: t.colorScheme.onSurface.withOpacity(.25),
+                          color: t.colorScheme.onSurface
+                              .withValues(alpha: .25),
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
@@ -657,7 +769,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                   ),
                 ),
 
-                // header + fechar
+                // ========= HEADER + BOTÃO FECHAR =========
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                   child: Row(
@@ -686,6 +798,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                   ),
                 ),
 
+                // ========= LISTA DE ITINERÁRIOS =========
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -695,7 +808,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
                 const SizedBox(height: 12),
 
-                // Start Navigation button
+                // ========= BOTÃO “INICIAR NAVEGAÇÃO” =========
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(
@@ -722,7 +835,7 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
 
                 const SizedBox(height: 12),
 
-                // ações no fundo
+                // ========= BOTÕES “FECHAR” + “APLICAR & FECHAR” =========
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -733,7 +846,8 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: t.colorScheme.onSurface,
                             side: BorderSide(
-                              color: t.colorScheme.onSurface.withOpacity(.2),
+                              color: t.colorScheme.onSurface
+                                  .withValues(alpha: .2),
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(26),
@@ -782,14 +896,19 @@ class _RouteOptionsOverlayState extends State<RouteOptionsOverlay> {
   }
 }
 
-// ======================= LISTA DE ITINERÁRIOS =======================
+// ===================================================================
+// PAINEL DE ITINERÁRIOS OTP
+// ===================================================================
 
+/// Painel que mostra a lista de itinerários OTP ordenados por EcoScore.
 class _OtpItinerariesPanel extends StatelessWidget {
   const _OtpItinerariesPanel();
 
+  /// Formata hora HH:mm.
   String _formatTime(DateTime dt) =>
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
+  /// Escolhe um ícone genérico para o itinerário com base nos modos das legs.
   IconData _getIconForMode(OtpItinerary itinerary) {
     for (final leg in itinerary.legs) {
       final mode = leg.mode.toUpperCase();
@@ -824,8 +943,10 @@ class _OtpItinerariesPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
+
     return Consumer<OtpRoutesController>(
       builder: (_, controller, __) {
+        // Estado: a carregar.
         if (controller.isLoading) {
           return _TransitCardBase(
             child: Row(
@@ -842,6 +963,7 @@ class _OtpItinerariesPanel extends StatelessWidget {
           );
         }
 
+        // Estado: erro.
         if (controller.error != null) {
           return _TransitCardBase(
             child: Row(
@@ -859,6 +981,7 @@ class _OtpItinerariesPanel extends StatelessWidget {
           );
         }
 
+        // Ordena itinerários por EcoScore (descendente).
         final itineraries = List<OtpItinerary>.from(controller.itineraries);
         itineraries.sort((OtpItinerary a, OtpItinerary b) {
           final scoreA = EcoScoreService.instance.calculateScore(a).score;
@@ -885,10 +1008,11 @@ class _OtpItinerariesPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'OTP não encontrou rotas de transporte público para esta ligação. '
-                  'Tenta outro destino ou verifica se há cobertura de transportes nesta área.',
+                  'OTP não encontrou rotas de transporte público para esta '
+                  'ligação. Tenta outro destino ou verifica se há cobertura '
+                  'de transportes nesta área.',
                   style: t.textTheme.bodySmall?.copyWith(
-                    color: t.colorScheme.onSurface.withOpacity(0.7),
+                    color: t.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -909,7 +1033,7 @@ class _OtpItinerariesPanel extends StatelessWidget {
             Text(
               '${itineraries.length} opções disponíveis',
               style: t.textTheme.bodySmall?.copyWith(
-                color: t.colorScheme.onSurface.withOpacity(0.6),
+                color: t.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 10),
@@ -935,6 +1059,7 @@ class _OtpItinerariesPanel extends StatelessWidget {
   }
 }
 
+/// Card de itinerário que pode expandir para mostrar detalhes de cada leg.
 class _ExpandableRouteCard extends StatefulWidget {
   final OtpItinerary itinerary;
   final int index;
@@ -962,6 +1087,7 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
     final t = Theme.of(context);
     final itinerary = widget.itinerary;
     final selected = widget.controller.selectedIndex == widget.index;
+
     final durationMin = (itinerary.duration / 60).round();
     final legsSummary = itinerary.legs
         .map(
@@ -994,13 +1120,15 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ====== HEADER DO CARD ======
             Row(
               children: [
                 Icon(widget.getIconForMode(itinerary), size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${widget.formatTime(itinerary.startTime)} – ${widget.formatTime(itinerary.endTime)}',
+                    '${widget.formatTime(itinerary.startTime)} – '
+                    '${widget.formatTime(itinerary.endTime)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
@@ -1025,9 +1153,12 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                 ),
               ],
             ),
+
             const SizedBox(height: 6),
             Text(legsSummary, style: t.textTheme.bodyMedium),
             const SizedBox(height: 6),
+
+            // ====== ECO BADGES + DISTÂNCIA A PÉ ======
             Row(
               children: [
                 // Eco Score badge
@@ -1039,7 +1170,9 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                   decoration: BoxDecoration(
                     color: scoreColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: scoreColor.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1064,6 +1197,7 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
+
                 // CO2 badge
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -1071,15 +1205,18 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: t.colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                    color: t.colorScheme.surfaceVariant
+                        .withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    EcoScoreService.instance.formatCo2PerKm(ecoScore.co2PerKm),
+                    EcoScoreService.instance
+                        .formatCo2PerKm(ecoScore.co2PerKm),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: t.colorScheme.onSurface.withValues(alpha: 0.9),
+                      color: t.colorScheme.onSurface
+                          .withValues(alpha: 0.9),
                     ),
                   ),
                 ),
@@ -1090,6 +1227,8 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                 ),
               ],
             ),
+
+            // ====== SECÇÃO EXPANDIDA ======
             if (_isExpanded) ...[
               const SizedBox(height: 12),
               const Divider(),
@@ -1105,7 +1244,8 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                       Icon(
                         _getLegIcon(leg.mode),
                         size: 16,
-                        color: t.colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: t.colorScheme.onSurface
+                            .withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -1126,9 +1266,11 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
                               style: t.textTheme.bodySmall,
                             ),
                             Text(
-                              '$legDurationMin min • ${legDistanceKm.toStringAsFixed(1)} km',
+                              '$legDurationMin min • '
+                              '${legDistanceKm.toStringAsFixed(1)} km',
                               style: t.textTheme.bodySmall?.copyWith(
-                                color: t.colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: t.colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -1145,6 +1287,7 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
     );
   }
 
+  /// Ícone por leg, de acordo com o modo de transporte.
   IconData _getLegIcon(String mode) {
     final m = mode.toUpperCase();
     if (m == 'WALK' || m == 'WALKING') return Icons.directions_walk;
@@ -1164,6 +1307,7 @@ class _ExpandableRouteCardState extends State<_ExpandableRouteCard> {
   }
 }
 
+/// Cartão base de informação (loading/erro) para o painel OTP.
 class _TransitCardBase extends StatelessWidget {
   final Widget child;
   const _TransitCardBase({required this.child});

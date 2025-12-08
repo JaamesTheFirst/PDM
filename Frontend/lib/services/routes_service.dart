@@ -4,9 +4,14 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+/// Base URL para o módulo de planeamento de rotas.
+///
+/// Pode ser sobreposta via:
+/// `--dart-define=ROUTES_BASE_URL=http://...`
 const String _envRoutesBase =
     String.fromEnvironment('ROUTES_BASE_URL', defaultValue: '');
 
+/// Calcula a base URL usada pelo [RoutesService].
 String _computeRoutesBase() {
   if (_envRoutesBase.isNotEmpty) return _envRoutesBase;
   if (kIsWeb) return 'http://localhost:3000';
@@ -16,17 +21,19 @@ String _computeRoutesBase() {
           String.fromEnvironment('ROUTES_BASE_URL', defaultValue: '');
       if (custom.isNotEmpty) return custom;
       // Android emulator -> host machine (10.0.2.2)
-      // For physical Android devices, you MUST set ROUTES_BASE_URL:
-      // flutter run --dart-define=ROUTES_BASE_URL=http://YOUR_WINDOWS_IP:3000
-      // Default to 10.0.2.2 (emulator) - will fail on physical devices
+      // Para dispositivos físicos, ROUTES_BASE_URL deve ser definido.
       return 'http://10.0.2.2:3000';
     }
-  } catch (_) {}
+  } catch (_) {
+    // Platform não disponível no web.
+  }
   return 'http://localhost:3000';
 }
 
+/// Base URL efectiva usada para planeamento de rotas.
 final String kRoutesBaseUrl = _computeRoutesBase();
 
+/// Leg (segmento) de um itinerário OTP.
 class OtpLeg {
   final String mode;
   final double distance;
@@ -37,7 +44,9 @@ class OtpLeg {
   final String toName;
   final String? routeName;
   final String? polyline;
-  final bool? rentedBike; // true if this is a bike-share leg
+
+  /// `true` se for uma leg de bike-share.
+  final bool? rentedBike;
 
   OtpLeg({
     required this.mode,
@@ -52,13 +61,17 @@ class OtpLeg {
     this.rentedBike,
   });
 
+  /// Cria [OtpLeg] a partir do JSON devolvido pelo OTP.
   factory OtpLeg.fromJson(Map<String, dynamic> json) {
-    // Handle null/missing from/to objects
-    final fromObj = json['from'] as Map<String, dynamic>? ?? {};
-    final toObj = json['to'] as Map<String, dynamic>? ?? {};
-    final routeObj = json['route'] as Map<String, dynamic>?;
-    final legGeometryObj = json['legGeometry'] as Map<String, dynamic>?;
-    
+    final Map<String, dynamic> fromObj =
+        json['from'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    final Map<String, dynamic> toObj =
+        json['to'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    final Map<String, dynamic>? routeObj =
+        json['route'] as Map<String, dynamic>?;
+    final Map<String, dynamic>? legGeometryObj =
+        json['legGeometry'] as Map<String, dynamic>?;
+
     return OtpLeg(
       mode: json['mode'] as String? ?? 'UNKNOWN',
       distance: (json['distance'] as num?)?.toDouble() ?? 0.0,
@@ -71,14 +84,15 @@ class OtpLeg {
       ),
       fromName: fromObj['name'] as String? ?? 'Origin',
       toName: toObj['name'] as String? ?? 'Destination',
-      routeName: routeObj?['shortName'] as String? ??
-          routeObj?['longName'] as String?,
+      routeName:
+          routeObj?['shortName'] as String? ?? routeObj?['longName'] as String?,
       polyline: legGeometryObj?['points'] as String?,
       rentedBike: json['rentedBike'] as bool?,
     );
   }
 }
 
+/// Itinerário completo devolvido pelo OTP.
 class OtpItinerary {
   final int duration;
   final double walkDistance;
@@ -94,9 +108,10 @@ class OtpItinerary {
     required this.legs,
   });
 
+  /// Cria [OtpItinerary] a partir do JSON do OTP.
   factory OtpItinerary.fromJson(Map<String, dynamic> json) {
-    final legsJson = json['legs'] as List<dynamic>? ?? [];
-    
+    final List<dynamic> legsJson = json['legs'] as List<dynamic>? ?? <dynamic>[];
+
     return OtpItinerary(
       duration: (json['duration'] as num?)?.toInt() ?? 0,
       walkDistance: (json['walkDistance'] as num?)?.toDouble() ?? 0.0,
@@ -107,12 +122,12 @@ class OtpItinerary {
         (json['endTime'] as num?)?.toInt() ?? 0,
       ),
       legs: legsJson
-          .map((leg) {
+          .map<OtpLeg>((dynamic leg) {
             try {
               return OtpLeg.fromJson(leg as Map<String, dynamic>);
             } catch (e) {
-              print('[OtpItinerary] Error parsing leg: $e');
-              print('[OtpItinerary] Leg data: $leg');
+              debugPrint('[OtpItinerary] Error parsing leg: $e');
+              debugPrint('[OtpItinerary] Leg data: $leg');
               rethrow;
             }
           })
@@ -121,6 +136,14 @@ class OtpItinerary {
   }
 }
 
+/// Resultado da operação de planeamento de rotas.
+///
+/// Contém:
+/// - [originalCount]: nº de itinerários antes de filtros.
+/// - [filteredCount]: nº de itinerários após filtros.
+/// - [filterMode]: modo de filtro aplicado no backend.
+/// - [maxWalkDistanceMeters]: limite de walking usado.
+/// - [itineraries]: lista final de [OtpItinerary].
 class PlannedRoutesResult {
   PlannedRoutesResult({
     required this.originalCount,
@@ -137,12 +160,20 @@ class PlannedRoutesResult {
   final List<OtpItinerary> itineraries;
 }
 
-/// Filter preferences for route planning
+/// Preferências de filtro para planeamento de rotas.
 class RouteFilters {
-  final String? filterMode; // 'ANY', 'WALK_ONLY', 'BUS_ONLY', 'RAIL_ONLY', etc. (for backend filtering)
+  /// Modo de filtro para o backend (`ANY`, `WALK_ONLY`, `BUS_ONLY`, etc.).
+  final String? filterMode;
+
+  /// Distância máxima de walking em metros.
   final int? maxWalkDistanceMeters;
-  final List<String>? modes; // ['WALK', 'TRANSIT'], ['WALK', 'CAR'], etc. (for OTP mode selection)
-  final List<String>? transitTypes; // ['BUS', 'RAIL', 'METRO', 'TRAM', 'BICYCLE_SHARE', 'SCOOTER_SHARE'] (granular transit selection)
+
+  /// Modos base para o OTP (`['WALK', 'TRANSIT']`, `['WALK', 'CAR']`, etc.).
+  final List<String>? modes;
+
+  /// Tipos de transporte público para granular endpoint
+  /// (`['BUS', 'RAIL', 'METRO', ...]`).
+  final List<String>? transitTypes;
 
   const RouteFilters({
     this.filterMode,
@@ -152,31 +183,48 @@ class RouteFilters {
   });
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{};
+    final Map<String, dynamic> map = <String, dynamic>{};
     if (filterMode != null) map['filterMode'] = filterMode;
-    if (maxWalkDistanceMeters != null) map['maxWalkDistanceMeters'] = maxWalkDistanceMeters;
-    // Only include modes if they are provided (this tells OTP what modes to use)
-    if (modes != null && modes!.isNotEmpty) map['modes'] = modes;
-    if (transitTypes != null && transitTypes!.isNotEmpty) map['transitTypes'] = transitTypes;
+    if (maxWalkDistanceMeters != null) {
+      map['maxWalkDistanceMeters'] = maxWalkDistanceMeters;
+    }
+    if (modes != null && modes!.isNotEmpty) {
+      map['modes'] = modes;
+    }
+    if (transitTypes != null && transitTypes!.isNotEmpty) {
+      map['transitTypes'] = transitTypes;
+    }
     return map;
   }
-  
-  bool get hasActiveFilters => 
-      (modes != null && modes!.isNotEmpty) || 
+
+  /// Indica se existe pelo menos um filtro activo.
+  bool get hasActiveFilters =>
+      (modes != null && modes!.isNotEmpty) ||
       (transitTypes != null && transitTypes!.isNotEmpty) ||
-      filterMode != null || 
+      filterMode != null ||
       maxWalkDistanceMeters != null;
-  
-  /// Check if this filter requires granular endpoint
-  bool get requiresGranularEndpoint => 
+
+  /// Indica se este filtro requer o endpoint granular no backend.
+  bool get requiresGranularEndpoint =>
       transitTypes != null && transitTypes!.isNotEmpty;
 }
 
+/// Serviço para chamar o backend de planeamento de rotas.
+///
+/// Esconde a lógica de:
+/// - Construção do body adequado (com/sem filtros granulares);
+/// - Tratamento de timeouts;
+/// - Parsing dos itinerários OTP.
 class RoutesService {
   RoutesService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
 
+  /// Planeia rotas entre dois pontos.
+  ///
+  /// - Usa `/routes/plan` por omissão;
+  /// - Usa `/routes/plan-granular` quando [filters.requiresGranularEndpoint]
+  ///   for `true`.
   Future<PlannedRoutesResult> plan({
     required double fromLat,
     required double fromLon,
@@ -184,111 +232,162 @@ class RoutesService {
     required double toLon,
     RouteFilters? filters,
   }) async {
-    // Use granular endpoint if transit types are specified
-    final useGranular = filters?.requiresGranularEndpoint ?? false;
-    final endpoint = useGranular ? 'plan-granular' : 'plan';
-    final uri = Uri.parse('$kRoutesBaseUrl/routes/$endpoint');
-    print('[RoutesService] Calling $uri');
-    print('[RoutesService] Body: fromLat=$fromLat, fromLon=$fromLon, toLat=$toLat, toLon=$toLon');
-    
-    // Build request body with filters
-    final body = <String, dynamic>{
+    // Usa granular endpoint se transitTypes estiverem definidos.
+    final bool useGranular = filters?.requiresGranularEndpoint ?? false;
+    final String endpoint = useGranular ? 'plan-granular' : 'plan';
+    final Uri uri = Uri.parse('$kRoutesBaseUrl/routes/$endpoint');
+
+    debugPrint('[RoutesService] Calling $uri');
+    debugPrint(
+      '[RoutesService] Body: fromLat=$fromLat, fromLon=$fromLon, '
+      'toLat=$toLat, toLon=$toLon',
+    );
+
+    // Body base.
+    final Map<String, dynamic> body = <String, dynamic>{
       'fromLat': fromLat,
       'fromLon': fromLon,
       'toLat': toLat,
       'toLon': toLon,
       'numItineraries': 5,
     };
-    
+
+    // Acrescentar filtros conforme o endpoint.
     if (filters != null) {
       if (useGranular) {
-        // For granular endpoint, use baseModes and transitTypes
-        body['baseModes'] = filters.modes ?? ['WALK', 'TRANSIT'];
-        if (filters.transitTypes != null && filters.transitTypes!.isNotEmpty) {
+        body['baseModes'] = filters.modes ?? <String>['WALK', 'TRANSIT'];
+        if (filters.transitTypes != null &&
+            filters.transitTypes!.isNotEmpty) {
           body['transitTypes'] = filters.transitTypes;
         }
         if (filters.maxWalkDistanceMeters != null) {
           body['maxWalkDistanceMeters'] = filters.maxWalkDistanceMeters;
         }
       } else {
-        // For regular endpoint, use standard filters
         body.addAll(filters.toJson());
-        // Remove transitTypes from regular endpoint (not supported)
+        // `transitTypes` não é suportado no endpoint regular.
         body.remove('transitTypes');
       }
     }
-    
+
     try {
-      final response = await _client
+      final http.Response response = await _client
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: <String, String>{
+              'Content-Type': 'application/json',
+            },
             body: jsonEncode(body),
           )
           .timeout(
             const Duration(seconds: 30),
             onTimeout: () {
-              print('[RoutesService] Request timed out after 30 seconds');
-              throw Exception('Request timed out. Verifica se o backend está a correr e se a ligação à rede está ativa.');
+              debugPrint(
+                '[RoutesService] Request timed out after 30 seconds',
+              );
+              throw Exception(
+                'Request timed out. Verifica se o backend está a correr '
+                'e se a ligação à rede está ativa.',
+              );
             },
           );
 
-      print('[RoutesService] Response status: ${response.statusCode}');
-      print('[RoutesService] Response body: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
+      debugPrint('[RoutesService] Response status: ${response.statusCode}');
+      final int maxLen = response.body.length > 500 ? 500 : response.body.length;
+      debugPrint(
+        '[RoutesService] Response body: ${response.body.substring(0, maxLen)}',
+      );
 
-      // Accept both 200 (OK) and 201 (Created) as success
+      // Aceita 200 (OK) e 201 (Created) como sucesso.
       if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('Erro do servidor: ${response.statusCode}. ${response.body.length > 200 ? response.body.substring(0, 200) : response.body}');
+        final String bodyPreview = response.body.length > 200
+            ? response.body.substring(0, 200)
+            : response.body;
+        throw Exception(
+          'Erro do servidor: ${response.statusCode}. $bodyPreview',
+        );
       }
 
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      print('[RoutesService] Decoded keys: ${decoded.keys.toList()}');
-      
-      final itinerariesJson =
-          (decoded['itineraries'] as List<dynamic>? ?? const []);
-      print('[RoutesService] Found ${itinerariesJson.length} itineraries');
-      
+      final Map<String, dynamic> decoded =
+          jsonDecode(response.body) as Map<String, dynamic>;
+      debugPrint(
+        '[RoutesService] Decoded keys: ${decoded.keys.toList()}',
+      );
+
+      final List<dynamic> itinerariesJson =
+          decoded['itineraries'] as List<dynamic>? ?? const <dynamic>[];
+      debugPrint(
+        '[RoutesService] Found ${itinerariesJson.length} itineraries',
+      );
+
       if (itinerariesJson.isNotEmpty) {
-        print('[RoutesService] First itinerary keys: ${(itinerariesJson[0] as Map).keys.toList()}');
-        if ((itinerariesJson[0] as Map).containsKey('legs')) {
-          final firstLegs = (itinerariesJson[0] as Map)['legs'] as List?;
+        final Map<dynamic, dynamic> firstItinerary =
+            itinerariesJson.first as Map<dynamic, dynamic>;
+        debugPrint(
+          '[RoutesService] First itinerary keys: '
+          '${firstItinerary.keys.toList()}',
+        );
+        if (firstItinerary.containsKey('legs')) {
+          final List<dynamic>? firstLegs =
+              firstItinerary['legs'] as List<dynamic>?;
           if (firstLegs != null && firstLegs.isNotEmpty) {
-            print('[RoutesService] First leg keys: ${(firstLegs[0] as Map).keys.toList()}');
-            print('[RoutesService] First leg from: ${(firstLegs[0] as Map)['from']}');
-            print('[RoutesService] First leg to: ${(firstLegs[0] as Map)['to']}');
+            final Map<dynamic, dynamic> firstLeg =
+                firstLegs.first as Map<dynamic, dynamic>;
+            debugPrint(
+              '[RoutesService] First leg keys: ${firstLeg.keys.toList()}',
+            );
+            debugPrint(
+              '[RoutesService] First leg from: ${firstLeg['from']}',
+            );
+            debugPrint(
+              '[RoutesService] First leg to: ${firstLeg['to']}',
+            );
           }
         }
       }
-      
-      final itineraries = <OtpItinerary>[];
-      for (var i = 0; i < itinerariesJson.length; i++) {
+
+      final List<OtpItinerary> itineraries = <OtpItinerary>[];
+      for (int i = 0; i < itinerariesJson.length; i++) {
         try {
-          final itinerary = OtpItinerary.fromJson(itinerariesJson[i] as Map<String, dynamic>);
+          final OtpItinerary itinerary = OtpItinerary.fromJson(
+            itinerariesJson[i] as Map<String, dynamic>,
+          );
           itineraries.add(itinerary);
-          print('[RoutesService] Successfully parsed itinerary $i with ${itinerary.legs.length} legs');
+          debugPrint(
+            '[RoutesService] Successfully parsed itinerary $i with '
+            '${itinerary.legs.length} legs',
+          );
         } catch (e, stackTrace) {
-          print('[RoutesService] Error parsing itinerary $i: $e');
-          print('[RoutesService] Itinerary data: ${itinerariesJson[i]}');
-          print('[RoutesService] Stack: $stackTrace');
-          // Continue parsing other itineraries instead of failing completely
+          debugPrint(
+            '[RoutesService] Error parsing itinerary $i: $e',
+          );
+          debugPrint(
+            '[RoutesService] Itinerary data: ${itinerariesJson[i]}',
+          );
+          debugPrint('[RoutesService] Stack: $stackTrace');
+          // Continua a tentar os restantes itinerários.
         }
       }
-      print('[RoutesService] Successfully parsed ${itineraries.length} out of ${itinerariesJson.length} itineraries');
+      debugPrint(
+        '[RoutesService] Successfully parsed ${itineraries.length} '
+        'out of ${itinerariesJson.length} itineraries',
+      );
 
       return PlannedRoutesResult(
         originalCount:
             decoded['originalItineraryCount'] as int? ?? itineraries.length,
         filteredCount:
             decoded['filteredItineraryCount'] as int? ?? itineraries.length,
-        filterMode: decoded['filterApplied']?['filterMode'] as String? ?? 'ANY',
+        filterMode:
+            decoded['filterApplied']?['filterMode'] as String? ?? 'ANY',
         maxWalkDistanceMeters:
             (decoded['filterApplied']?['maxWalkDistanceMeters'] as num?)
                 ?.toDouble(),
         itineraries: itineraries,
       );
     } catch (e, stackTrace) {
-      print('[RoutesService] Error: $e');
-      print('[RoutesService] Stack trace: $stackTrace');
+      debugPrint('[RoutesService] Error: $e');
+      debugPrint('[RoutesService] Stack trace: $stackTrace');
       rethrow;
     }
   }

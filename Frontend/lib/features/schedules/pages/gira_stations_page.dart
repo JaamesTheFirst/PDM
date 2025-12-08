@@ -3,9 +3,16 @@ import 'package:flutter/foundation.dart';
 
 import '../data/gira_api.dart';
 
+/// Página de listagem de estações GIRA.
+///
+/// Funcionalidades:
+/// - Paginação server-side (50 registos por página).
+/// - Filtro local por texto (nome/rua da estação).
+/// - Apresentação de ocupação aproximada (dock vs. bicicletas).
 class GiraStationsPage extends StatefulWidget {
   const GiraStationsPage({super.key});
 
+  /// Cor verde associada à marca GIRA.
   static const giraGreen = Color(0xFF8CC63F);
 
   @override
@@ -13,20 +20,34 @@ class GiraStationsPage extends StatefulWidget {
 }
 
 class _GiraStationsPageState extends State<GiraStationsPage> {
+  /// Cliente de API responsável por obter dados de estações GIRA.
   final GiraApiClient _api = GiraApiClient();
+
+  /// Campo usado para filtrar localmente as estações da página actual.
   final TextEditingController _searchController = TextEditingController();
 
+  /// Indica se está a decorrer um carregamento (página remota).
   bool _loading = false;
+
+  /// Mensagem de erro, se alguma operação falhou.
   String? _error;
 
-  // página actual vinda da API (máx 50)
+  /// Página actual vinda da API (máx. 50 registos).
   List<GiraStationRecord> _pageStations = [];
-  // lista filtrada localmente (por rua / texto)
+
+  /// Lista filtrada localmente com base em [_searchController].
   List<GiraStationRecord> _visibleStations = [];
 
+  /// Número total de registos (todas as estações).
   int _total = 0;
+
+  /// Limite de registos por página, conforme definido pela API.
   int _limit = 50;
-  int _currentPage = 1; // 1-based
+
+  /// Número da página actual (1-based).
+  int _currentPage = 1;
+
+  /// Número total de páginas, calculado a partir de [_total] e [_limit].
   int _totalPages = 1;
 
   @override
@@ -46,6 +67,11 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
 
   // ==================== LOAD PAGE (50 EM 50) ====================
 
+  /// Carrega uma página de estações GIRA a partir do backend.
+  ///
+  /// A paginação é feita via:
+  /// - [limit]: máximo de registos por página.
+  /// - [offset]: deslocamento calculado a partir do número da página.
   Future<void> _loadPage(int page) async {
     if (page < 1) return;
 
@@ -62,8 +88,7 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
 
       final total = slice.total;
       final limit = slice.limit;
-      final totalPages =
-          limit > 0 ? ((total + limit - 1) ~/ limit) : 1;
+      final totalPages = limit > 0 ? ((total + limit - 1) ~/ limit) : 1;
 
       _pageStations = slice.records;
       _limit = limit;
@@ -71,7 +96,8 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
       _currentPage = page;
       _totalPages = totalPages == 0 ? 1 : totalPages;
 
-      _applyLocalFilter(); // actualiza _visibleStations com search actual
+      // Actualiza a lista visível aplicando o filtro de texto actual.
+      _applyLocalFilter();
 
       debugPrint(
         '[GIRA PAGE] página $_currentPage carregada: ${_pageStations.length} registos (total=$_total, totalPages=$_totalPages)',
@@ -91,11 +117,13 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
     }
   }
 
+  /// Vai para a página anterior, se existir.
   void _goToPreviousPage() {
     if (_currentPage <= 1 || _loading) return;
     _loadPage(_currentPage - 1);
   }
 
+  /// Vai para a próxima página, se existir.
   void _goToNextPage() {
     if (_currentPage >= _totalPages || _loading) return;
     _loadPage(_currentPage + 1);
@@ -103,6 +131,10 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
 
   // ==================== SEARCH LOCAL (POR RUA / NOME) ====================
 
+  /// Aplica o filtro local sobre [_pageStations] com base no texto actual.
+  ///
+  /// Neste momento o filtro apenas usa:
+  /// - [GiraStationRecord.desigComercial]
   void _applyLocalFilter() {
     final q = _searchController.text.trim().toLowerCase();
 
@@ -112,7 +144,7 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
       } else {
         _visibleStations = _pageStations.where((st) {
           final name = (st.desigComercial ?? '').toLowerCase();
-          // aqui podes juntar mais campos se quiseres
+          // aqui podes juntar mais campos se quiseres (ex.: rua, freguesia, etc.)
           return name.contains(q);
         }).toList();
       }
@@ -221,6 +253,7 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
 
             const SizedBox(height: 8),
 
+            // Corpo dinâmico (lista / erro / loading)
             Expanded(
               child: _buildBody(context),
             ),
@@ -230,6 +263,11 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
     );
   }
 
+  /// Constrói o corpo consoante o estado actual:
+  /// - Loading inicial.
+  /// - Erro sem dados.
+  /// - Lista vazia (sem estações ou sem match do filtro).
+  /// - Lista de estações com barra de ocupação.
   Widget _buildBody(BuildContext context) {
     final t = Theme.of(context);
 
@@ -259,6 +297,7 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
       );
     }
 
+    // Sem resultados visíveis (ou porque não há dados ou pelo filtro)
     if (_visibleStations.isEmpty) {
       return Center(
         child: Padding(
@@ -380,16 +419,17 @@ class _GiraStationsPageState extends State<GiraStationsPage> {
 
         // spinner pequeno quando mudas de página mas já tens dados
         if (_loading && _pageStations.isNotEmpty)
-          Positioned(
+          const Positioned(
             right: 16,
             top: 12,
             child: SizedBox(
               width: 20,
               height: 20,
-              child: const CircularProgressIndicator(
+              child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                    GiraStationsPage.giraGreen),
+                  GiraStationsPage.giraGreen,
+                ),
               ),
             ),
           ),

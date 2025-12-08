@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart';
+
 import '../services/routes_service.dart';
 
-/// Default emission factors (kg CO2 per km) when backend data is unavailable
-/// Sources: Typical values for Portugal/Europe
-const Map<String, double> _defaultEmissionFactors = {
+/// Default emission factors (kg CO₂ per km) when backend data is unavailable.
+///
+/// Valores baseados em literatura típica para Portugal/Europa.
+/// A chave do mapa é o modo de transporte em maiúsculas.
+const Map<String, double> _defaultEmissionFactors = <String, double>{
   'WALK': 0.0,
   'WALKING': 0.0,
   'BICYCLE': 0.0,
@@ -24,9 +28,11 @@ const Map<String, double> _defaultEmissionFactors = {
   'FLIXBUS': 0.027, // FlixBus (long-distance bus)
 };
 
-/// Default occupancy rates (passengers per vehicle)
-/// Used to calculate per-passenger CO2: co2_per_passenger = co2_per_km / occupancy
-const Map<String, double> _defaultOccupancyRates = {
+/// Default occupancy rates (passengers per vehicle).
+///
+/// Usado para calcular emissões por passageiro:
+/// `co2_per_passenger = (co2_per_km * distance_km) / occupancy`.
+const Map<String, double> _defaultOccupancyRates = <String, double>{
   'BUS': 20.0, // Average bus occupancy
   'TRAM': 50.0,
   'METRO': 100.0,
@@ -40,13 +46,22 @@ const Map<String, double> _defaultOccupancyRates = {
   'TAXI': 1.0,
 };
 
-/// CO2 baseline for score calculation (kg CO2 per km for a typical car trip)
-/// Routes below this get higher scores
+/// CO₂ baseline para cálculo do score (kg CO₂ / km de uma viagem típica de carro).
+/// Rotas abaixo deste valor recebem pontuações mais altas.
 const double _baselineCo2PerKm = 0.120;
 
-/// Maximum CO2 per km for score calculation (routes above this get score 0)
+/// Máximo de CO₂ por km para cálculo do score.
+/// Rotas acima deste valor recebem pontuação 0.
 const double _maxCo2PerKm = 0.200;
 
+/// Resultado de cálculo de Eco Score para um itinerário.
+///
+/// Contém:
+/// - [co2Kg]: emissões totais estimadas em kg.
+/// - [co2PerKm]: emissões médias por km.
+/// - [score]: valor de 0 a 100 (quanto maior, mais ecológico).
+/// - [hasPhysicalActivity]: se inclui modos com actividade física.
+/// - [primaryMode]: modo principal da viagem (ex.: BUS, RAIL, WALKING).
 class EcoScoreResult {
   final double co2Kg;
   final double co2PerKm;
@@ -54,7 +69,7 @@ class EcoScoreResult {
   final bool hasPhysicalActivity;
   final String? primaryMode;
 
-  EcoScoreResult({
+  const EcoScoreResult({
     required this.co2Kg,
     required this.co2PerKm,
     required this.score,
@@ -63,30 +78,58 @@ class EcoScoreResult {
   });
 }
 
+/// Serviço responsável por calcular emissões de CO₂ e Eco Score
+/// para itinerários provenientes do OTP.
+///
+/// Uso típico:
+/// ```dart
+/// final result = EcoScoreService.instance.calculateScore(itinerary);
+/// print(result.score);      // 0–100
+/// print(result.co2Kg);      // emissões totais em kg
+/// print(result.co2PerKm);   // emissões por km
+/// ```
 class EcoScoreService {
   EcoScoreService._();
+
+  /// Instância singleton do [EcoScoreService].
   static final EcoScoreService instance = EcoScoreService._();
 
-  /// Calculate CO2 emissions and Eco Score for an itinerary
+  /// Calcula emissões de CO₂ e Eco Score para um [OtpItinerary].
+  ///
+  /// Passos principais:
+  /// 1. Para cada leg:
+  ///    - Determina factor de emissão por modo.
+  ///    - Se for modo de transporte público, divide por *occupancy*.
+  ///    - Acumula emissões totais e distância total.
+  /// 2. Calcula `co2PerKm = totalCo2Kg / totalDistanceKm`.
+  /// 3. Aplica regras especiais:
+  ///    - Rotas 100% zero-emissão → score 100.
+  ///    - Rotas apenas de carro → penalização forte.
+  ///    - Bónus para actividade física (+10).
+  ///
+  /// Devolve um [EcoScoreResult] com valores já arredondados/prontos para UI.
   EcoScoreResult calculateScore(OtpItinerary itinerary) {
     double totalCo2Kg = 0.0;
     double totalDistanceKm = 0.0;
     bool hasPhysicalActivity = false;
     String? primaryMode;
 
-    // Calculate CO2 for each leg
-    for (final leg in itinerary.legs) {
-      final mode = leg.mode.toUpperCase();
-      final distanceKm = leg.distance / 1000.0; // Convert meters to km
+    // Calcular CO₂ para cada leg.
+    for (final OtpLeg leg in itinerary.legs) {
+      final String mode = leg.mode.toUpperCase();
+      final double distanceKm = leg.distance / 1000.0; // m → km
       totalDistanceKm += distanceKm;
 
-      // Get emission factor for this mode
-      // Handle OTP mode variations (R, IC might come as RAIL, TRANSIT, etc.)
+      // Factor de emissão base para este modo.
       double emissionFactor = _defaultEmissionFactors[mode] ?? 0.0;
-      
-      // If mode not found, try to match common OTP variations
+
+      // Se não encontrarmos o modo directamente, tentamos heurísticas
+      // para agrupar variações do OTP.
       if (emissionFactor == 0.0 && mode != 'WALK' && mode != 'WALKING') {
-        if (mode.contains('RAIL') || mode.contains('TRAIN') || mode == 'R' || mode == 'IC') {
+        if (mode.contains('RAIL') ||
+            mode.contains('TRAIN') ||
+            mode == 'R' ||
+            mode == 'IC') {
           emissionFactor = _defaultEmissionFactors['RAIL'] ?? 0.014;
         } else if (mode.contains('BUS') || mode == 'COACH') {
           emissionFactor = _defaultEmissionFactors['BUS'] ?? 0.089;
@@ -96,14 +139,16 @@ class EcoScoreService {
           emissionFactor = _defaultEmissionFactors['TRAM'] ?? 0.03;
         }
       }
-      
-      // For transit modes, divide by occupancy to get per-passenger CO2
+
+      // Ocupação média para modos de transporte público.
       double? occupancy = _defaultOccupancyRates[mode];
-      
-      // If occupancy not found, try to match common OTP variations
+
       if (occupancy == null && mode != 'WALK' && mode != 'WALKING') {
-        if (mode.contains('RAIL') || mode.contains('TRAIN') || mode == 'R' || mode == 'IC') {
-          occupancy = mode == 'IC' ? 120.0 : 150.0; // IC has lower occupancy
+        if (mode.contains('RAIL') ||
+            mode.contains('TRAIN') ||
+            mode == 'R' ||
+            mode == 'IC') {
+          occupancy = mode == 'IC' ? 120.0 : 150.0;
         } else if (mode.contains('BUS') || mode == 'COACH') {
           occupancy = mode == 'FLIXBUS' || mode == 'COACH' ? 30.0 : 20.0;
         } else if (mode.contains('METRO') || mode.contains('SUBWAY')) {
@@ -112,59 +157,69 @@ class EcoScoreService {
           occupancy = 50.0;
         }
       }
-      
-      double legCo2Kg;
-      
+
+      // Cálculo de CO₂ para a leg.
+      final double legCo2Kg;
       if (occupancy != null && occupancy > 0) {
-        // Transit mode: per-passenger CO2 = (emission_factor * distance) / occupancy
+        // Modo de transporte público: valor por passageiro.
         legCo2Kg = (emissionFactor * distanceKm) / occupancy;
       } else {
-        // Non-transit mode (walking, bike, car, etc.): direct calculation
+        // Modos directos (walk, bike, car, etc.): uso directo do factor.
         legCo2Kg = emissionFactor * distanceKm;
       }
 
       totalCo2Kg += legCo2Kg;
-      
-      // Debug logging
-      print('[EcoScore] Leg: mode=$mode, distance=${distanceKm.toStringAsFixed(2)}km, emissionFactor=$emissionFactor, occupancy=$occupancy, legCo2=${(legCo2Kg * 1000).toStringAsFixed(2)}g');
 
-      // Check for physical activity modes
-      if (mode == 'WALK' || mode == 'WALKING' || 
-          mode == 'BICYCLE' || mode == 'BIKE' || 
-          mode == 'BIKE_SHARE' || mode == 'SCOOTER' || 
+      debugPrint(
+        '[EcoScore] Leg: mode=$mode, '
+        'distance=${distanceKm.toStringAsFixed(2)}km, '
+        'emissionFactor=$emissionFactor, '
+        'occupancy=$occupancy, '
+        'legCo2=${(legCo2Kg * 1000).toStringAsFixed(2)}g',
+      );
+
+      // Modos com actividade física.
+      if (mode == 'WALK' ||
+          mode == 'WALKING' ||
+          mode == 'BICYCLE' ||
+          mode == 'BIKE' ||
+          mode == 'BIKE_SHARE' ||
+          mode == 'SCOOTER' ||
           mode == 'SCOOTER_SHARE') {
         hasPhysicalActivity = true;
       }
 
-      // Determine primary mode (first non-walking leg, or walking if all walking)
+      // Modo principal (primeira leg não-walking).
       if (primaryMode == null && mode != 'WALK' && mode != 'WALKING') {
         primaryMode = mode;
       }
     }
 
-    // If all legs are walking, set primary mode to WALKING
-    if (primaryMode == null) {
-      primaryMode = 'WALKING';
-    }
+    // Se todas as legs forem walking, definimos modo principal como WALKING.
+    primaryMode ??= 'WALKING';
 
-    // Calculate CO2 per km
-    final co2PerKm = totalDistanceKm > 0 ? totalCo2Kg / totalDistanceKm : 0.0;
-    
-    // Debug logging
-    print('[EcoScore] Total: distance=${totalDistanceKm.toStringAsFixed(2)}km, totalCo2=${(totalCo2Kg * 1000).toStringAsFixed(2)}g, co2PerKm=${(co2PerKm * 1000).toStringAsFixed(3)}g/km');
+    // CO₂ por km (evita divisão por zero).
+    final double co2PerKm =
+        totalDistanceKm > 0 ? totalCo2Kg / totalDistanceKm : 0.0;
 
-    // Check if route uses ONLY zero-emission modes (walking, biking, scooter)
-    // This is stricter - only pure active transport gets 100
+    debugPrint(
+      '[EcoScore] Total: distance=${totalDistanceKm.toStringAsFixed(2)}km, '
+      'totalCo2=${(totalCo2Kg * 1000).toStringAsFixed(2)}g, '
+      'co2PerKm=${(co2PerKm * 1000).toStringAsFixed(3)}g/km',
+    );
+
+    // Verificar se rota usa ONLY modos zero-emissão.
     bool isOnlyZeroEmission = true;
-    for (final leg in itinerary.legs) {
-      final mode = leg.mode.toUpperCase();
-      
-      // Use the same mode matching logic as in the calculation
+    for (final OtpLeg leg in itinerary.legs) {
+      final String mode = leg.mode.toUpperCase();
+
       double emissionFactor = _defaultEmissionFactors[mode] ?? 0.0;
-      
-      // If mode not found, try to match common OTP variations
+
       if (emissionFactor == 0.0 && mode != 'WALK' && mode != 'WALKING') {
-        if (mode.contains('RAIL') || mode.contains('TRAIN') || mode == 'R' || mode == 'IC') {
+        if (mode.contains('RAIL') ||
+            mode.contains('TRAIN') ||
+            mode == 'R' ||
+            mode == 'IC') {
           emissionFactor = _defaultEmissionFactors['RAIL'] ?? 0.014;
         } else if (mode.contains('BUS') || mode == 'COACH') {
           emissionFactor = _defaultEmissionFactors['BUS'] ?? 0.089;
@@ -176,100 +231,111 @@ class EcoScoreService {
           emissionFactor = _defaultEmissionFactors['CAR'] ?? 0.120;
         }
       }
-      
-      // If any leg has emissions, it's not pure zero-emission
+
       if (emissionFactor > 0.0) {
         isOnlyZeroEmission = false;
-        print('[EcoScore] Route is NOT zero-emission: found mode=$mode with emissions=$emissionFactor');
+        debugPrint(
+          '[EcoScore] Route is NOT zero-emission: '
+          'found mode=$mode with emissions=$emissionFactor',
+        );
         break;
       }
     }
-    
-    print('[EcoScore] isOnlyZeroEmission=$isOnlyZeroEmission, co2PerKm=${(co2PerKm * 1000).toStringAsFixed(3)}g/km');
 
-    // Check if route is car-only (least efficient)
+    debugPrint(
+      '[EcoScore] isOnlyZeroEmission=$isOnlyZeroEmission, '
+      'co2PerKm=${(co2PerKm * 1000).toStringAsFixed(3)}g/km',
+    );
+
+    // Verificar se rota é apenas de carro (descontando walking).
     bool isCarOnly = true;
-    for (final leg in itinerary.legs) {
-      final mode = leg.mode.toUpperCase();
-      if (mode != 'WALK' && mode != 'WALKING' && mode != 'CAR' && !mode.contains('CAR')) {
+    for (final OtpLeg leg in itinerary.legs) {
+      final String mode = leg.mode.toUpperCase();
+      if (mode != 'WALK' &&
+          mode != 'WALKING' &&
+          mode != 'CAR' &&
+          !mode.contains('CAR')) {
         isCarOnly = false;
         break;
       }
     }
-    // If all non-walking legs are car, it's car-only
-    if (isCarOnly && itinerary.legs.any((leg) => leg.mode.toUpperCase() == 'CAR' || leg.mode.toUpperCase().contains('CAR'))) {
+
+    if (isCarOnly &&
+        itinerary.legs.any((OtpLeg leg) =>
+            leg.mode.toUpperCase() == 'CAR' ||
+            leg.mode.toUpperCase().contains('CAR'))) {
       isCarOnly = true;
     } else {
       isCarOnly = false;
     }
 
-    // Check if route uses fossil fuel buses (diesel buses should score lower)
+    // Verificar se usa autocarros a combustíveis fósseis (diesel).
     bool hasFossilBus = false;
-    for (final leg in itinerary.legs) {
-      final mode = leg.mode.toUpperCase();
-      if (mode.contains('BUS') && !mode.contains('ELECTRIC') && !mode.contains('HYBRID')) {
+    for (final OtpLeg leg in itinerary.legs) {
+      final String mode = leg.mode.toUpperCase();
+      if (mode.contains('BUS') &&
+          !mode.contains('ELECTRIC') &&
+          !mode.contains('HYBRID')) {
         hasFossilBus = true;
         break;
       }
     }
 
-    // Calculate score (0-100)
-    // Lower CO2 per km = higher score
-    // Use a stricter scale that properly penalizes fossil fuels
+    // Cálculo da pontuação base (0–100).
     double baseScore = 0.0;
-    
+
     if (isOnlyZeroEmission && co2PerKm <= 0.0001) {
-      // ONLY zero-emission modes (walking, cycling, scooter) - strict requirement
+      // Apenas modos zero-emissão → score máximo.
       baseScore = 100.0;
     } else if (isCarOnly) {
-      // Car-only routes get the lowest scores (strict penalty)
-      // Car emits ~120 g/km, so it should score very low
-      final co2PerKmGram = co2PerKm * 1000; // Convert to g/km
-      // For car-only: 80-120 g/km -> 0-20 score (very strict)
+      // Rotas só de carro: penalização forte.
+      final double co2PerKmGram = co2PerKm * 1000; // kg/km → g/km
       if (co2PerKmGram >= 120) {
         baseScore = 0.0;
       } else if (co2PerKmGram >= 80) {
-        baseScore = 20 - ((co2PerKmGram - 80) / 40) * 20; // 80g/km = 20, 120g/km = 0
+        baseScore =
+            20 - ((co2PerKmGram - 80) / 40) * 20; // 80g/km = 20, 120g/km = 0
       } else {
-        baseScore = 20.0; // Cap at 20 for car-only
+        baseScore = 20.0;
       }
     } else if (co2PerKm >= _maxCo2PerKm) {
-      // Very high emissions
+      // Emissões muito altas.
       baseScore = 0.0;
     } else {
-      // Use a stricter piecewise function that properly differentiates fossil fuels
-      final co2PerKmGram = co2PerKm * 1000; // Convert to g/km
+      // Função por partes, mais detalhada por faixa de emissões.
+      final double co2PerKmGram = co2PerKm * 1000; // kg/km → g/km
 
       if (co2PerKmGram <= 0.1) {
-        // 0-0.1 g/km: Electric trains, very efficient transit (90-95)
+        // 0–0.1 g/km: comboios muito eficientes (90–95).
         baseScore = 95 - (co2PerKmGram / 0.1) * 5;
       } else if (co2PerKmGram <= 1) {
-        // 0.1-1 g/km: Efficient electric transit (80-90)
+        // 0.1–1 g/km: transit eléctrico eficiente (80–90).
         baseScore = 90 - ((co2PerKmGram - 0.1) / 0.9) * 10;
       } else if (co2PerKmGram <= 5) {
-        // 1-5 g/km: Mixed transit, some fossil fuels (60-80)
-        // Diesel buses typically fall here (~4.45 g/km) -> score ~65
+        // 1–5 g/km: transit misto, alguns fósseis (60–80).
         baseScore = 80 - ((co2PerKmGram - 1) / 4) * 20;
       } else if (co2PerKmGram <= 20) {
-        // 5-20 g/km: Higher emission transit (40-60)
+        // 5–20 g/km: emissões médias (40–60).
         baseScore = 60 - ((co2PerKmGram - 5) / 15) * 20;
       } else if (co2PerKmGram <= 50) {
-        // 20-50 g/km: High emissions (20-40)
+        // 20–50 g/km: emissões altas (20–40).
         baseScore = 40 - ((co2PerKmGram - 20) / 30) * 20;
       } else {
-        // 50-200 g/km: Very high emissions (0-20)
+        // 50–200 g/km: emissões muito altas (0–20).
         baseScore = 20 - ((co2PerKmGram - 50) / 150) * 20;
       }
-      
-      // Additional penalty for fossil fuel buses (diesel buses)
+
+      // Penalização extra para autocarros fósseis.
       if (hasFossilBus) {
-        // Reduce score by 15-20 points for fossil fuel buses
         baseScore = (baseScore - 18).clamp(0.0, 100.0);
-        print('[EcoScore] Applied fossil bus penalty: score reduced by 18 points');
+        debugPrint(
+          '[EcoScore] Applied fossil bus penalty: '
+          'score reduced by 18 points',
+        );
       }
     }
 
-    // Physical activity bonus (only if not already at 100)
+    // Bónus de actividade física (se ainda não estiver em 100).
     if (hasPhysicalActivity && baseScore < 100.0) {
       baseScore = (baseScore + 10.0).clamp(0.0, 100.0);
     }
@@ -283,7 +349,11 @@ class EcoScoreService {
     );
   }
 
-  /// Format CO2 for display
+  /// Formata valores de CO₂ totais para apresentação.
+  ///
+  /// - < 0.001 kg → `"0 g"`
+  /// - < 1 kg     → `"XYZ g"`
+  /// - >= 1 kg    → `"X.YZ kg"`
   String formatCo2(double co2Kg) {
     if (co2Kg < 0.001) {
       return '0 g';
@@ -294,14 +364,19 @@ class EcoScoreService {
     }
   }
 
-  /// Format CO2 per km for display
+  /// Formata emissões por km para apresentação.
+  ///
+  /// Ajusta a unidade automaticamente:
+  /// - Valores muito pequenos → mg/km
+  /// - Intermédios → g/km
+  /// - Grandes → kg/km
   String formatCo2PerKm(double co2PerKm) {
-    // Lower threshold to show very small values (0.01 g/km instead of 0.1 g/km)
-    if (co2PerKm < 0.00001) { // 0.01 g/km threshold
+    // Threshold mais baixo para mostrar valores muito pequenos (0.01 g/km).
+    if (co2PerKm < 0.00001) {
       return '0 g/km';
     } else if (co2PerKm < 0.001) {
-      // Show in mg/km for very small values (0.01-1 g/km)
-      final mgPerKm = co2PerKm * 1000000;
+      // 0.01–1 g/km → mg/km.
+      final double mgPerKm = co2PerKm * 1000000;
       if (mgPerKm < 10) {
         return '${mgPerKm.toStringAsFixed(1)} mg/km';
       } else {
@@ -314,7 +389,13 @@ class EcoScoreService {
     }
   }
 
-  /// Get color for score display
+  /// Devolve a cor (ARGB) recomendada para desenhar o Eco Score.
+  ///
+  /// Os intervalos são:
+  /// - 80–100 → verde "eco mint" (`0xFF3CD4A0`)
+  /// - 60–79  → verde (`0xFF4CAF50`)
+  /// - 40–59  → âmbar (`0xFFFFC107`)
+  /// - 0–39   → laranja/vermelho (`0xFFFF5722`)
   int getScoreColor(int score) {
     if (score >= 80) {
       return 0xFF3CD4A0; // Eco mint (green)
@@ -327,4 +408,3 @@ class EcoScoreService {
     }
   }
 }
-

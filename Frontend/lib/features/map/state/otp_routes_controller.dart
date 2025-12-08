@@ -1,18 +1,63 @@
 import 'package:flutter/material.dart';
 import '../../../services/routes_service.dart';
 
+/// Controlador responsável por pedir itinerários ao backend/OTP
+/// e expor o estado para a UI (lista de rotas, erros, seleção, etc.).
+///
+/// Funções principais:
+/// - Chamar o serviço de rotas (`RoutesService.plan`) com coordenadas e filtros.
+/// - Aplicar lógica de fallback quando não existem itinerários para os filtros
+///   escolhidos (ex.: tentar mais modos, WALK-only, etc.).
+/// - Gerir estado de loading/erro.
+/// - Guardar o índice do itinerário selecionado.
+///
+/// Este controlador é tipicamente usado com `Provider`/`ChangeNotifierProvider`
+/// para alimentar widgets como o overlay de opções de rota.
 class OtpRoutesController extends ChangeNotifier {
+  /// Cria uma instância do controlador de rotas OTP.
+  ///
+  /// [service] é o wrapper de acesso ao backend que expõe o método `plan`.
   OtpRoutesController(this._service);
 
+  /// Serviço que encapsula as chamadas ao backend/OTP.
   final RoutesService _service;
 
+  /// Indica se está a decorrer um pedido de planeamento de rota.
   bool isLoading = false;
+
+  /// Mensagem de erro (caso o último pedido falhe), ou `null`.
   String? error;
+
+  /// Resultado bruto devolvido pelo serviço de rotas (pode ser `null`).
   PlannedRoutesResult? _result;
+
+  /// Índice do itinerário atualmente selecionado (ou `null` se nenhum).
   int? selectedIndex;
 
+  /// Lista de itinerários planeados (ou lista vazia).
+  ///
+  /// É derivada de `_result?.itineraries`.
   List<OtpItinerary> get itineraries => _result?.itineraries ?? [];
 
+  /// Faz o pedido de itinerários ao serviço de rotas, com fallback inteligente.
+  ///
+  /// Parâmetros:
+  /// - [fromLat], [fromLon]: coordenadas da origem.
+  /// - [toLat], [toLon]: coordenadas do destino.
+  /// - [filters]: filtros de modos/distâncias (opcional).
+  ///
+  /// Fluxo:
+  /// 1. Marca `isLoading = true` e limpa erro anterior.
+  /// 2. Chama `_service.plan` com filtros primários (ou default WALK+TRANSIT).
+  /// 3. Se não houver itinerários, aplica regras de fallback:
+  ///    - Respeita o caso em que o utilizador quer explicitamente só modos
+  ///      de transporte sem WALK (não faz fallback agressivo).
+  ///    - Se WALK está incluído ou não havia filtros, tenta combinações extra
+  ///      de modos (ex.: adicionar BICYCLE, CAR, TRANSIT).
+  ///    - Em último caso, pode tentar WALK-only se fizer sentido.
+  /// 4. Guarda o resultado final e define `selectedIndex` para 0 se houver
+  ///    itinerários.
+  /// 5. Em caso de erro, guarda `error` e limpa resultado/seleção.
   Future<void> fetch({
     required double fromLat,
     required double fromLon,
@@ -34,8 +79,9 @@ class OtpRoutesController extends ChangeNotifier {
         );
       }
 
-      // For walking-only requests, ensure maxWalkDistanceMeters is only applied if explicitly set
-      // This allows long walking routes when user doesn't set a constraint
+      // Para pedidos apenas de WALK, deixa o OTP decidir a distância máxima
+      // se o utilizador não especificar `maxWalkDistanceMeters`. Isto permite
+      // percursos longos a pé (ex.: peregrinos).
       if (primaryFilters.modes != null && 
           primaryFilters.modes!.length == 1 && 
           primaryFilters.modes!.contains('WALK') &&
@@ -66,30 +112,30 @@ class OtpRoutesController extends ChangeNotifier {
                                       !hasWalkSelected && 
                                       userSelectedModes.every((m) => ['TRANSIT', 'CAR', 'BICYCLE'].contains(m));
         
-        // Don't fallback if user explicitly selected only transport modes (no WALK)
-        // This respects their choice to exclude walking
+        // Não fazer fallback agressivo se o utilizador escolheu explicitamente
+        // apenas modos de transporte (sem WALK). Respeita a escolha.
         if (hasOnlyTransportModes) {
           print('[OtpRoutesController] User selected only transport modes (no WALK), respecting choice - no fallback');
         } 
-        // Fallback if: user selected WALK, or no filters specified (default case)
+        // Fallback se: user selecionou WALK, ou não tinha filtros (caso default)
         else if (hasWalkSelected || primaryFilters == null || userSelectedModes.isEmpty) {
           print('[OtpRoutesController] No routes found, trying fallback modes...');
           
-          // Build fallback modes
+          // Construir lista de modos para fallback
           final fallbackModes = <String>[];
           
           if (userSelectedModes.isNotEmpty) {
-            // User selected modes - preserve them and add alternatives
+            // Utilizador escolheu modos - preserva e adiciona alternativas
             fallbackModes.addAll(userSelectedModes);
             
-            // If WALK is selected, try adding other modes for more options
+            // Se WALK foi selecionado, tenta adicionar outros modos
             if (hasWalkSelected) {
               if (!fallbackModes.contains('BICYCLE')) fallbackModes.add('BICYCLE');
               if (!fallbackModes.contains('CAR')) fallbackModes.add('CAR');
               if (!fallbackModes.contains('TRANSIT')) fallbackModes.add('TRANSIT');
             }
           } else {
-            // No user selection (default) - try all modes
+            // Sem seleção explícita (default) - tentar todos os modos principais
             fallbackModes.addAll(['WALK', 'BICYCLE', 'CAR', 'TRANSIT']);
           }
           
@@ -112,9 +158,8 @@ class OtpRoutesController extends ChangeNotifier {
               print('[OtpRoutesController] Fallback result: ${fallbackResult.itineraries.length} itineraries');
               _result = fallbackResult;
             } else if (hasWalkSelected) {
-              // If user selected WALK but still no routes, try WALK only (maybe other modes are causing issues)
-              // If user selected WALK only and didn't set max_walk_distance, don't apply any constraint
-              // This allows long walking routes (e.g., for pilgrims)
+              // Se o utilizador selecionou WALK mas ainda assim não há rotas,
+              // tentar WALK-only (ou WALK com constraint explícita).
               final isWalkOnly = userSelectedModes.length == 1 && userSelectedModes.contains('WALK');
               final shouldApplyWalkConstraint = primaryFilters?.maxWalkDistanceMeters != null;
               
@@ -170,6 +215,10 @@ class OtpRoutesController extends ChangeNotifier {
     }
   }
 
+  /// Marca o itinerário com índice [index] como selecionado, se existir.
+  ///
+  /// Não notifica se o índice já estiver selecionado, para evitar rebuilds
+  /// desnecessários.
   void selectItinerary(int index) {
     if (index < 0 || index >= itineraries.length) return;
     if (selectedIndex == index) return;
@@ -177,6 +226,9 @@ class OtpRoutesController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Limpa o estado do controlador (resultado, erros, seleção).
+  ///
+  /// Útil quando o utilizador muda de origem/destino ou fecha o fluxo de rotas.
   void clear() {
     _result = null;
     error = null;
@@ -184,4 +236,3 @@ class OtpRoutesController extends ChangeNotifier {
     notifyListeners();
   }
 }
-

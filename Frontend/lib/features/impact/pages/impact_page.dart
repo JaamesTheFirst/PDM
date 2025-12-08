@@ -1,8 +1,13 @@
-// lib/features/impact/pages/impact_page.dart
 import 'package:flutter/material.dart';
 
 import '../../../services/impact_service.dart';
 
+/// Ecrã que mostra o impacto ecológico do utilizador.
+///
+/// - Busca um resumo semanal através do [ImpactService].
+/// - Mostra estatísticas agregadas (CO₂ poupado, distância, EcoScore, etc.).
+/// - Lista o impacto distribuído pelos últimos dias.
+/// - Inclui metas visuais com barras de progresso.
 class ImpactPage extends StatefulWidget {
   const ImpactPage({super.key});
 
@@ -11,12 +16,18 @@ class ImpactPage extends StatefulWidget {
 }
 
 class _ImpactPageState extends State<ImpactPage> {
+  // Tokens de cor usados neste ecrã.
   static const _ecoMint = Color(0xFF3CD4A0);
   static const _solarYellow = Color(0xFFFFD166);
   static const _vibrantCoral = Color(0xFFFF6B6B);
 
+  /// Resumo atual carregado a partir do backend.
   ImpactSummary? _summary;
+
+  /// Indica se está a decorrer uma operação de carregamento.
   bool _isLoading = true;
+
+  /// Mensagem de erro a mostrar ao utilizador, se existir.
   String? _error;
 
   @override
@@ -25,6 +36,10 @@ class _ImpactPageState extends State<ImpactPage> {
     _loadImpact();
   }
 
+  /// Carrega o resumo de impacto a partir do [ImpactService].
+  ///
+  /// Atualiza os estados [_isLoading], [_summary] e [_error] consoante
+  /// o resultado da chamada à API.
   Future<void> _loadImpact() async {
     setState(() {
       _isLoading = true;
@@ -46,17 +61,30 @@ class _ImpactPageState extends State<ImpactPage> {
     }
   }
 
+  /// Formata um valor de CO₂ em kg para string legível.
+  ///
+  /// - Valores muito pequenos são normalizados para evitar `-0` ou ruído.
+  /// - < 1 kg → mostra em gramas (ex.: `350 g`).
+  /// - ≥ 1 kg → mostra em kg com 2 casas decimais (ex.: `1.25 kg`).
   String _formatCo2(double kg) {
     // evitar -0 / 0.0000001 etc
     final normalized = kg.abs() < 0.0005 ? 0.0 : kg;
 
     if (normalized <= 0) return '0 g';
-    if (normalized < 1) return '${(normalized * 1000).toStringAsFixed(0)} g';
+    if (normalized < 1) {
+      return '${(normalized * 1000).toStringAsFixed(0)} g';
+    }
     return '${normalized.toStringAsFixed(2)} kg';
   }
 
+  /// Formata uma distância em km para string legível.
+  ///
+  /// - < 1 km → mostra em metros (ex.: `750 m`).
+  /// - ≥ 1 km → mostra em km com 1 casa decimal (ex.: `3.4 km`).
   String _formatDistance(double km) {
-    if (km < 1) return '${(km * 1000).toStringAsFixed(0)} m';
+    if (km < 1) {
+      return '${(km * 1000).toStringAsFixed(0)} m';
+    }
     return '${km.toStringAsFixed(1)} km';
   }
 
@@ -64,14 +92,16 @@ class _ImpactPageState extends State<ImpactPage> {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
 
+    // Estado de carregamento.
     if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(_ecoMint),
+          valueColor: const AlwaysStoppedAnimation<Color>(_ecoMint),
         ),
       );
     }
 
+    // Estado de erro.
     if (_error != null) {
       return Center(
         child: Padding(
@@ -85,7 +115,7 @@ class _ImpactPageState extends State<ImpactPage> {
                 _error!,
                 textAlign: TextAlign.center,
                 style: t.textTheme.bodyMedium?.copyWith(
-                  color: t.colorScheme.onSurface.withOpacity(.8),
+                  color: t.colorScheme.onSurface.withValues(alpha: .8),
                 ),
               ),
               const SizedBox(height: 16),
@@ -100,12 +130,15 @@ class _ImpactPageState extends State<ImpactPage> {
       );
     }
 
+    // A partir daqui assumimos que há resumo carregado.
     final summary = _summary!;
     final hasTrips = summary.hasAnyTrips;
 
+    // CO₂ total poupado (não deixamos ir para valores negativos).
     final double saved =
         summary.totalCo2SavedKg <= 0 ? 0.0 : summary.totalCo2SavedKg;
 
+    // Percentagens de viagens eco/ativas em [0, 100].
     final num ecoPercentNum =
         (summary.ecoTripsRatio * 100).clamp(0.0, 100.0);
     final num activePercentNum =
@@ -114,12 +147,13 @@ class _ImpactPageState extends State<ImpactPage> {
     final double ecoPercent = ecoPercentNum.toDouble();
     final double activePercent = activePercentNum.toDouble();
 
+    // Progresso para metas (em [0, 1]).
     final double ecoGoalProgress =
         (ecoPercent / 100).clamp(0.0, 1.0).toDouble();
     final double activeGoalProgress =
         (activePercent / 30).clamp(0.0, 1.0).toDouble();
 
-    // EcoScore médio: só faz sentido se houver viagens
+    // EcoScore médio: só faz sentido se houver viagens e o valor não for NaN.
     final double avgEcoScore = (summary.totalTrips > 0 &&
             !summary.avgEcoScore.isNaN)
         ? summary.avgEcoScore
@@ -132,13 +166,13 @@ class _ImpactPageState extends State<ImpactPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // HERO CARD
+            // ===== HERO CARD =====
             _HighlightCard(
               title: hasTrips ? 'Impacto acumulado' : 'Ainda a aquecer ✨',
               subtitle: hasTrips
                   ? 'Face a viajar sempre de carro'
                   : 'Começa a usar modos Eco para acumular impacto',
-              // 👇 sem sinal "−"
+              // Sem sinal negativo: se não há poupança, mostra 0.
               value: hasTrips && saved > 0
                   ? '${_formatCo2(saved)} CO₂'
                   : '0 g CO₂',
@@ -147,22 +181,26 @@ class _ImpactPageState extends State<ImpactPage> {
             ),
             const SizedBox(height: 12),
 
-            // CHIP DE PERÍODO (all-time)
+            // ===== CHIP DE PERÍODO =====
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: t.colorScheme.primary
-                      .withValues(alpha: t.brightness == Brightness.dark ? .12 : .08),
+                  color: t.colorScheme.primary.withValues(
+                    alpha: t.brightness == Brightness.dark ? .12 : .08,
+                  ),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.timeline_rounded,
-                        size: 14, color: t.colorScheme.primary),
+                    Icon(
+                      Icons.timeline_rounded,
+                      size: 14,
+                      color: t.colorScheme.primary,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Impacto acumulado',
@@ -179,7 +217,7 @@ class _ImpactPageState extends State<ImpactPage> {
 
             const SizedBox(height: 20),
 
-            // STATS GRID
+            // ===== STATS GRID (1ª linha) =====
             Row(
               children: [
                 Expanded(
@@ -206,6 +244,8 @@ class _ImpactPageState extends State<ImpactPage> {
               ],
             ),
             const SizedBox(height: 12),
+
+            // ===== STATS GRID (2ª linha) =====
             Row(
               children: [
                 Expanded(
@@ -232,7 +272,7 @@ class _ImpactPageState extends State<ImpactPage> {
 
             const SizedBox(height: 24),
 
-            // LISTA DE DIAS OU INFO CARD
+            // ===== LISTA DE DIAS OU INFO CARD =====
             if (summary.days.isNotEmpty) ...[
               Text(
                 'Últimos dias',
@@ -262,7 +302,9 @@ class _ImpactPageState extends State<ImpactPage> {
             ] else ...[
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: t.cardColor,
                   borderRadius: BorderRadius.circular(16),
@@ -274,8 +316,10 @@ class _ImpactPageState extends State<ImpactPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.insights_rounded,
-                        color: t.colorScheme.primary),
+                    Icon(
+                      Icons.insights_rounded,
+                      color: t.colorScheme.primary,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -295,7 +339,7 @@ class _ImpactPageState extends State<ImpactPage> {
               const SizedBox(height: 24),
             ],
 
-            // METAS
+            // ===== METAS =====
             Text(
               'Metas',
               style: t.textTheme.titleLarge?.copyWith(
@@ -317,7 +361,7 @@ class _ImpactPageState extends State<ImpactPage> {
 
             const SizedBox(height: 24),
 
-            // NOTA
+            // ===== NOTAS =====
             Text(
               'Estimativas com base em distância × fator de emissão. '
               'Os valores comparam as tuas rotas com a hipótese de usar sempre um carro típico.',
@@ -344,8 +388,11 @@ class _ImpactPageState extends State<ImpactPage> {
   }
 }
 
-// ====== WIDGETS ======
+// ===================================================================
+//  WIDGETS AUXILIARES
+// ===================================================================
 
+/// Card em destaque no topo do ecrã com o valor principal de impacto.
 class _HighlightCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -419,7 +466,7 @@ class _HighlightCard extends StatelessWidget {
                   style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w700,
-                    fontSize: 20, // ↓ antes 22
+                    fontSize: 20,
                   ),
                 ),
               ],
@@ -431,6 +478,7 @@ class _HighlightCard extends StatelessWidget {
   }
 }
 
+/// Tile compacto para mostrar uma métrica (distância, percentagem, etc.).
 class _StatTile extends StatelessWidget {
   final String label;
   final String value;
@@ -486,7 +534,7 @@ class _StatTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12, // ↓ antes 13
+                    fontSize: 12,
                     color: t.colorScheme.onSurface.withValues(alpha: 0.9),
                   ),
                 ),
@@ -498,7 +546,7 @@ class _StatTile extends StatelessWidget {
                   style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w700,
-                    fontSize: 16, // ↓ antes 18
+                    fontSize: 16,
                   ),
                 ),
               ],
@@ -510,6 +558,7 @@ class _StatTile extends StatelessWidget {
   }
 }
 
+/// Linha de meta com um label e barra de progresso.
 class _GoalRow extends StatelessWidget {
   final String label;
   final double progress;
@@ -549,6 +598,14 @@ class _GoalRow extends StatelessWidget {
   }
 }
 
+/// Linha que representa um dia no resumo (`Últimos dias`).
+///
+/// Mostra:
+/// - Data curta.
+/// - Número de viagens.
+/// - Distância do dia.
+/// - CO₂ poupado no dia.
+/// - Uma barrinha vertical de intensidade.
 class _DayRow extends StatelessWidget {
   final String date;
   final int trips;
@@ -566,6 +623,7 @@ class _DayRow extends StatelessWidget {
     required this.intensity,
   });
 
+  /// Converte string ISO (YYYY-MM-DD) para formato `dd/MM`.
   String _formatDateShort(String raw) {
     try {
       final dt = DateTime.parse(raw);
@@ -625,7 +683,7 @@ class _DayRow extends StatelessWidget {
           SizedBox(
             width: 80,
             child: Text(
-              // 👇 sem "−" também aqui
+              // Sem sinal negativo: já vem formatado pela função de CO₂.
               savedLabel,
               textAlign: TextAlign.right,
               style: TextStyle(

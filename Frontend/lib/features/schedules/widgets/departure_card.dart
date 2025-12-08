@@ -1,10 +1,28 @@
 import 'package:flutter/material.dart';
 
+/// Modelo que representa uma partida num painel de horários.
+///
+/// Pode ser usado para comboios, metro, autocarros ou outros modos,
+/// desde que seja possível mapear:
+/// - [time]: hora de partida formatada (ex.: "14:32").
+/// - [destination]: nome do destino (ex.: "Trindade").
+/// - [line]: código ou nome da linha (ex.: "Linha A").
+/// - [platform]: número ou identificação de plataforma.
+/// - [operator]: nome do operador (ex.: "CP", "Metro do Porto").
 class Departure {
+  /// Hora de partida no formato legível (não é um DateTime).
   final String time;
+
+  /// Destino desta partida (ex.: estação ou terminal).
   final String destination;
+
+  /// Linha associada à partida (ex.: "Linha Amarela").
   final String line;
+
+  /// Plataforma / cais / via onde o veículo parte.
   final String platform;
+
+  /// Nome do operador que explora a partida (ex.: CP, Metro do Porto).
   final String operator;
 
   const Departure({
@@ -16,8 +34,22 @@ class Departure {
   });
 }
 
+/// Cartão visual que apresenta a informação de uma [Departure].
+///
+/// Mostra:
+/// - Hora de partida em destaque.
+/// - Linha.
+/// - Destino.
+/// - Operador.
+/// - Plataforma, realçada com o [accentColor].
+///
+/// O widget não faz formatação de datas/horas; espera receber strings
+/// prontas a apresentar.
 class DepartureCard extends StatelessWidget {
+  /// Partida a ser desenhada no cartão.
   final Departure departure;
+
+  /// Cor de destaque usada no gradiente de fundo e chip de plataforma.
   final Color accentColor;
 
   const DepartureCard({
@@ -66,15 +98,14 @@ class DepartureCard extends StatelessWidget {
               Text(
                 departure.line,
                 style: t.textTheme.bodySmall?.copyWith(
-                  color:
-                      t.textTheme.bodySmall?.color?.withOpacity(0.7),
+                  color: t.textTheme.bodySmall?.color?.withOpacity(0.7),
                 ),
               ),
             ],
           ),
           const SizedBox(width: 16),
 
-          // Destino
+          // Destino + operador
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,8 +120,7 @@ class DepartureCard extends StatelessWidget {
                 Text(
                   'Operador: ${departure.operator}',
                   style: t.textTheme.bodySmall?.copyWith(
-                    color: t.textTheme.bodySmall?.color
-                        ?.withOpacity(0.7),
+                    color: t.textTheme.bodySmall?.color?.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -106,8 +136,7 @@ class DepartureCard extends StatelessWidget {
               Text(
                 'Plataforma',
                 style: t.textTheme.bodySmall?.copyWith(
-                  color: t.textTheme.bodySmall?.color
-                      ?.withOpacity(0.7),
+                  color: t.textTheme.bodySmall?.color?.withOpacity(0.7),
                 ),
               ),
               const SizedBox(height: 2),

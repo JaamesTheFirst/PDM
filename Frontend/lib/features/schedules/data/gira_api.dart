@@ -1,8 +1,12 @@
+// lib/features/schedules/data/gira_api.dart
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../../../services/api_client.dart';
 
+/// Snapshot de uma estação GIRA no momento de agregação.
 class GiraStationRecord {
   final String? estado;
   final int? numDocas;
@@ -50,15 +54,18 @@ class GiraStationRecord {
           }
         }
       } catch (_) {
-        // ignora
+        // ignora erros de parsing da posição
       }
     }
 
     DateTime? ts;
-    if (json['entity_ts'] != null) {
+    final tsRaw = json['entity_ts'];
+    if (tsRaw is String) {
       try {
-        ts = DateTime.parse(json['entity_ts'] as String);
-      } catch (_) {}
+        ts = DateTime.parse(tsRaw);
+      } catch (_) {
+        // ignora datas inválidas
+      }
     }
 
     return GiraStationRecord(
@@ -73,6 +80,7 @@ class GiraStationRecord {
   }
 }
 
+/// Paginador de estações Gira (slice de resultados do backend).
 class GiraStationsSlice {
   final int total;
   final int limit;
@@ -87,6 +95,7 @@ class GiraStationsSlice {
   });
 }
 
+/// Cliente para endpoints Gira do backend.
 class GiraApiClient {
   final String baseUrl;
   final http.Client _client;
@@ -101,7 +110,9 @@ class GiraApiClient {
     return Uri.parse('$baseUrl$path').replace(queryParameters: query);
   }
 
-  /// GET /gira/stations?limit=&offset=
+  /// GET `/gira/stations?limit=&offset=`
+  ///
+  /// Devolve um slice com `total`, `limit`, `offset` e a lista de registos.
   Future<GiraStationsSlice> getStations({
     int limit = 50,
     int offset = 0,
@@ -126,11 +137,11 @@ class GiraApiClient {
     final l = data['limit'] as int? ?? limit;
     final o = data['offset'] as int? ?? offset;
 
-    final recordsJson = (data['records'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>();
+    final recordsJson =
+        (data['records'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
 
     final records =
-        recordsJson.map((j) => GiraStationRecord.fromJson(j)).toList();
+        recordsJson.map(GiraStationRecord.fromJson).toList();
 
     return GiraStationsSlice(
       total: total,
@@ -140,6 +151,7 @@ class GiraApiClient {
     );
   }
 
+  /// Fecha o `http.Client` interno.
   void dispose() {
     _client.close();
   }

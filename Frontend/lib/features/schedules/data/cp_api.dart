@@ -4,9 +4,10 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../../../services/api_client.dart';
 
-/// Resultado de pesquisa de estações CP (GET /cp/stops/search)
+/// Resultado de pesquisa de estações CP (GET `/cp/stops/search`).
 class CpStopSearchResult {
   final String gtfsId;
   final String name;
@@ -30,14 +31,27 @@ class CpStopSearchResult {
   }
 }
 
-/// Linha da “board” de partidas
+/// Linha da board de partidas (pronta para UI).
 class CpStopBoardRow {
-  final String time; // "HH:MM"
+  /// Hora em formato `"HH:MM"`.
+  final String time;
+
+  /// Destino (headsign).
   final String? destination;
+
+  /// Nome curto da linha (se existir).
   final String? lineShortName;
+
+  /// Nome longo da linha (fallback).
   final String? lineLongName;
+
+  /// ID GTFS da rota.
   final String? routeGtfsId;
+
+  /// Atraso em minutos (pode ser 0).
   final int delayMinutes;
+
+  /// Indica se é em tempo real.
   final bool isRealtime;
 
   CpStopBoardRow({
@@ -63,7 +77,7 @@ class CpStopBoardRow {
   }
 }
 
-/// Board completa de partidas de uma estação (GET /cp/stops/:id/departures/board)
+/// Board completa de partidas de uma estação CP.
 class CpStopBoard {
   final String stopId;
   final String stopName;
@@ -87,12 +101,15 @@ class CpStopBoard {
       lat: (json['lat'] as num?)?.toDouble(),
       lon: (json['lon'] as num?)?.toDouble(),
       departures: depsJson
-          .map((e) => CpStopBoardRow.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => CpStopBoardRow.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
 }
 
+/// Cliente HTTP para endpoints CP do teu backend.
 class CpApiClient {
   CpApiClient({http.Client? client, String? baseUrl})
       : _client = client ?? http.Client(),
@@ -111,8 +128,8 @@ class CpApiClient {
     );
   }
 
-  int _toEpochSeconds(DateTime dt) =>
-      dt.millisecondsSinceEpoch ~/ 1000; // local time
+  /// Converte [DateTime] local em epoch seconds.
+  int _toEpochSeconds(DateTime dt) => dt.millisecondsSinceEpoch ~/ 1000;
 
   // ===== Normalização sem acentos + lowercase =====
 
@@ -170,8 +187,9 @@ class CpApiClient {
     return buffer.toString().toLowerCase();
   }
 
-  // ================== SEARCH STOPS (com fallback sem acentos) ==================
+  // ================== SEARCH STOPS ==================
 
+  /// Pesquisa estações CP com fallback sem acentos.
   Future<List<CpStopSearchResult>> searchStops(
     String query, {
     int limit = 5,
@@ -182,10 +200,10 @@ class CpApiClient {
     if (trimmed.length < 2) return [];
 
     final normalized = _normalizeForSearch(trimmed);
-    final Set<String> seenIds = {};
-    final List<CpStopSearchResult> allResults = [];
+    final seenIds = <String>{};
+    final allResults = <CpStopSearchResult>[];
 
-    Future<void> _fetch(String q, {String tag = 'orig'}) async {
+    Future<void> fetch(String q, {String tag = 'orig'}) async {
       if (allResults.length >= limit) return;
 
       final uri = _buildUri('/cp/stops/search', {
@@ -198,7 +216,8 @@ class CpApiClient {
       try {
         final resp = await _client.get(uri).timeout(_timeout);
         debugPrint(
-          '[CP API] searchStops($tag) status=${resp.statusCode} bodyLen=${resp.body.length}',
+          '[CP API] searchStops($tag) status=${resp.statusCode} '
+          'bodyLen=${resp.body.length}',
         );
 
         if (resp.statusCode != 200) {
@@ -208,15 +227,15 @@ class CpApiClient {
           return;
         }
 
-        final json = jsonDecode(resp.body);
-        if (json is! List) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is! List) {
           debugPrint(
             '[CP API] searchStops($tag) resposta inesperada (não é array)',
           );
           return;
         }
 
-        for (final item in json) {
+        for (final item in decoded) {
           if (allResults.length >= limit) break;
           final stop =
               CpStopSearchResult.fromJson(item as Map<String, dynamic>);
@@ -231,12 +250,10 @@ class CpApiClient {
       }
     }
 
-    // 1. tenta com o texto original (com acentos)
-    await _fetch(trimmed, tag: 'orig');
+    await fetch(trimmed, tag: 'orig');
 
-    // 2. se normalizado for diferente, tenta também sem acentos/lowercase
     if (allResults.length < limit && normalized != trimmed.toLowerCase()) {
-      await _fetch(normalized, tag: 'norm');
+      await fetch(normalized, tag: 'norm');
     }
 
     debugPrint(
@@ -245,8 +262,9 @@ class CpApiClient {
     return allResults;
   }
 
-  // ===================== STOP BOARD (resto do dia / dia inteiro) =====================
+  // ===================== STOP BOARD =====================
 
+  /// Board de partidas para um dia (hoje = resto do dia, outro = dia inteiro).
   Future<CpStopBoard> getStopBoard({
     required String stopGtfsId,
     required DateTime day,
@@ -259,15 +277,13 @@ class CpApiClient {
     late int timeRange;
 
     if (isToday) {
-      // Hoje: a partir de agora até ao fim do dia
+      // Hoje: de agora até ao fim do dia.
       startTime = _toEpochSeconds(now);
-
-      final endOfDay =
-          DateTime(now.year, now.month, now.day, 23, 59, 59);
+      final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
       timeRange = endOfDay.difference(now).inSeconds;
       if (timeRange < 0) timeRange = 0;
     } else {
-      // Outro dia: dia inteiro
+      // Outro dia: 24h completas.
       final startOfDay = DateTime(day.year, day.month, day.day);
       startTime = _toEpochSeconds(startOfDay);
       timeRange = 24 * 3600;
@@ -289,7 +305,8 @@ class CpApiClient {
     try {
       final resp = await _client.get(uri).timeout(_timeout);
       debugPrint(
-        '[CP API] getStopBoard status=${resp.statusCode} bodyLen=${resp.body.length}',
+        '[CP API] getStopBoard status=${resp.statusCode} '
+        'bodyLen=${resp.body.length}',
       );
 
       if (resp.statusCode != 200) {
@@ -298,8 +315,9 @@ class CpApiClient {
         );
       }
 
-      final json = jsonDecode(resp.body) as Map<String, dynamic>;
-      final board = CpStopBoard.fromJson(json);
+      final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+      final board = CpStopBoard.fromJson(decoded);
+
       debugPrint(
         '[CP API] getStopBoard -> ${board.departures.length} partidas.',
       );

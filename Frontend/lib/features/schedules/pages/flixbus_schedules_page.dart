@@ -5,6 +5,16 @@ import 'package:flutter/foundation.dart';
 import '../widgets/departure_card.dart';
 import '../data/flixbus_api.dart';
 
+/// Página de horários FlixBus.
+///
+/// Funcionalidades:
+/// - Carregar lista completa de linhas FlixBus a partir do backend.
+/// - Paginação local (limite fixo de linhas por página).
+/// - Filtro local por texto (linha/cidade/agência, com normalização de acentos).
+/// - Selector de dia global usado no detalhe (bottom sheet).
+/// - Detalhe por linha com:
+///   - Lista de paragens.
+///   - Tabelas de partidas por paragem e dia.
 class FlixbusSchedulesPage extends StatefulWidget {
   const FlixbusSchedulesPage({super.key});
 
@@ -13,23 +23,43 @@ class FlixbusSchedulesPage extends StatefulWidget {
 }
 
 class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
+  /// Cor de marca aproximada da FlixBus.
   static const _flixbusGreen = Color(0xFF73BF15);
 
+  /// Cliente de API para interagir com os dados FlixBus.
   final FlixbusApiClient _api = FlixbusApiClient();
+
+  /// Controlador de texto para a pesquisa por linha/cidade.
   final TextEditingController _searchController = TextEditingController();
 
+  /// Flag de carregamento (lista de linhas / mudanças de página).
   bool _loading = false;
+
+  /// Mensagem de erro global, se existir.
   String? _error;
 
+  /// Todas as linhas carregadas do backend.
   List<FlixbusRoute> _allRoutes = [];
+
+  /// Subconjunto de linhas relativo à página atual.
   List<FlixbusRoute> _pageRoutes = [];
+
+  /// Subconjunto filtrado por pesquisa dentro da página atual.
   List<FlixbusRoute> _visibleRoutes = [];
 
+  /// Número máximo de linhas por página.
   int _limit = 20;
+
+  /// Página actual (1-based).
   int _currentPage = 1;
+
+  /// Número total de páginas.
   int _totalPages = 1;
 
+  /// Controlo de visibilidade do calendário de selecção de dia.
   bool _showCalendar = false;
+
+  /// Dia actualmente selecionado (global para a página e detalhe).
   DateTime _selectedDay = DateTime.now();
 
   @override
@@ -48,6 +78,11 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
 
   // ==================== LOAD ROUTES + PAGINAÇÃO ====================
 
+  /// Carrega todas as rotas FlixBus do backend.
+  ///
+  /// Após o carregamento:
+  /// - Reinicia a paginação.
+  /// - Reconstrói a página actual e as listas visíveis.
   Future<void> _loadRoutes() async {
     setState(() {
       _loading = true;
@@ -76,6 +111,7 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
     }
   }
 
+  /// Recalcula paginação com base no total de rotas e limite actual.
   void _rebuildPagination() {
     final total = _allRoutes.length;
     _totalPages = _limit > 0 ? ((total + _limit - 1) ~/ _limit) : 1;
@@ -85,6 +121,7 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
     _applyLocalFilter();
   }
 
+  /// Actualiza [_pageRoutes] de acordo com [_currentPage] e [_limit].
   void _updatePageRoutes() {
     final total = _allRoutes.length;
     final start = (_currentPage - 1) * _limit;
@@ -96,6 +133,7 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
     _pageRoutes = _allRoutes.sublist(start, end);
   }
 
+  /// Vai para a página anterior, se possível, e reaplica o filtro local.
   void _goToPreviousPage() {
     if (_currentPage <= 1 || _loading) return;
     setState(() {
@@ -105,6 +143,7 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
     });
   }
 
+  /// Vai para a página seguinte, se possível, e reaplica o filtro local.
   void _goToNextPage() {
     if (_currentPage >= _totalPages || _loading) return;
     setState(() {
@@ -116,6 +155,10 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
 
   // ==================== SEARCH LOCAL POR LINHA ====================
 
+  /// Normaliza uma string removendo acentos/caracteres especiais básicos,
+  /// retornando tudo em minúsculas.
+  ///
+  /// Permite procurar por "Covilha" e encontrar "Covilhã", por exemplo.
   String _normalize(String input) {
     const mapping = {
       'á': 'a',
@@ -169,6 +212,12 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
     return buffer.toString().toLowerCase();
   }
 
+  /// Aplica o filtro local de pesquisa à página actual de rotas.
+  ///
+  /// Pesquisa nos campos:
+  /// - [FlixbusRoute.shortName]
+  /// - [FlixbusRoute.longName]
+  /// - [FlixbusRoute.agencyName]
   void _applyLocalFilter() {
     final raw = _searchController.text.trim();
     final q = _normalize(raw);
@@ -191,6 +240,7 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
 
   // ======================= UI HELPERS =======================
 
+  /// Formata uma data para texto legível, adicionando "(hoje)" se for o dia actual.
   String _formatDay(BuildContext context, DateTime day) {
     final localizations = MaterialLocalizations.of(context);
     final today = DateUtils.dateOnly(DateTime.now());
@@ -408,6 +458,8 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
     );
   }
 
+  /// Constrói o corpo principal consoante o estado de carregamento/erro
+  /// e os resultados filtrados.
   Widget _buildBody(BuildContext context) {
     final t = Theme.of(context);
 
@@ -555,6 +607,7 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
 
   // ==================== BOTTOM SHEET DETALHE DA LINHA ====================
 
+  /// Abre o bottom sheet com o detalhe de uma linha (paragens + horários).
   void _openRouteDetailSheet(FlixbusRoute route) {
     showModalBottomSheet(
       context: context,
@@ -584,6 +637,11 @@ class _FlixbusSchedulesPageState extends State<FlixbusSchedulesPage> {
 //  SHEET COM PARAGENS + HORÁRIOS (POR LINHA)
 // ===================================================================
 
+/// Bottom sheet com detalhe de uma linha FlixBus.
+///
+/// Mostra:
+/// - Lista de paragens.
+/// - Para cada paragem, as partidas da linha seleccionada e dia escolhido.
 class _FlixbusRouteDetailSheet extends StatefulWidget {
   final FlixbusRoute route;
   final FlixbusApiClient api;
@@ -606,12 +664,22 @@ class _FlixbusRouteDetailSheetState
     extends State<_FlixbusRouteDetailSheet> {
   static const _flixbusGreen = Color(0xFF73BF15);
 
+  /// Flag de carregamento da estrutura de detalhe (lista de paragens).
   bool _loadingDetail = true;
+
+  /// Mensagem de erro, se houver falha ao carregar o detalhe/boards.
   String? _error;
+
+  /// Detalhe completo da rota (inclui paragens).
   FlixbusRouteDetail? _detail;
 
+  /// Conjunto de paragens "expandidas" (com board visível).
   final Set<String> _openStops = {};
+
+  /// Map de paragem -> lista de partidas (board).
   final Map<String, List<FlixbusStopBoardRow>> _boardsByStop = {};
+
+  /// ID da paragem actualmente a ser carregada (spinner individual).
   String? _loadingStopId;
 
   @override
@@ -620,6 +688,7 @@ class _FlixbusRouteDetailSheetState
     _loadDetail();
   }
 
+  /// Carrega o detalhe da rota (lista de paragens, etc.).
   Future<void> _loadDetail() async {
     setState(() {
       _loadingDetail = true;
@@ -644,6 +713,13 @@ class _FlixbusRouteDetailSheetState
     }
   }
 
+  /// Abre/fecha o board de uma paragem específica.
+  ///
+  /// - Ao abrir:
+  ///   - Carrega o board dessa paragem e filtra apenas as partidas
+  ///     relativas à rota actual.
+  /// - Ao fechar:
+  ///   - Remove a paragem de [_openStops].
   Future<void> _toggleStopBoard(FlixbusStopBasic stop) async {
     final stopId = stop.gtfsId;
 
@@ -773,6 +849,7 @@ class _FlixbusRouteDetailSheetState
     );
   }
 
+  /// Constrói a lista de paragens e respectivos boards, dependendo do estado.
   Widget _buildStopsList(BuildContext context) {
     final t = Theme.of(context);
 

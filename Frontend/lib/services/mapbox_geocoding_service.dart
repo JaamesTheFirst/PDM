@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../mapbox_config.dart';
 
+/// Representa um lugar devolvido pelas APIs de Geocoding da Mapbox.
 class MapboxPlace {
   final String id;
   final String name;
@@ -12,19 +15,44 @@ class MapboxPlace {
   final double latitude;
   final List<String> placeTypes;
   final String? category;
+
+  /// Distância aproximada em metros a um ponto de referência (opcional).
   final double? distanceMeters;
 
-  MapboxPlace({
+  const MapboxPlace({
     required this.id,
     required this.name,
     required this.placeName,
     required this.longitude,
     required this.latitude,
-    this.placeTypes = const [],
+    this.placeTypes = const <String>[],
     this.category,
     this.distanceMeters,
   });
 
+  /// Cria um [MapboxPlace] a partir de um feature JSON da Mapbox.
+  factory MapboxPlace.fromJson(Map<String, dynamic> json) {
+    final List<num> coords =
+        (json['geometry']?['coordinates'] as List?)?.cast<num>() ??
+            <num>[0, 0];
+
+    return MapboxPlace(
+      id: json['id'] as String? ?? '',
+      name: (json['text'] as String?) ??
+          (json['place_name'] as String? ?? ''),
+      placeName: (json['place_name'] as String?) ?? '',
+      longitude: coords.isNotEmpty ? coords[0].toDouble() : 0.0,
+      latitude: coords.length > 1 ? coords[1].toDouble() : 0.0,
+      placeTypes:
+          (json['place_type'] as List?)?.whereType<String>().toList() ??
+              const <String>[],
+      category: (json['properties'] is Map<String, dynamic>)
+          ? (json['properties']['category'] as String?)
+          : null,
+    );
+  }
+
+  /// Copia o [MapboxPlace] com um novo valor de [distanceMeters].
   MapboxPlace copyWith({double? distanceMeters}) => MapboxPlace(
         id: id,
         name: name,
@@ -35,35 +63,31 @@ class MapboxPlace {
         category: category,
         distanceMeters: distanceMeters ?? this.distanceMeters,
       );
-
-  factory MapboxPlace.fromJson(Map<String, dynamic> json) {
-    final coords = (json['geometry']?['coordinates'] as List?)?.cast<num>() ?? const [0, 0];
-    return MapboxPlace(
-      id: json['id'] as String? ?? '',
-      name: (json['text'] as String?) ?? (json['place_name'] as String? ?? ''),
-      placeName: (json['place_name'] as String?) ?? '',
-      longitude: coords.isNotEmpty ? coords[0].toDouble() : 0.0,
-      latitude: coords.length > 1 ? coords[1].toDouble() : 0.0,
-      placeTypes: (json['place_type'] as List?)?.whereType<String>().toList() ?? const [],
-      category: (json['properties'] is Map<String, dynamic>)
-          ? (json['properties']['category'] as String?)
-          : null,
-    );
-  }
 }
 
+/// Serviço fino sobre a API de Geocoding da Mapbox
+/// (forward search + reverse + nearby POIs).
 class MapboxGeocodingService {
   MapboxGeocodingService._();
+
+  /// Instância singleton do [MapboxGeocodingService].
   static final MapboxGeocodingService instance = MapboxGeocodingService._();
 
-  static const _host = 'api.mapbox.com';
-  static const _basePath = '/geocoding/v5/mapbox.places';
-  static const _allTypes =
+  static const String _host = 'api.mapbox.com';
+  static const String _basePath = '/geocoding/v5/mapbox.places';
+
+  /// Lista completa de types usada para `searchPlaces`.
+  static const String _allTypes =
       'address,place,poi,poi.landmark,neighborhood,locality,district,postcode,region,country';
 
   // -------- HTTP util com timeout + retry ----------
-  static Future<http.Response?> _get(Uri uri,
-      {int retries = 1, Duration timeout = const Duration(seconds: 8)}) async {
+
+  /// Pequeno helper para GET com timeout e número de [retries].
+  static Future<http.Response?> _get(
+    Uri uri, {
+    int retries = 1,
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
     for (int i = 0; i <= retries; i++) {
       try {
         return await http.get(uri).timeout(timeout);
@@ -72,18 +96,29 @@ class MapboxGeocodingService {
           debugPrint('HTTP GET failed ($uri): $e');
           return null;
         }
-        await Future.delayed(const Duration(milliseconds: 200));
+        await Future<Duration>.delayed(const Duration(milliseconds: 200));
       }
     }
     return null;
   }
 
   // --------- bbox helper (raio em km) ----------
-  static Map<String, double> _bboxAround(
-      {required double lon, required double lat, double radiusKm = 30}) {
-    final dLat = radiusKm / 111.0;
-    final dLon = radiusKm / (111.0 * (math.cos(lat * math.pi / 180.0)).abs().clamp(0.0001, double.infinity));
-    return {
+
+  /// Calcula uma bounding box aproximada em torno de [lon], [lat] com raio
+  /// [radiusKm] em km.
+  static Map<String, double> _bboxAround({
+    required double lon,
+    required double lat,
+    double radiusKm = 30,
+  }) {
+    final double dLat = radiusKm / 111.0;
+    final double dLon = radiusKm /
+        (111.0 *
+            (math.cos(lat * math.pi / 180.0))
+                .abs()
+                .clamp(0.0001, double.infinity));
+
+    return <String, double>{
       'minLon': lon - dLon,
       'minLat': lat - dLat,
       'maxLon': lon + dLon,
@@ -91,7 +126,16 @@ class MapboxGeocodingService {
     };
   }
 
-  /// SEARCH-AS-YOU-TYPE (forward): prioriza o que está perto usando proximity + bbox + country.
+  /// Forward geocoding tipo “search as you type”.
+  ///
+  /// Usa:
+  /// - `autocomplete=true`
+  /// - `types` variados (endereços, POIs, etc.) em [_allTypes]
+  /// - `proximity` + `bbox` para privilegiar resultados perto
+  ///
+  /// Se [proximityLon]/[proximityLat] forem fornecidos, a lista devolvida
+  /// é ordenada por proximidade e o campo [MapboxPlace.distanceMeters] é
+  /// preenchido.
   Future<List<MapboxPlace>> searchPlaces(
     String query, {
     int limit = 12,
@@ -101,11 +145,11 @@ class MapboxGeocodingService {
     double? proximityLat,
     double? bboxRadiusKm,
   }) async {
-    final q = query.trim();
-    if (q.length < 3) return [];
+    final String q = query.trim();
+    if (q.length < 3) return <MapboxPlace>[];
 
-    final path = '$_basePath/${Uri.encodeComponent(q)}.json';
-    final params = <String, String>{
+    final String path = '$_basePath/${Uri.encodeComponent(q)}.json';
+    final Map<String, String> params = <String, String>{
       'access_token': kMapboxAccessToken,
       'limit': '$limit',
       'language': language,
@@ -113,55 +157,76 @@ class MapboxGeocodingService {
       'types': _allTypes,
     };
 
-    final hasProximity = (proximityLon != null && proximityLat != null);
+    final bool hasProximity =
+        proximityLon != null && proximityLat != null;
+
     if (hasProximity) {
-      params['proximity'] = '${proximityLon},${proximityLat!}';
+      params['proximity'] = '$proximityLon,$proximityLat';
       if (bboxRadiusKm != null && bboxRadiusKm > 0) {
-        final b = _bboxAround(lon: proximityLon, lat: proximityLat, radiusKm: bboxRadiusKm);
-        params['bbox'] = '${b['minLon']},${b['minLat']},${b['maxLon']},${b['maxLat']}';
+        final Map<String, double> b = _bboxAround(
+          lon: proximityLon!,
+          lat: proximityLat!,
+          radiusKm: bboxRadiusKm,
+        );
+        params['bbox'] =
+            '${b['minLon']},${b['minLat']},${b['maxLon']},${b['maxLat']}';
       }
     }
+
     if (countryIso2 != null && countryIso2.isNotEmpty) {
       params['country'] = countryIso2;
     }
 
-    final uri = Uri.https(_host, path, params);
-    final res = await _get(uri, retries: 1);
-    if (res == null) return [];
+    final Uri uri = Uri.https(_host, path, params);
+    final http.Response? res = await _get(uri, retries: 1);
+    if (res == null) return <MapboxPlace>[];
     if (res.statusCode != 200) {
       debugPrint('Geocoding ERROR ${res.statusCode}: ${res.body}');
-      return [];
+      return <MapboxPlace>[];
     }
 
     Map<String, dynamic> data;
     try {
-      data = json.decode(res.body) as Map<String, dynamic>;
+      data = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (e) {
       debugPrint('Geocoding JSON parse error: $e\nBody: ${res.body}');
-      return [];
+      return <MapboxPlace>[];
     }
 
-    var list = (data['features'] as List? ?? const [])
+    List<MapboxPlace> list = (data['features'] as List? ?? const <dynamic>[])
         .whereType<Map<String, dynamic>>()
         .map<MapboxPlace>(MapboxPlace.fromJson)
         .toList();
 
-    // dedup
-    final seen = <String>{};
-    list = list.where((f) => seen.add(f.id)).toList();
+    // Remover duplicados por id.
+    final Set<String> seen = <String>{};
+    list = list.where((MapboxPlace f) => seen.add(f.id)).toList();
 
     if (hasProximity) {
-      final pLon = proximityLon!;
-      final pLat = proximityLat!;
+      final double pLon = proximityLon!;
+      final double pLat = proximityLat!;
+
       list = list
-          .map((f) => f.copyWith(
-                distanceMeters: _haversineMeters(pLat, pLon, f.latitude, f.longitude),
-              ))
+          .map(
+            (MapboxPlace f) => f.copyWith(
+              distanceMeters: _haversineMeters(
+                pLat,
+                pLon,
+                f.latitude,
+                f.longitude,
+              ),
+            ),
+          )
           .toList()
-        ..sort((a, b) {
-          final aIsPoi = a.placeTypes.contains('poi') || a.placeTypes.contains('poi.landmark');
-          final bIsPoi = b.placeTypes.contains('poi') || b.placeTypes.contains('poi.landmark');
-          final typeScore = (aIsPoi == bIsPoi) ? 0 : (aIsPoi ? -1 : 1);
+        ..sort((MapboxPlace a, MapboxPlace b) {
+          final bool aIsPoi =
+              a.placeTypes.contains('poi') ||
+                  a.placeTypes.contains('poi.landmark');
+          final bool bIsPoi =
+              b.placeTypes.contains('poi') ||
+                  b.placeTypes.contains('poi.landmark');
+          final int typeScore =
+              (aIsPoi == bIsPoi) ? 0 : (aIsPoi ? -1 : 1);
           if (typeScore != 0) return typeScore;
           return (a.distanceMeters ?? double.infinity)
               .compareTo(b.distanceMeters ?? double.infinity);
@@ -171,98 +236,142 @@ class MapboxGeocodingService {
     return list;
   }
 
-  /// SUGESTÕES PERTO (rápido): **UMA** chamada de REVERSE com `types=poi`
-  /// e `categories=...` (sem spam por categoria).
+  /// Reverse geocoding para encontrar POIs perto de [lon], [lat].
+  ///
+  /// Faz **uma** chamada `reverse` com:
+  /// - `types=poi,poi.landmark`
+  /// - `categories` passadas em [categories] (ou um conjunto default)
   Future<List<MapboxPlace>> nearbyPOIs({
     required double lon,
     required double lat,
     String language = 'pt',
-    String? countryIso2, // opcional
+    String? countryIso2,
     int limit = 24,
     List<String>? categories,
   }) async {
-    final cats = categories ??
-        [
+    final List<String> cats = categories ??
+        <String>[
           // cultura/turismo
-          'theatre','theater','teatro','museum','museu','cinema','gallery','galeria','art',
+          'theatre',
+          'theater',
+          'teatro',
+          'museum',
+          'museu',
+          'cinema',
+          'gallery',
+          'galeria',
+          'art',
           // comida & bebida
-          'restaurant','restaurante','cafe','coffee','bakery','bar',
+          'restaurant',
+          'restaurante',
+          'cafe',
+          'coffee',
+          'bakery',
+          'bar',
           // serviços
-          'supermarket','mercado','convenience','pharmacy','hospital','clinic','bank','atm','post office',
+          'supermarket',
+          'mercado',
+          'convenience',
+          'pharmacy',
+          'hospital',
+          'clinic',
+          'bank',
+          'atm',
+          'post office',
           // lazer / outdoors
-          'park','gym','hotel','shopping mall','stadium',
+          'park',
+          'gym',
+          'hotel',
+          'shopping mall',
+          'stadium',
         ];
 
-    final path = '$_basePath/$lon,$lat.json'; // reverse geocoding
-    final params = <String, String>{
+    final String path = '$_basePath/$lon,$lat.json'; // reverse geocoding
+    final Map<String, String> params = <String, String>{
       'access_token': kMapboxAccessToken,
       'language': language,
       'types': 'poi,poi.landmark',
       'limit': '$limit',
-      'categories': cats.join(','), // <- UMA chamada com categorias
+      'categories': cats.join(','),
     };
     if (countryIso2 != null && countryIso2.isNotEmpty) {
       params['country'] = countryIso2;
     }
 
-    final uri = Uri.https(_host, path, params);
-    final res = await _get(uri, retries: 1);
-    if (res == null) return [];
+    final Uri uri = Uri.https(_host, path, params);
+    final http.Response? res = await _get(uri, retries: 1);
+    if (res == null) return <MapboxPlace>[];
     if (res.statusCode != 200) {
       debugPrint('NearbyPOIs ERROR ${res.statusCode}: ${res.body}');
-      return [];
+      return <MapboxPlace>[];
     }
 
     Map<String, dynamic> data;
     try {
-      data = json.decode(res.body) as Map<String, dynamic>;
+      data = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (e) {
       debugPrint('NearbyPOIs JSON parse error: $e\nBody: ${res.body}');
-      return [];
+      return <MapboxPlace>[];
     }
 
-    var list = (data['features'] as List? ?? const [])
+    List<MapboxPlace> list = (data['features'] as List? ?? const <dynamic>[])
         .whereType<Map<String, dynamic>>()
         .map<MapboxPlace>(MapboxPlace.fromJson)
         .toList();
 
     // dedup + ordenar por distância real
-    final seen = <String>{};
-    list = list.where((f) => seen.add(f.id)).toList();
+    final Set<String> seen = <String>{};
+    list = list.where((MapboxPlace f) => seen.add(f.id)).toList();
     list = list
-        .map((f) => f.copyWith(distanceMeters: _haversineMeters(lat, lon, f.latitude, f.longitude)))
+        .map(
+          (MapboxPlace f) => f.copyWith(
+            distanceMeters: _haversineMeters(
+              lat,
+              lon,
+              f.latitude,
+              f.longitude,
+            ),
+          ),
+        )
         .toList()
-      ..sort((a, b) =>
-          (a.distanceMeters ?? double.infinity).compareTo(b.distanceMeters ?? double.infinity));
+      ..sort(
+        (MapboxPlace a, MapboxPlace b) =>
+            (a.distanceMeters ?? double.infinity)
+                .compareTo(b.distanceMeters ?? double.infinity),
+      );
 
     return list;
   }
 
-  /// Reverse geocoding – rua/local atual.
+  /// Reverse geocoding básico – devolve a melhor correspondência para
+  /// `[longitude], [latitude]` (morada ou place).
   Future<MapboxPlace?> reverseGeocode(
     double longitude,
     double latitude, {
     String language = 'pt',
   }) async {
-    final path = '$_basePath/$longitude,$latitude.json';
-    final params = <String, String>{
+    final String path = '$_basePath/$longitude,$latitude.json';
+    final Map<String, String> params = <String, String>{
       'access_token': kMapboxAccessToken,
       'limit': '1',
       'language': language,
       'types': 'address,place',
     };
-    final uri = Uri.https(_host, path, params);
-    final res = await _get(uri, retries: 1);
+    final Uri uri = Uri.https(_host, path, params);
+    final http.Response? res = await _get(uri, retries: 1);
     if (res == null) return null;
     if (res.statusCode != 200) {
       debugPrint('ReverseGeocoding ERROR ${res.statusCode}: ${res.body}');
       return null;
     }
     try {
-      final data = json.decode(res.body) as Map<String, dynamic>;
-      final features = data['features'] as List? ?? const [];
+      final Map<String, dynamic> data =
+          jsonDecode(res.body) as Map<String, dynamic>;
+      final List<dynamic> features = data['features'] as List? ?? const [];
       if (features.isEmpty) return null;
-      return MapboxPlace.fromJson(features.first as Map<String, dynamic>);
+      return MapboxPlace.fromJson(
+        features.first as Map<String, dynamic>,
+      );
     } catch (e) {
       debugPrint('ReverseGeocoding JSON parse error: $e\nBody: ${res.body}');
       return null;
@@ -270,15 +379,25 @@ class MapboxGeocodingService {
   }
 
   // -------- utils --------
-  static double _haversineMeters(double lat1, double lon1, double lat2, double lon2) {
-    const r = 6371000.0;
-    final dLat = _deg2rad(lat2 - lat1);
-    final dLon = _deg2rad(lon2 - lon1);
-    final a = math.sin(dLat/2)*math.sin(dLat/2) +
-        math.cos(_deg2rad(lat1))*math.cos(_deg2rad(lat2)) *
-        math.sin(dLon/2)*math.sin(dLon/2);
-    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a));
+
+  /// Distância Haversine em metros entre dois pontos.
+  static double _haversineMeters(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double r = 6371000.0;
+    final double dLat = _deg2rad(lat2 - lat1);
+    final double dLon = _deg2rad(lon2 - lon1);
+    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_deg2rad(lat1)) *
+            math.cos(_deg2rad(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return r * c;
   }
+
   static double _deg2rad(double d) => d * (math.pi / 180.0);
 }

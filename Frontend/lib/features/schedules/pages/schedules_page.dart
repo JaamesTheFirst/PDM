@@ -7,16 +7,31 @@ import 'carris_schedules_page.dart';
 import 'gbfs_availability_page.dart';
 import 'gira_stations_page.dart';
 
+/// Página principal de “Horários & disponibilidade”.
+///
+/// Lista os diferentes operadores/serviços integrados na app
+/// (CP, FlixBus, Metro do Porto, Carris, GIRA, sistemas GBFS) e
+/// faz navegação para as páginas dedicadas de cada um.
 class SchedulesPage extends StatelessWidget {
   const SchedulesPage({super.key});
 
-  // cores aproximadas dos operadores
+  /// Cor institucional aproximada da CP (Comboios de Portugal).
   static const _cpBlue = Color(0xFF00549A);
+
+  /// Verde aproximado da identidade FlixBus.
   static const _flixbusGreen = Color(0xFF73BF15);
+
+  /// Roxo aproximado do Metro do Porto.
   static const _metroPortoPurple = Color(0xFF5A2A82);
+
+  /// Amarelo aproximado da Carris.
   static const _carrisYellow = Color(0xFFFFD600);
+
+  /// Verde usado para sistemas GBFS (bike/scooter sharing).
   static const _gbfsGreen = Color(0xFF3CD4A0);
-  static const _giraGreen = Color(0xFF8CC63F); // verde GIRA-ish
+
+  /// Verde aproximado da marca GIRA.
+  static const _giraGreen = Color(0xFF8CC63F);
 
   @override
   Widget build(BuildContext context) {
@@ -46,9 +61,9 @@ class SchedulesPage extends StatelessWidget {
           color: _cpBlue,
           chipLabel: 'Comboios',
           onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const CpSchedulesPage()));
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CpSchedulesPage()),
+            );
           },
         ),
         const SizedBox(height: 12),
@@ -61,9 +76,9 @@ class SchedulesPage extends StatelessWidget {
           color: _flixbusGreen,
           chipLabel: 'Longo curso',
           onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => FlixbusSchedulesPage()));
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => FlixbusSchedulesPage()),
+            );
           },
         ),
         const SizedBox(height: 12),
@@ -91,7 +106,6 @@ class SchedulesPage extends StatelessWidget {
           subtitle: 'Linhas urbanas a partir do grafo OTP (GTFS Carris).',
           icon: Icons.directions_bus,
           color: _carrisYellow,
-          // darkText: true,  // remove ou mete false
           chipLabel: 'Autocarros',
           onTap: () {
             Navigator.of(context).push(
@@ -99,7 +113,6 @@ class SchedulesPage extends StatelessWidget {
             );
           },
         ),
-
         const SizedBox(height: 12),
 
         // GIRA – Lisboa
@@ -110,9 +123,9 @@ class SchedulesPage extends StatelessWidget {
           color: _giraGreen,
           chipLabel: 'GIRA',
           onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const GiraStationsPage()));
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const GiraStationsPage()),
+            );
           },
         ),
         const SizedBox(height: 12),
@@ -136,13 +149,38 @@ class SchedulesPage extends StatelessWidget {
   }
 }
 
+/// Cartão de operador apresentado na [SchedulesPage].
+///
+/// Mostra:
+/// - Ícone grande de fundo.
+/// - Título (nome do operador).
+/// - Descrição curta.
+/// - “Chip” com o tipo de serviço (ex.: Comboios, Metro, GBFS).
+/// - Seta de navegação.
+///
+/// Ao tocar no cartão, executa o [onTap] recebido.
 class _OperatorCard extends StatelessWidget {
+  /// Título principal (ex.: "CP – Comboios de Portugal").
   final String title;
+
+  /// Descrição/explicação do tipo de dados disponíveis.
   final String subtitle;
+
+  /// Ícone representativo do modo de transporte (comboio, metro, etc.).
   final IconData icon;
+
+  /// Cor base do gradiente do cartão.
   final Color color;
+
+  /// Texto exibido no chip (ex.: "Metro", "Comboios").
   final String chipLabel;
+
+  /// Se `true`, usa texto escuro; se `false`, usa texto branco.
+  ///
+  /// Útil para fundos mais claros (ex.: amarelo Carris).
   final bool darkText;
+
+  /// Callback executado quando o cartão é tocado.
   final VoidCallback onTap;
 
   const _OperatorCard({
@@ -178,7 +216,7 @@ class _OperatorCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           child: Stack(
             children: [
-              // ÍCONE GIGANTE
+              // Ícone gigante de fundo
               Positioned.fill(
                 child: Align(
                   alignment: const Alignment(-0.9, -0.6),

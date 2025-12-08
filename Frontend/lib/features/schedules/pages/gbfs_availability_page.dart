@@ -4,9 +4,19 @@ import 'package:flutter/foundation.dart';
 
 import '../data/gbfs_api.dart';
 
+/// Página de disponibilidade em tempo real de sistemas GBFS.
+///
+/// Funcionalidades:
+/// - Carregar lista de sistemas GBFS disponíveis (cidades/operadores).
+/// - Selecionar um sistema e obter:
+///   - Estações com capacidade / veículos disponíveis.
+///   - Veículos "soltos" (free-floating).
+/// - Pesquisar por texto (aplicada a estações e veículos).
+/// - Filtrar resultados e apresentar cartões com barra de ocupação.
 class GbfsAvailabilityPage extends StatefulWidget {
   const GbfsAvailabilityPage({super.key});
 
+  /// Cor principal usada para destacar elementos relacionados com GBFS.
   static const _gbfsGreen = Color(0xFF3CD4A0);
 
   @override
@@ -16,27 +26,40 @@ class GbfsAvailabilityPage extends StatefulWidget {
 
 class _GbfsAvailabilityPageState
     extends State<GbfsAvailabilityPage> {
-  // <<< AQUI: sem const, porque GbfsApiClient já não tem const constructor
+  /// Cliente da API responsável por comunicar com o backend GBFS.
+  ///
+  /// Importante: não pode ser `const` porque o [GbfsApiClient] não tem
+  /// construtor const.
   final GbfsApiClient _api = GbfsApiClient();
 
+  /// Controlador de texto para a pesquisa de estação/veículo.
   final TextEditingController _searchController =
       TextEditingController();
 
+  /// Flag de carregamento da lista de sistemas.
   bool _loadingSystems = false;
+
+  /// Flag de carregamento de disponibilidade (estações/veículos).
   bool _loadingAvailability = false;
+
+  /// Mensagem de erro genérica para a página.
   String? _error;
 
+  /// Lista de sistemas GBFS disponíveis (ex.: "Lisboa GIRA", "Bird Porto").
   List<GbfsSystem> _systems = [];
+
+  /// Sistema actualmente selecionado no dropdown.
   GbfsSystem? _selectedSystem;
 
-  /// listas “cruas” vindas do backend
+  /// Listas “cruas” vindas do backend (sem filtros).
   List<GbfsStationAvailability> _allStations = [];
   List<GbfsFreeBike> _allFreeBikes = [];
 
-  /// listas filtradas (search + filtros de qualidade)
+  /// Listas filtradas (pesquisa + filtros de qualidade).
   List<GbfsStationAvailability> _visibleStations = [];
   List<GbfsFreeBike> _visibleFreeBikes = [];
 
+  /// Query de pesquisa actual (texto livre).
   String _searchQuery = '';
 
   @override
@@ -51,6 +74,12 @@ class _GbfsAvailabilityPageState
     super.dispose();
   }
 
+  /// Carrega a lista de sistemas GBFS configurados no backend.
+  ///
+  /// - Limpa erros e activa `_loadingSystems`.
+  /// - Ordena os sistemas por nome (case-insensitive).
+  /// - Selecciona automaticamente o primeiro sistema, se existir.
+  /// - Ao seleccionar, dispara também [_loadAvailability] para esse sistema.
   Future<void> _loadSystems() async {
     setState(() {
       _loadingSystems = true;
@@ -93,6 +122,12 @@ class _GbfsAvailabilityPageState
     }
   }
 
+  /// Filtro "base" de qualidade para estações.
+  ///
+  /// Regras:
+  /// - Nome tem de ser minimamente decente (>= 3 caracteres).
+  /// - Tem de existir alguma informação de ocupação
+  ///   (veículos livres ou número total de docas).
   List<GbfsStationAvailability> _baseFilterStations(
     List<GbfsStationAvailability> stations,
   ) {
@@ -107,11 +142,17 @@ class _GbfsAvailabilityPageState
         return false;
       }
 
-      // se tiver address, óptimo; se não, pode ser que o nome seja a rua
+      // se tiver address, óptimo; se não, o nome pode ser a rua
       return true;
     }).toList();
   }
 
+  /// Aplica os filtros actuais (qualidade + pesquisa textual).
+  ///
+  /// - Filtra estações com [_baseFilterStations].
+  /// - Aplica search query ao nome e address.
+  /// - Aplica search query a veículos soltos (id e tipo).
+  /// - Ordena estações e veículos por nome/ID.
   void _applyFilters() {
     final q = _searchQuery.trim().toLowerCase();
 
@@ -152,6 +193,11 @@ class _GbfsAvailabilityPageState
     });
   }
 
+  /// Carrega a disponibilidade de um sistema específico (estações + veículos).
+  ///
+  /// - Limpa listas anteriores e visíveis.
+  /// - Em caso de sucesso, repõe `_allStations` e `_allFreeBikes`,
+  ///   e chama [_applyFilters] para actualizar a vista.
   Future<void> _loadAvailability(String systemId) async {
     setState(() {
       _loadingAvailability = true;
@@ -211,6 +257,11 @@ class _GbfsAvailabilityPageState
     );
   }
 
+  /// Constrói o corpo principal da página, tratando os diferentes estados:
+  /// - Carregamento inicial de sistemas.
+  /// - Erro.
+  /// - Nenhum sistema configurado.
+  /// - Listas de estações e veículos filtrados.
   Widget _buildBody(ThemeData t) {
     if (_loadingSystems && _systems.isEmpty) {
       return const Center(
@@ -337,6 +388,10 @@ class _GbfsAvailabilityPageState
     );
   }
 
+  /// Dropdown para escolher o sistema GBFS actual (cidade/operador).
+  ///
+  /// Ao alterar o valor, dispara [_loadAvailability] para o sistema
+  /// seleccionado.
   Widget _buildSystemSelector(ThemeData t) {
     return DropdownButtonFormField<GbfsSystem>(
       value: _selectedSystem,
@@ -370,6 +425,7 @@ class _GbfsAvailabilityPageState
     );
   }
 
+  /// Campo de pesquisa para filtrar estações e veículos por texto.
   Widget _buildSearchField(ThemeData t) {
     return TextField(
       controller: _searchController,
@@ -407,6 +463,13 @@ class _GbfsAvailabilityPageState
   }
 }
 
+/// Cartão visual para uma estação de um sistema GBFS.
+///
+/// Mostra:
+/// - Nome.
+/// - Morada (quando disponível).
+/// - Número de veículos disponíveis / total.
+/// - Barra de ocupação aproximada (veículos vs. docas).
 class _GbfsStationCard extends StatelessWidget {
   final GbfsStationAvailability station;
   final Color accentColor;
@@ -500,6 +563,12 @@ class _GbfsStationCard extends StatelessWidget {
   }
 }
 
+/// Cartão visual para um veículo solto (free-floating) GBFS.
+///
+/// Mostra:
+/// - ID do veículo.
+/// - Coordenadas (quando disponíveis).
+/// - Tipo de veículo (quando disponível).
 class _GbfsFreeBikeCard extends StatelessWidget {
   final GbfsFreeBike bike;
   final Color accentColor;

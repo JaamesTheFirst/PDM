@@ -1,3 +1,5 @@
+// lib/features/map/pages/navigation_map_page.dart
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -9,6 +11,11 @@ import '../../../services/location_service.dart';
 import '../state/navigation_controller.dart';
 import '../widgets/navigation_overlay.dart';
 
+/// Ecrã de navegação em tempo real.
+///
+/// - Segue a posição atual do utilizador.
+/// - Desenha a linha da perna de rota ativa.
+/// - Mantém a câmara centrada no utilizador (quando `_isFollowingUser` está ativo).
 class NavigationMapPage extends StatefulWidget {
   const NavigationMapPage({super.key});
 
@@ -39,6 +46,7 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
   void initState() {
     super.initState();
 
+    // Só depois do primeiro frame é que o context está 100% pronto para o Provider.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final nav = context.read<NavigationController>();
       nav.addListener(_onNavChanged);
@@ -70,6 +78,7 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
     super.dispose();
   }
 
+  /// Callback de criação do mapa na navegação.
   Future<void> _onMapCreated(mbx.MapboxMap map) async {
     _mapboxMap = map;
     _isMapReady = true;
@@ -83,24 +92,26 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
     _onNavChanged();
   }
 
+  /// Listener do [NavigationController] para atualizar mapa + rota.
   void _onNavChanged() {
     if (!_isMapReady) return;
 
     final nav = context.read<NavigationController>();
 
-    // atualizar a posição do user no mapa
+    // Atualiza a posição do utilizador no mapa.
     final pos = nav.currentPosition;
     if (pos != null) {
       _updateUserFromPosition(pos);
     }
 
-    // regista leg atual (caso tenha mudado)
+    // Regista leg atual (caso tenha mudado).
     _lastLegIndexDrawn = nav.currentLegIndex;
 
-    // redesenha sempre a linha (usa geometry cortada pela posição atual)
+    // Redesenha sempre a linha da perna atual.
     _drawCurrentLegRoute();
   }
 
+  /// Atualiza posição do utilizador e recenter se `_isFollowingUser` for true.
   Future<void> _updateUserFromPosition(Position pos) async {
     if (!_isMapReady || _mapboxMap == null) return;
 
@@ -116,6 +127,7 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
     }
   }
 
+  /// Garante que o círculo do utilizador está criado/atualizado.
   Future<void> _ensureUserIndicator() async {
     if (!_isMapReady || _mapboxMap == null || _currentPoint == null) return;
 
@@ -127,7 +139,7 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
         mbx.CircleAnnotationOptions(
           geometry: _currentPoint!,
           circleRadius: 24.0,
-          circleColor: _ecoMint.withOpacity(0.25).value,
+          circleColor: _ecoMint.withValues(alpha: 0.25).value,
         ),
       );
     } else {
@@ -151,6 +163,7 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
     }
   }
 
+  /// Recentra a câmara no utilizador, com zoom/pitch de navegação.
   Future<void> _moveCameraToUser({bool animated = true}) async {
     if (!_isMapReady || _mapboxMap == null || _currentPoint == null) return;
 
@@ -179,6 +192,7 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
     } catch (_) {}
   }
 
+  /// Desenha a linha da perna de rota atual a partir da posição corrente.
   Future<void> _drawCurrentLegRoute() async {
     if (!_isMapReady || _mapboxMap == null) return;
 
@@ -217,6 +231,7 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
     } catch (_) {}
   }
 
+  /// Handler do botão de recentrar.
   Future<void> _onRecentrePressed() async {
     setState(() {
       _isFollowingUser = true;
@@ -241,6 +256,7 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
       backgroundColor: colorScheme.surface,
       body: Stack(
         children: [
+          // Mapa base de navegação.
           Positioned.fill(
             child: mbx.MapWidget(
               onMapCreated: _onMapCreated,
@@ -259,23 +275,20 @@ class _NavigationMapPageState extends State<NavigationMapPage> {
             ),
           ),
 
+          // Overlay com info de navegação (próxima instrução, etc.).
           const NavigationOverlay(),
 
+          // Botão de recentrar.
           Positioned(
             right: 16,
             bottom: safeBottom + 18,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton(
-                  heroTag: 'nav-recenter',
-                  onPressed: _onRecentrePressed,
-                  backgroundColor: colorScheme.surface,
-                  foregroundColor: colorScheme.primary,
-                  elevation: 4,
-                  child: const Icon(Icons.my_location),
-                ),
-              ],
+            child: FloatingActionButton(
+              heroTag: 'nav-recenter',
+              onPressed: _onRecentrePressed,
+              backgroundColor: colorScheme.surface,
+              foregroundColor: colorScheme.primary,
+              elevation: 4,
+              child: const Icon(Icons.my_location),
             ),
           ),
         ],
