@@ -1,0 +1,85 @@
+{
+  "updaters": [
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "https://mds.bird.co/gbfs/v2/public/braga",
+      "frequency": "PT1M",
+      "network": "bird-braga",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    },
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "https://mds.bird.co/gbfs/v2/public/cascais",
+      "frequency": "PT1M",
+      "network": "bird-cascais",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    },
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "https://mds.bird.co/gbfs/v2/public/lisbon",
+      "frequency": "PT1M",
+      "network": "bikr-lisbon",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    },
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "https://mds.bird.co/gbfs/v2/public/matosinhos",
+      "frequency": "PT1M",
+      "network": "bird-matosinhos",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    },
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "https://mds.bird.co/gbfs/v2/public/porto",
+      "frequency": "PT1M",
+      "network": "bird-porto",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    },
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "https://gbfs.primelayer.pt/gbfs-smartmobility/gbfs/v3",
+      "frequency": "PT1M",
+      "network": "bora_viseu",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    },
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_tb",
+      "frequency": "PT1M",
+      "network": "nextbike_tb",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    },
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bx",
+      "frequency": "PT1M",
+      "network": "nextbike_bx",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    },
+    {
+      "type": "vehicle-rental",
+      "sourceType": "gbfs",
+      "url": "http://localhost:8081/gbfs.json",
+      "frequency": "PT5M",
+      "network": "gira-lisboa",
+      "allowKeepingRentedVehicleAtDestination": false,
+      "geofencingZones": false
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "last_updated": 1765131438,
+  "ttl": 3600,
+  "version": "2.3",
+  "data": {
+    "system_id": "gira-lisboa",
+    "language": "pt",
+    "name": "GIRA - Bicicletas de Lisboa",
+    "short_name": "GIRA",
+    "operator": "EMEL - Empresa Municipal de Mobilidade e Estacionamento de Lisboa",
+    "url": "https://www.gira-bicicletasdelisboa.pt/",
+    "purchase_url": "https://www.gira-bicicletasdelisboa.pt/",
+    "start_date": "2017-08-01",
+    "phone_number": "+351 21 321 21 21",
+    "email": "gira@emel.pt",
+    "timezone": "Europe/Lisbon",
+    "license_url": "https://www.gira-bicicletasdelisboa.pt/",
+    "rental_apps": {
+      "android": {
+        "store_uri": "https://play.google.com/store/apps/details?id=pt.emel.gira",
+        "discovery_uri": "https://play.google.com/store/apps/details?id=pt.emel.gira"
+      },
+      "ios": {
+        "store_uri": "https://apps.apple.com/pt/app/gira/id1234567890",
+        "discovery_uri": "https://apps.apple.com/pt/app/gira/id1234567890"
+      }
+    }
+  }
+}

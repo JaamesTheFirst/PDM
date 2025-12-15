@@ -1,0 +1,2361 @@
+{
+  "last_updated": 1765131438,
+  "ttl": 3600,
+  "version": "2.3",
+  "data": {
+    "stations": [
+      {
+        "station_id": "135",
+        "name": "Avenida Cidade de Lourenço Marques / Vale do",
+        "short_name": "135",
+        "lat": 38.764067,
+        "lon": -9.118689,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "456",
+        "name": "Entrecampos / Av. das Forças Armadas",
+        "short_name": "456",
+        "lat": 38.74877,
+        "lon": -9.14872,
+        "capacity": 41,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "132",
+        "name": "Avenida de Berlim / Rua Cidade de Cabinda",
+        "short_name": "132",
+        "lat": 38.76829,
+        "lon": -9.11255,
+        "capacity": 25,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "206",
+        "name": "Av. Brasília / Doca de Alcântara",
+        "short_name": "206",
+        "lat": 38.70141,
+        "lon": -9.17502,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "555",
+        "name": "Alameda das Linhas de Torres",
+        "short_name": "555",
+        "lat": 38.770657,
+        "lon": -9.160248,
+        "capacity": 33,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "463",
+        "name": "Campo Grande / Av. da Igreja",
+        "short_name": "463",
+        "lat": 38.75243,
+        "lon": -9.14951,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "479",
+        "name": "Rua Professor Oliveira Marques",
+        "short_name": "479",
+        "lat": 38.75491,
+        "lon": -9.15724,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "225",
+        "name": "Martim Moniz",
+        "short_name": "225",
+        "lat": 38.71526,
+        "lon": -9.13694,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "306",
+        "name": "Avenida da Liberdade / Rua Alexandre Herculano",
+        "short_name": "306",
+        "lat": 38.72281,
+        "lon": -9.14854,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "461",
+        "name": "Rua Professora Teresa Ambrósio",
+        "short_name": "461",
+        "lat": 38.749141,
+        "lon": -9.155564,
+        "capacity": 32,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "415",
+        "name": "Av. Duque de Ávila / Av. Conde Valbom",
+        "short_name": "415",
+        "lat": 38.735188,
+        "lon": -9.148443,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "312",
+        "name": "Rua Álvaro Coutinho / Avenida Almirante Reis",
+        "short_name": "312",
+        "lat": 38.724869,
+        "lon": -9.134802,
+        "capacity": 18,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "223",
+        "name": "Praça do Rossio",
+        "short_name": "223",
+        "lat": 38.713112,
+        "lon": -9.138952,
+        "capacity": 21,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "238",
+        "name": "Rua de Cascais / Alcântara Mar",
+        "short_name": "238",
+        "lat": 38.702936,
+        "lon": -9.175234,
+        "capacity": 36,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "311",
+        "name": "Avenida Almirante Reis Nº14",
+        "short_name": "311",
+        "lat": 38.721721,
+        "lon": -9.135295,
+        "capacity": 11,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "103",
+        "name": "Jardim da Água",
+        "short_name": "103",
+        "lat": 38.761218,
+        "lon": -9.095019,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "109",
+        "name": "Alameda dos Oceanos / Rua Ilha dos Amores",
+        "short_name": "109",
+        "lat": 38.777589,
+        "lon": -9.094672,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "446",
+        "name": "Av. República / Interface Entrecampos",
+        "short_name": "446",
+        "lat": 38.74456,
+        "lon": -9.14773,
+        "capacity": 40,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "151",
+        "name": "Rua Contra Almirante Ferraz / Escola Sec.António Damásio",
+        "short_name": "151",
+        "lat": 38.770434,
+        "lon": -9.108728,
+        "capacity": 24,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "442",
+        "name": "Campo Pequeno",
+        "short_name": "442",
+        "lat": 38.743371,
+        "lon": -9.14523,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "218",
+        "name": "Cais do Sodré",
+        "short_name": "218",
+        "lat": 38.70617,
+        "lon": -9.14471,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "403",
+        "name": "Av. Fontes Pereira de Melo",
+        "short_name": "403",
+        "lat": 38.731698,
+        "lon": -9.146522,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "220",
+        "name": "Rua do Comercio",
+        "short_name": "220",
+        "lat": 38.70878,
+        "lon": -9.137125,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "214",
+        "name": "Largo de Santos",
+        "short_name": "214",
+        "lat": 38.70673,
+        "lon": -9.15424,
+        "capacity": 24,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "362",
+        "name": "Avenida Eng. Duarte Pacheco",
+        "short_name": "362",
+        "lat": 38.72437,
+        "lon": -9.159469,
+        "capacity": 40,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "314",
+        "name": "Rua Marques da Silva / Rua António Pedro",
+        "short_name": "314",
+        "lat": 38.729657,
+        "lon": -9.135675,
+        "capacity": 12,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "484",
+        "name": "Rua Professor Vieira de Almeida",
+        "short_name": "484",
+        "lat": 38.76081,
+        "lon": -9.16658,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "464",
+        "name": "Av. da Igreja / Rua Afonso Lopes Vieira",
+        "short_name": "464",
+        "lat": 38.75165,
+        "lon": -9.148427,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "452",
+        "name": "Rua Teixeira de Pascoais / Rua Dr. Gama Barros",
+        "short_name": "452",
+        "lat": 38.747751,
+        "lon": -9.136681,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "219",
+        "name": "Praça do Município",
+        "short_name": "219",
+        "lat": 38.70797,
+        "lon": -9.13951,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "113",
+        "name": "Alameda dos Oceanos/ Passeio do Levante",
+        "short_name": "113",
+        "lat": 38.78414,
+        "lon": -9.09825,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "410",
+        "name": "Rua da Mesquita / Universidade Nova de Lisboa",
+        "short_name": "410",
+        "lat": 38.73492,
+        "lon": -9.16015,
+        "capacity": 40,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "478",
+        "name": "Alameda da Universidade / Faculdade de Letras",
+        "short_name": "478",
+        "lat": 38.75359,
+        "lon": -9.15717,
+        "capacity": 32,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "519",
+        "name": "Rua Prof. Pulido Valente / Rua Prof. Mário",
+        "short_name": "519",
+        "lat": 38.763204,
+        "lon": -9.1691,
+        "capacity": 25,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "554",
+        "name": "Alameda das Linhas de Torres / Rua Ladislau",
+        "short_name": "554",
+        "lat": 38.768683,
+        "lon": -9.158298,
+        "capacity": 27,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "432",
+        "name": "Praça de Londres",
+        "short_name": "432",
+        "lat": 38.7407,
+        "lon": -9.1377,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "449",
+        "name": "Av. 5 de Outubro / Rua da Cruz Vermelha",
+        "short_name": "449",
+        "lat": 38.746836,
+        "lon": -9.150085,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "237",
+        "name": "Avenida da India / Praca das Industrias",
+        "short_name": "237",
+        "lat": 38.699093,
+        "lon": -9.182262,
+        "capacity": 30,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "550",
+        "name": "Rua Fernando Curado Ribeiro / Alameda das Li",
+        "short_name": "550",
+        "lat": 38.760871,
+        "lon": -9.156487,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "487",
+        "name": "Rua Professor João Barreira",
+        "short_name": "487",
+        "lat": 38.76136,
+        "lon": -9.17096,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "509",
+        "name": "Centro Comercial Fonte Nova",
+        "short_name": "509",
+        "lat": 38.748901,
+        "lon": -9.190007,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "488",
+        "name": "Rua Fernando Namora / Rua António Quadros",
+        "short_name": "488",
+        "lat": 38.76014,
+        "lon": -9.17526,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "305",
+        "name": "Avenida da Liberdade / Rua Barata Salgueiro",
+        "short_name": "305",
+        "lat": 38.72228,
+        "lon": -9.147,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "486",
+        "name": "Rua Hermano Neves / Rua José Escada",
+        "short_name": "486",
+        "lat": 38.75954,
+        "lon": -9.16985,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "365",
+        "name": "Rua Castilho / Rua Marquês da Fronteira",
+        "short_name": "365",
+        "lat": 38.729724,
+        "lon": -9.157531,
+        "capacity": 30,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "115",
+        "name": "Passeio dos Heróis do Mar / Rua Capitão Cook",
+        "short_name": "115",
+        "lat": 38.793,
+        "lon": -9.09781,
+        "capacity": 12,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "462",
+        "name": "Campo Grande / Biblioteca Nacional",
+        "short_name": "462",
+        "lat": 38.75027,
+        "lon": -9.15031,
+        "capacity": 29,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "134",
+        "name": "Praça Cidade do Luso",
+        "short_name": "134",
+        "lat": 38.765588,
+        "lon": -9.116342,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "508",
+        "name": "Estação de Comboios de Benfica",
+        "short_name": "508",
+        "lat": 38.74473,
+        "lon": -9.200039,
+        "capacity": 23,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "417",
+        "name": "Av. Duque de Ávila / Jardim Arco Do Cego",
+        "short_name": "417",
+        "lat": 38.735352,
+        "lon": -9.142703,
+        "capacity": 23,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "556",
+        "name": "Alamedas das Linhas de Torres / Estrada da T",
+        "short_name": "556",
+        "lat": 38.773489,
+        "lon": -9.161462,
+        "capacity": 11,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "114",
+        "name": "Via do Oriente",
+        "short_name": "114",
+        "lat": 38.78836,
+        "lon": -9.09974,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "477",
+        "name": "Alameda da Universidade / Faculdade de Direito",
+        "short_name": "477",
+        "lat": 38.75264,
+        "lon": -9.15671,
+        "capacity": 24,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "552",
+        "name": "Alameda das Linhas de Torres / Hospital Puli",
+        "short_name": "552",
+        "lat": 38.766075,
+        "lon": -9.157335,
+        "capacity": 12,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "366",
+        "name": "Palacio da justiça",
+        "short_name": "366",
+        "lat": 38.731134,
+        "lon": -9.156435,
+        "capacity": 30,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "205",
+        "name": "Av. Brasília / Cordoaria",
+        "short_name": "205",
+        "lat": 38.697,
+        "lon": -9.188,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "430",
+        "name": "Av. Barbosa Du Bocage / Rua Arco do Cego",
+        "short_name": "430",
+        "lat": 38.74081,
+        "lon": -9.14329,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "485",
+        "name": "Rua Tomás da Fonseca / Rua António Albino Machado",
+        "short_name": "485",
+        "lat": 38.756,
+        "lon": -9.17,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "450",
+        "name": "Rua Alfredo Cortês",
+        "short_name": "450",
+        "lat": 38.74626,
+        "lon": -9.14399,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "216",
+        "name": "Praça D. Luís I",
+        "short_name": "216",
+        "lat": 38.70663,
+        "lon": -9.14655,
+        "capacity": 21,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "106",
+        "name": "Jardim Garcia da Orta",
+        "short_name": "106",
+        "lat": 38.769459,
+        "lon": -9.092506,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "468",
+        "name": "Largo Frei Heitor Pinto",
+        "short_name": "468",
+        "lat": 38.75482,
+        "lon": -9.13827,
+        "capacity": 21,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "310",
+        "name": "Rua Pina Manique / Largo do Intendente",
+        "short_name": "310",
+        "lat": 38.720733,
+        "lon": -9.134847,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "476",
+        "name": "Av. Professor Gama Pinto / Reitoria",
+        "short_name": "476",
+        "lat": 38.75231,
+        "lon": -9.15885,
+        "capacity": 23,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "301",
+        "name": "Avenida da Liberdade / Restauradores",
+        "short_name": "301",
+        "lat": 38.71702,
+        "lon": -9.14242,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "316",
+        "name": "Rua António Pedro / Rua Pascoal de Melo",
+        "short_name": "316",
+        "lat": 38.731424,
+        "lon": -9.135356,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "224",
+        "name": "Martim Moniz",
+        "short_name": "224",
+        "lat": 38.71498,
+        "lon": -9.13651,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "423",
+        "name": "Av. Conde Valbom / Rua Marquês Sá da Bandeira",
+        "short_name": "423",
+        "lat": 38.737911,
+        "lon": -9.152295,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "315",
+        "name": "Rua Passos Manuel/ Jardim Constantino",
+        "short_name": "315",
+        "lat": 38.731264,
+        "lon": -9.136968,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "221",
+        "name": "Rua do Crucifixo / Rua São Nicolau",
+        "short_name": "221",
+        "lat": 38.710191,
+        "lon": -9.138828,
+        "capacity": 15,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "215",
+        "name": "Av. 24 de Julho",
+        "short_name": "215",
+        "lat": 38.70662,
+        "lon": -9.14949,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "110",
+        "name": "Rua de Moscavide",
+        "short_name": "110",
+        "lat": 38.778466,
+        "lon": -9.097068,
+        "capacity": 18,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "457",
+        "name": "Rua Aboim Ascensão",
+        "short_name": "457",
+        "lat": 38.74975,
+        "lon": -9.14722,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "490",
+        "name": "Rua Fernando Namora / Azinhaga da Torre do Fato",
+        "short_name": "490",
+        "lat": 38.76026,
+        "lon": -9.17849,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "203",
+        "name": "Padrão dos Descobrimentos",
+        "short_name": "203",
+        "lat": 38.6935,
+        "lon": -9.20633,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "361",
+        "name": "Amoreiras Shopping Center",
+        "short_name": "361",
+        "lat": 38.72392,
+        "lon": -9.160992,
+        "capacity": 31,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "364",
+        "name": "Rua D.francisco M. de melo / Rua artilharia 1",
+        "short_name": "364",
+        "lat": 38.728263,
+        "lon": -9.159369,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "304",
+        "name": "Avenida da Liberdade / São Jorge",
+        "short_name": "304",
+        "lat": 38.72026,
+        "lon": -9.14637,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "459",
+        "name": "Rua Maria Amália Vaz de Carvalho / ES Rainha D. Leonor",
+        "short_name": "459",
+        "lat": 38.751481,
+        "lon": -9.141741,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "551",
+        "name": "Rua Francisco Stromp / Alameda das Linhas de",
+        "short_name": "551",
+        "lat": 38.762584,
+        "lon": -9.157235,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "352",
+        "name": "Rua Tomás da Anunciação / Rua Almeida e S.",
+        "short_name": "352",
+        "lat": 38.717313,
+        "lon": -9.165653,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "313",
+        "name": "Rua Frei Francisco Foreiro / Rua de Arroios",
+        "short_name": "313",
+        "lat": 38.728049,
+        "lon": -9.135956,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "431",
+        "name": "Rua do Arco Cego / Av. Magalhães Lima",
+        "short_name": "431",
+        "lat": 38.73937,
+        "lon": -9.14199,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "471",
+        "name": "Rua Lopes de Mendonça / EB São João de Brito",
+        "short_name": "471",
+        "lat": 38.756487,
+        "lon": -9.137337,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "419",
+        "name": "Av. António José de Almeida / Instituto Superior Técnico",
+        "short_name": "419",
+        "lat": 38.73811,
+        "lon": -9.13956,
+        "capacity": 25,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "363",
+        "name": "Rua de campolide / Rua marques da fronteira",
+        "short_name": "363",
+        "lat": 38.727094,
+        "lon": -9.162216,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "208",
+        "name": "Cais das Pombas",
+        "short_name": "208",
+        "lat": 38.70523,
+        "lon": -9.14373,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "406",
+        "name": "Praça Duque de Saldanha",
+        "short_name": "406",
+        "lat": 38.734247,
+        "lon": -9.145341,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "309",
+        "name": "Rua da Palma",
+        "short_name": "309",
+        "lat": 38.71901,
+        "lon": -9.13577,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "475",
+        "name": "Av. Professor Gama Pinto / Cantina Velha",
+        "short_name": "475",
+        "lat": 38.75115,
+        "lon": -9.15907,
+        "capacity": 41,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "108",
+        "name": "Rua do Bojador",
+        "short_name": "108",
+        "lat": 38.774289,
+        "lon": -9.09235,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "308",
+        "name": "Marquês de Pombal",
+        "short_name": "308",
+        "lat": 38.7246,
+        "lon": -9.14969,
+        "capacity": 11,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "553",
+        "name": "Rua Luis Pastor de Macedo / Rua Tobis Portuguesa",
+        "short_name": "553",
+        "lat": 38.767114,
+        "lon": -9.15535,
+        "capacity": 12,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "420",
+        "name": "Av. Rovisco Pais / Av. Manuel da Maia",
+        "short_name": "420",
+        "lat": 38.73617,
+        "lon": -9.13672,
+        "capacity": 26,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "307",
+        "name": "Marquês de Pombal",
+        "short_name": "307",
+        "lat": 38.724954,
+        "lon": -9.149334,
+        "capacity": 33,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "414",
+        "name": "Av. Duque de Ávila / Rua Pinheiro Chagas",
+        "short_name": "414",
+        "lat": 38.735,
+        "lon": -9.151,
+        "capacity": 19,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "104",
+        "name": "Gare do Oriente",
+        "short_name": "104",
+        "lat": 38.766716,
+        "lon": -9.097322,
+        "capacity": 40,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "105",
+        "name": "CC Vasco da Gama",
+        "short_name": "105",
+        "lat": 38.768548,
+        "lon": -9.096222,
+        "capacity": 40,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "102",
+        "name": "Porta do Mar",
+        "short_name": "102",
+        "lat": 38.759156,
+        "lon": -9.096439,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "130",
+        "name": "Avenida Berlim / Rua Américo Jesus Fernandes",
+        "short_name": "130",
+        "lat": 38.767761,
+        "lon": -9.106858,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "408",
+        "name": "Praça Duque de Saldanha",
+        "short_name": "408",
+        "lat": 38.733749,
+        "lon": -9.144117,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "433",
+        "name": "Av. Paris / Av. Almirante Reis",
+        "short_name": "433",
+        "lat": 38.74095,
+        "lon": -9.13409,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "480",
+        "name": "Faculdade de Ciências",
+        "short_name": "480",
+        "lat": 38.75587,
+        "lon": -9.15503,
+        "capacity": 25,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "520",
+        "name": "Lispolis",
+        "short_name": "520",
+        "lat": 38.766995,
+        "lon": -9.182513,
+        "capacity": 23,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "427",
+        "name": "Av. República / Av. Visconde Valmor",
+        "short_name": "427",
+        "lat": 38.73812,
+        "lon": -9.14617,
+        "capacity": 12,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "226",
+        "name": "Rua dos Fanqueiros",
+        "short_name": "226",
+        "lat": 38.711888,
+        "lon": -9.136456,
+        "capacity": 13,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "232",
+        "name": "Avenida da Índia / Centro de Arqueologia de Lisboa",
+        "short_name": "232",
+        "lat": 38.694155,
+        "lon": -9.212149,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "139",
+        "name": "Rua Cidade de Bissau {Metro Olivais}",
+        "short_name": "139",
+        "lat": 38.76134,
+        "lon": -9.111596,
+        "capacity": 25,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "407",
+        "name": "Praça Duque de Saldanha",
+        "short_name": "407",
+        "lat": 38.73434,
+        "lon": -9.14446,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "483",
+        "name": "Rua Professor Francisco Lucas Pires",
+        "short_name": "483",
+        "lat": 38.75939,
+        "lon": -9.16405,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "401",
+        "name": "Rua Martens Ferrão / Av. Fontes Pereira de Melo",
+        "short_name": "401",
+        "lat": 38.72894,
+        "lon": -9.14742,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "517",
+        "name": "Rua Padre Américo",
+        "short_name": "517",
+        "lat": 38.763505,
+        "lon": -9.180437,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "518",
+        "name": "Avenida das Nações Unidas / Azinhaga da Torre do Fato",
+        "short_name": "518",
+        "lat": 38.764097,
+        "lon": -9.177955,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "443",
+        "name": "Av. de Roma / Fórum Lisboa",
+        "short_name": "443",
+        "lat": 38.74351,
+        "lon": -9.13866,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "472",
+        "name": "Rua Marquês Soveral / ES Padre António Vieira",
+        "short_name": "472",
+        "lat": 38.75784,
+        "lon": -9.13608,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "101",
+        "name": "Alameda dos Oceanos / Rua dos Argonautas",
+        "short_name": "101",
+        "lat": 38.756161,
+        "lon": -9.096804,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "107",
+        "name": "Rotunda dos Vice-Reis",
+        "short_name": "107",
+        "lat": 38.774505,
+        "lon": -9.095416,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "428",
+        "name": "Av. República / Avenida Barbosa Du Bocage",
+        "short_name": "428",
+        "lat": 38.74047,
+        "lon": -9.14684,
+        "capacity": 12,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "416",
+        "name": "Av. República / Avenida Duque de Ávila",
+        "short_name": "416",
+        "lat": 38.735304,
+        "lon": -9.14553,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "474",
+        "name": "Av. do Brasil / Av. Rio de Janeiro",
+        "short_name": "474",
+        "lat": 38.75832,
+        "lon": -9.1409,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "421",
+        "name": "Alameda D. Afonso Henriques",
+        "short_name": "421",
+        "lat": 38.73736,
+        "lon": -9.13416,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "150",
+        "name": "Avenida Dr. Francisco Luis Gomes / Go Fit",
+        "short_name": "150",
+        "lat": 38.769665,
+        "lon": -9.111745,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "222",
+        "name": "Praça da Figueira",
+        "short_name": "222",
+        "lat": 38.71383,
+        "lon": -9.13828,
+        "capacity": 30,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "460",
+        "name": "Av. Rio de Janeiro / Parque de Jogos 1º de Maio",
+        "short_name": "460",
+        "lat": 38.75176,
+        "lon": -9.13749,
+        "capacity": 15,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "133",
+        "name": "Rua Cidade de Benguela / Avenida Cidade de L",
+        "short_name": "133",
+        "lat": 38.76503,
+        "lon": -9.110724,
+        "capacity": 18,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "112",
+        "name": "Alameda dos Oceanos / Passeio das Garças",
+        "short_name": "112",
+        "lat": 38.78069,
+        "lon": -9.09622,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "413",
+        "name": "Av. Ressano Garcia / Av. António Augusto de Aguiar",
+        "short_name": "413",
+        "lat": 38.73432,
+        "lon": -9.15425,
+        "capacity": 10,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "131",
+        "name": "Avenida de Berlim / Praça Baden Powell",
+        "short_name": "131",
+        "lat": 38.768137,
+        "lon": -9.110767,
+        "capacity": 21,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "137",
+        "name": "Rua Cidade de Bissau {entrada SPACIO}",
+        "short_name": "137",
+        "lat": 38.762829,
+        "lon": -9.114505,
+        "capacity": 33,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "426",
+        "name": "Av. Elias Garcia / Av. 5 de Outubro",
+        "short_name": "426",
+        "lat": 38.739046,
+        "lon": -9.14793,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "473",
+        "name": "Av. do Brasil / Av. de Roma",
+        "short_name": "473",
+        "lat": 38.75643,
+        "lon": -9.14697,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "481",
+        "name": "Campo Grande / Museu da Cidade",
+        "short_name": "481",
+        "lat": 38.758207,
+        "lon": -9.156169,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "510",
+        "name": "Largo da Revista Militar / Avenida do Colégio Militar",
+        "short_name": "510",
+        "lat": 38.752892,
+        "lon": -9.189058,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "412",
+        "name": "Av. Ressano Garcia / Av. António Augusto de Aguiar",
+        "short_name": "412",
+        "lat": 38.73448,
+        "lon": -9.1546,
+        "capacity": 16,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "235",
+        "name": "Avenida da India / Travessa da Galeotas",
+        "short_name": "235",
+        "lat": 38.697187,
+        "lon": -9.192735,
+        "capacity": 30,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "453",
+        "name": "Av. Roma / Av. EUA",
+        "short_name": "453",
+        "lat": 38.74873,
+        "lon": -9.14207,
+        "capacity": 14,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "212",
+        "name": "Av. Infante Dom Henrique / Terminal de Cruzeiros",
+        "short_name": "212",
+        "lat": 38.71035,
+        "lon": -9.12769,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "507",
+        "name": "Rua José dos Santos Pereira / Rua Conde de Almoster",
+        "short_name": "507",
+        "lat": 38.74487,
+        "lon": -9.193084,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "521",
+        "name": "Rua César de Oliveira / Rua Fernando Lopes Graça",
+        "short_name": "521",
+        "lat": 38.769048,
+        "lon": -9.173853,
+        "capacity": 22,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "351",
+        "name": "Rua Tomás da Anunciação / Rua Almeida e S.",
+        "short_name": "351",
+        "lat": 38.717313,
+        "lon": -9.165653,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "513",
+        "name": "Rua Guiomar Torresão/Metro de Carnide",
+        "short_name": "513",
+        "lat": 38.758691,
+        "lon": -9.19216,
+        "capacity": 20,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "436",
+        "name": "Instituto Português de Oncologia",
+        "short_name": "436",
+        "lat": 38.739395,
+        "lon": -9.162447,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "209",
+        "name": "Ribeira das Naus",
+        "short_name": "209",
+        "lat": 38.705954,
+        "lon": -9.141466,
+        "capacity": 27,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "435",
+        "name": "Interface de Sete Rios",
+        "short_name": "435",
+        "lat": 38.740579,
+        "lon": -9.166955,
+        "capacity": 43,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "506",
+        "name": "Rua Tenente Coronel Reibeiro dos Reis/Rua Conde de Almoster",
+        "short_name": "506",
+        "lat": 38.745181,
+        "lon": -9.190028,
+        "capacity": 17,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "213",
+        "name": "Av. Infante Dom Henrique / Santa Apolónia",
+        "short_name": "213",
+        "lat": 38.713416,
+        "lon": -9.122548,
+        "capacity": 32,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      },
+      {
+        "station_id": "303",
+        "name": "Avenida da Liberdade / Rua das Pretas",
+        "short_name": "303",
+        "lat": 38.71957,
+        "lon": -9.14455,
+        "capacity": 0,
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "parking_type": "STATION",
+        "parking_hoop": false
+      }
+    ]
+  }
+}

@@ -60,6 +60,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ./EXTERNALS:/EXTERNALS
     depends_on:
       - postgres
       - redis
@@ -67,7 +68,7 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-    command: sh -lc "npm ci && npx prisma generate && npm run start:dev"
+    command: sh -lc "npm ci && npx prisma generate && npx prisma migrate deploy && npm run start:dev"
 
   otp:
     image: docker.io/opentripplanner/opentripplanner:latest

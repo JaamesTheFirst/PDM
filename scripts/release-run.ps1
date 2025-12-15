@@ -1,8 +1,4 @@
-# ===========================================
-# One-Click Release Script for Windows
-# Runs spin-up.sh and Flutter app
-# ===========================================
-
+[CmdletBinding()]
 param(
     [switch]$Mock = $false,
     [switch]$Help = $false
@@ -16,7 +12,7 @@ if ($Help) {
     Write-Host "  -Help    Show this help message"
     Write-Host ""
     Write-Host "Example:"
-    Write-Host "  .\release-run.ps1          # Normal run"
+    Write-Host "  .\release-run.ps1         # Normal run"
     Write-Host "  .\release-run.ps1 -Mock   # Run with mock location"
     exit 0
 }
@@ -41,19 +37,42 @@ if (-not $flutterAvailable) {
     exit 1
 }
 
-# Get the project root directory (where this script is located)
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Get paths
+$scriptPath  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptPath
 
-Write-Host "📁 Project root: $projectRoot" -ForegroundColor Green
+Write-Host "Project root: $projectRoot" -ForegroundColor Green
 Write-Host ""
 
 # Step 1: Run spin-up.sh in WSL
-Write-Host "🚀 Step 1: Starting backend services..." -ForegroundColor Yellow
+Write-Host "Step 1: Starting backend services..." -ForegroundColor Yellow
 Write-Host ""
 
-$spinUpScript = Join-Path $scriptPath "spin-up.sh"
-wsl bash $spinUpScript
+$spinUpScriptWin = Join-Path $scriptPath "spin-up.sh"
+if (-not (Test-Path $spinUpScriptWin)) {
+    Write-Host "ERROR: spin-up.sh not found at: $spinUpScriptWin" -ForegroundColor Red
+    exit 1
+}
+
+function Convert-ToWslPath([string]$winPath) {
+    $full = (Resolve-Path $winPath).Path
+    $drive = $full.Substring(0,1).ToLower()
+    $rest  = $full.Substring(2).Replace('\','/')
+    return "/mnt/$drive$rest"
+}
+
+$projectRootWsl = Convert-ToWslPath $projectRoot
+wsl.exe bash -lc "cd '$projectRootWsl' && bash ./scripts/spin-up.sh"
+
+
+if (-not $spinUpScriptWsl) {
+    Write-Host "ERROR: Could not convert path to WSL with wslpath." -ForegroundColor Red
+    Write-Host "Windows path was: $spinUpScriptWin" -ForegroundColor Yellow
+    exit 1
+}
+
+wsl.exe bash -lc "bash '$spinUpScriptWsl'"
+
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
@@ -62,60 +81,63 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host ""
-Write-Host "✅ Backend services started successfully!" -ForegroundColor Green
+Write-Host "Backend services started successfully!" -ForegroundColor Green
 Write-Host ""
 
-# Step 2: Wait a bit for services to be ready
-Write-Host "⏳ Waiting 5 seconds for services to be ready..." -ForegroundColor Yellow
+# Wait a bit for services to be ready
+Write-Host "Waiting 5 seconds for services to be ready..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
-# Step 2.5: Install Flutter dependencies (first-time setup)
+# Step 2: Install Flutter dependencies
 Write-Host ""
-Write-Host "📦 Step 2: Installing Flutter dependencies..." -ForegroundColor Yellow
+Write-Host "Step 2: Installing Flutter dependencies..." -ForegroundColor Yellow
 Write-Host ""
 
 $frontendDir = Join-Path $projectRoot "Frontend"
-
 if (-not (Test-Path $frontendDir)) {
     Write-Host "ERROR: Frontend directory not found at: $frontendDir" -ForegroundColor Red
     exit 1
 }
 
 Push-Location $frontendDir
-
 try {
-    # Run flutter pub get (idempotent - safe to run multiple times)
-    Write-Host "Running 'flutter pub get'..." -ForegroundColor Gray
+    Write-Host "Running flutter pub get..." -ForegroundColor Gray
     flutter pub get | Out-Null
+
     if ($LASTEXITCODE -ne 0) {
         Write-Host "WARNING: flutter pub get had issues, but continuing..." -ForegroundColor Yellow
     } else {
-        Write-Host "✅ Flutter dependencies installed" -ForegroundColor Green
+        Write-Host "Flutter dependencies installed" -ForegroundColor Green
     }
-} catch {
+}
+catch {
     Write-Host "WARNING: Could not run flutter pub get, but continuing..." -ForegroundColor Yellow
-} finally {
+}
+finally {
     Pop-Location
 }
 
 # Step 3: Run Flutter app
 Write-Host ""
-Write-Host "📱 Step 3: Starting Flutter app..." -ForegroundColor Yellow
+Write-Host "Step 3: Starting Flutter app..." -ForegroundColor Yellow
 Write-Host ""
 
 Push-Location $frontendDir
-
 try {
     if ($Mock) {
-        Write-Host "🎭 Running with MOCK LOCATION enabled" -ForegroundColor Magenta
+        Write-Host "Running with MOCK LOCATION enabled" -ForegroundColor Magenta
         Write-Host ""
         flutter run --dart-define=MOCK_LOCATION=true
     } else {
-        Write-Host "📍 Running in NORMAL mode" -ForegroundColor Cyan
+        Write-Host "Running in NORMAL mode" -ForegroundColor Cyan
         Write-Host ""
         flutter run
     }
-} finally {
+}
+catch {
+    Write-Host "ERROR: Flutter run failed. Check the output above." -ForegroundColor Red
+    throw
+}
+finally {
     Pop-Location
 }
-

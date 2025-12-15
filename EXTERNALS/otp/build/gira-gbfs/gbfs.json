@@ -1,0 +1,23 @@
+{
+  "last_updated": 1765131438,
+  "ttl": 3600,
+  "version": "2.3",
+  "data": {
+    "pt": {
+      "feeds": [
+        {
+          "name": "system_information",
+          "url": "http://host.docker.internal:8081/system_information.json"
+        },
+        {
+          "name": "station_information",
+          "url": "http://host.docker.internal:8081/station_information.json"
+        },
+        {
+          "name": "station_status",
+          "url": "http://host.docker.internal:8081/station_status.json"
+        }
+      ]
+    }
+  }
+}

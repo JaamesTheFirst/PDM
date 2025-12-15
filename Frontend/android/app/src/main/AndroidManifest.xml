@@ -1,10 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <!-- Mapbox Access Token -->
 
-<!--
-<meta-data android:name="com.mapbox.token"
-           android:value="aqui tem de meter a api key que vos vou dar no whatsapp"/>
--->
+<!-- Internet permission (required for Mapbox) -->
+<uses-permission android:name="android.permission.INTERNET"/>
 
 <!-- Location permissions -->
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -15,6 +13,9 @@
         android:label="sustainable_transport_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Mapbox Access Token -->
+        <meta-data android:name="com.mapbox.token"
+                   android:value="pk.eyJ1IjoidGlhZ29tYXJxdWVzIiwiYSI6ImNtaW5zeHoweTB3MWkzZXNidmxmd29wamkifQ.wieB0AYuGHF-qVRTqmFQ2Q"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"
