@@ -5,15 +5,15 @@ param(
 )
 
 if ($Help) {
-    Write-Host "Usage: .\release-run.ps1 [-Mock]"
+    Write-Host "Usage: .\release-run.ps1 [-Mock]" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "Options:"
-    Write-Host "  -Mock    Run Flutter app with mock location enabled"
-    Write-Host "  -Help    Show this help message"
+    Write-Host "Options:" -ForegroundColor Gray
+    Write-Host "  -Mock    Run Flutter app with mock location enabled" -ForegroundColor Gray
+    Write-Host "  -Help    Show this help message" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "Example:"
-    Write-Host "  .\release-run.ps1         # Normal run"
-    Write-Host "  .\release-run.ps1 -Mock   # Run with mock location"
+    Write-Host "Example:" -ForegroundColor Gray
+    Write-Host "  .\release-run.ps1         # Normal run" -ForegroundColor Gray
+    Write-Host "  .\release-run.ps1 -Mock   # Run with mock location" -ForegroundColor Gray
     exit 0
 }
 
@@ -55,25 +55,17 @@ if (-not (Test-Path $spinUpScriptWin)) {
 }
 
 function Convert-ToWslPath([string]$winPath) {
-    $full = (Resolve-Path $winPath).Path
+    $full  = (Resolve-Path $winPath).Path
     $drive = $full.Substring(0,1).ToLower()
     $rest  = $full.Substring(2).Replace('\','/')
     return "/mnt/$drive$rest"
 }
 
+# Corre o spin-up a partir da raiz do projecto (só UMA vez)
 $projectRootWsl = Convert-ToWslPath $projectRoot
-wsl.exe bash -lc "cd '$projectRootWsl' && bash ./scripts/spin-up.sh"
+$cmd = "cd '$projectRootWsl' && chmod +x ./scripts/spin-up.sh && bash ./scripts/spin-up.sh"
 
-
-if (-not $spinUpScriptWsl) {
-    Write-Host "ERROR: Could not convert path to WSL with wslpath." -ForegroundColor Red
-    Write-Host "Windows path was: $spinUpScriptWin" -ForegroundColor Yellow
-    exit 1
-}
-
-wsl.exe bash -lc "bash '$spinUpScriptWsl'"
-
-
+wsl.exe bash -lc $cmd
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "ERROR: Spin-up script failed. Please check the errors above." -ForegroundColor Red
