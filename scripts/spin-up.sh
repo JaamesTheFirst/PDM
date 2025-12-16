@@ -260,27 +260,54 @@ echo -e "Redis:            ${GREEN}${WINDOWS_HOST_IP}:${REDIS_PORT}${NC}"
 echo -e "${BLUE}════════════════════════════════════════${NC}\n"
 
 # ===========================================
-# 7,5.Download OTP graph.obj (Dropbox) -> EXTERNALS/otp/build/graph.obj
+# 7.5. Download OTP graph.obj (Dropbox) -> EXTERNALS/otp/build/graph.obj
+# Only downloads if file is missing or invalid
 # ===========================================
 
-echo -e "${YELLOW}⬇️  Downloading OTP graph.obj from Dropbox...${NC}"
+echo -e "${YELLOW}⬇️  Ensuring OTP graph.obj exists...${NC}"
 
 DROPBOX_URL="https://www.dropbox.com/scl/fi/bgkfs770vk3glt5irlajn/graph.obj?rlkey=6hy2ryfvqoihxczn42yy6w32f&st=6gyax8w5&dl=1"
 OTP_GRAPH_DEST="EXTERNALS/otp/build/graph.obj"
 
 mkdir -p "$(dirname "$OTP_GRAPH_DEST")"
 
-# Download (follow redirects) and fail if HTTP error
-curl -L --fail "$DROPBOX_URL" -o "$OTP_GRAPH_DEST"
+is_valid_graph_obj() {
+  local f="$1"
 
-# Quick sanity check: avoid saving HTML
-if head -c 200 "$OTP_GRAPH_DEST" | grep -qiE '<!doctype html|<html'; then
-  echo -e "${RED}❌ Download returned HTML instead of graph.obj (bad link or permissions).${NC}"
-  rm -f "$OTP_GRAPH_DEST"
-  exit 1
+  # Must exist and not be empty
+  [ -f "$f" ] || return 1
+  [ -s "$f" ] || return 1
+
+  # Must not be HTML (common when Dropbox link fails / permissions)
+  if head -c 300 "$f" | grep -qiE '<!doctype html|<html'; then
+    return 1
+  fi
+
+  return 0
+}
+
+if is_valid_graph_obj "$OTP_GRAPH_DEST"; then
+  echo -e "${GREEN}✅ graph.obj já existe e parece válido: $OTP_GRAPH_DEST${NC}\n"
+else
+  echo -e "${YELLOW}   graph.obj não encontrado ou inválido — a fazer download...${NC}"
+
+  TMP_FILE="${OTP_GRAPH_DEST}.tmp"
+
+  # Download (follow redirects) and fail if HTTP error
+  curl -L --fail "$DROPBOX_URL" -o "$TMP_FILE"
+
+  # Sanity check: avoid saving HTML
+  if head -c 300 "$TMP_FILE" | grep -qiE '<!doctype html|<html'; then
+    echo -e "${RED}❌ Download devolveu HTML em vez de graph.obj (link/permissões).${NC}"
+    rm -f "$TMP_FILE"
+    exit 1
+  fi
+
+  # Move into place atomically
+  mv -f "$TMP_FILE" "$OTP_GRAPH_DEST"
+
+  echo -e "${GREEN}✅ graph.obj guardado em $OTP_GRAPH_DEST${NC}\n"
 fi
-
-echo -e "${GREEN}✅ graph.obj saved to $OTP_GRAPH_DEST${NC}\n"
 
 # ===========================================
 # 8. Start Services
